@@ -1,0 +1,176 @@
+# Copyright (C) 1991-2005 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic       
+# functions, and any output files any of the foregoing           
+# (including device programming or simulation files), and any    
+# associated documentation or information are expressly subject  
+# to the terms and conditions of the Altera Program License      
+# Subscription Agreement, Altera MegaCore Function License       
+# Agreement, or other applicable license agreement, including,   
+# without limitation, that your use is for the sole purpose of   
+# programming logic devices manufactured by Altera and sold by   
+# Altera or its authorized distributors.  Please refer to the    
+# applicable agreement for further details.
+
+
+# The default values for assignments are stored in the file
+#		ledwater_assignment_defaults.qdf
+# If this file doesn't exist, and for assignments not listed, see file
+#		assignment_defaults.qdf
+
+# Altera recommends that you do not modify this file. This
+# file is updated automatically by the Quartus II software
+# and any changes you make may be lost or overwritten.
+
+
+# Project-Wide Assignments
+# ========================
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 5.0
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "23:35:58  SEPTEMBER 01, 2005"
+set_global_assignment -name LAST_QUARTUS_VERSION "17.1.1 Standard Edition"
+#set_global_assignment -name VERILOG_FILE ledwater.v
+set_global_assignment -name CDF_FILE E115.cdf
+
+# Pin & Location Assignments
+# ==========================
+
+# Analysis & Synthesis Assignments
+# ================================
+set_global_assignment -name FAMILY "Cyclone IV E"
+set_global_assignment -name TOP_LEVEL_ENTITY E115_zpu
+
+# Fitter Assignments
+# ==================
+set_global_assignment -name DEVICE EP4CE115F23I7
+set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 256
+
+# Assembler Assignments
+# =====================
+
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 7
+set_global_assignment -name AUTO_RESTART_CONFIGURATION OFF
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP "-40"
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 100
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 484
+set_global_assignment -name LL_ROOT_REGION ON -section_id "Root Region"
+set_global_assignment -name LL_MEMBER_STATE LOCKED -section_id "Root Region"
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED"
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
+set_global_assignment -name ALLOW_ANY_RAM_SIZE_FOR_RECOGNITION ON
+set_global_assignment -name SYNTH_MESSAGE_LEVEL HIGH
+
+
+#============================================================
+# UART
+#============================================================
+set_location_assignment PIN_A7 -to UART_RX_0
+set_location_assignment PIN_B7 -to UART_TX_0
+set_location_assignment PIN_C6 -to UART_RX_1
+set_location_assignment PIN_D7 -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_1
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_0
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_1
+
+#============================================================
+# CLOCK
+#============================================================
+set_location_assignment PIN_AB11 -to CLOCK_50
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLOCK_50
+#set_location_assignment PIN_AB11 -to clk_25M
+
+#============================================================
+# LED
+#============================================================
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LED[3]
+set_location_assignment PIN_A5 -to LED[0]
+set_location_assignment PIN_B5 -to LED[1]
+set_location_assignment PIN_C4 -to LED[2]
+set_location_assignment PIN_C3 -to LED[3]
+
+#============================================================
+# Modules and Files
+#============================================================
+
+set_global_assignment -name VHDL_FILE ../E115_zpu_Toplevel.vhd
+set_global_assignment -name QIP_FILE Clock_25to100.qip
+set_global_assignment -name SDC_FILE E115_zpu_constraints.sdc
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_flex.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_pkg.vhd
+#set_global_assignment -name VHDL_FILE ../cpu/zpu_flex_pkg.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_small.vhd
+#set_global_assignment -name VHDL_FILE ../cpu/zpu_small_pkg.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_medium.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo.vhd
+#set_global_assignment -name VHDL_FILE ../cpu/zpu_medium_pkg.vhd
+#set_global_assignment -name VHDL_FILE ../trace/trace.vhd
+#set_global_assignment -name VHDL_FILE ../trace/txt_util.vhd
+set_global_assignment -name VHDL_FILE ../zpu_soc_pkg.vhd
+set_global_assignment -name VHDL_FILE ../zpu_soc.vhd
+set_global_assignment -name VHDL_FILE ../devices/RAM/dpram.vhd
+#set_global_assignment -name VHDL_FILE ../devices/uart/uart_brgen.vhd
+#set_global_assignment -name VHDL_FILE ../devices/uart/uart_mv_filter.vhd
+#set_global_assignment -name VHDL_FILE ../devices/uart/uart_rx.vhd
+#set_global_assignment -name VHDL_FILE ../devices/uart/uart_tx.vhd
+set_global_assignment -name VHDL_FILE ../devices/uart/uart.vhd
+set_global_assignment -name VHDL_FILE ../devices/uart/uart_debug.vhd
+#set_global_assignment -name VHDL_FILE ../devices/uart/simple_uart.vhd
+#set_global_assignment -name VHDL_FILE ../devices/fifo/fifo.vhd
+set_global_assignment -name VHDL_FILE ../devices/intr/interrupt_controller.vhd
+set_global_assignment -name VHDL_FILE ../devices/spi/spi.vhd
+set_global_assignment -name VHDL_FILE ../devices/ps2/io_ps2_com.vhd
+set_global_assignment -name VHDL_FILE ../devices/timer/timer_controller.vhd
+set_global_assignment -name VHDL_FILE ../devices/BootROM/BootROM.vhd
+set_global_assignment -name VHDL_FILE ../devices/BootROM/SysROM_0.vhd
+set_global_assignment -name VHDL_FILE ../devices/BootROM/SysROM_1.vhd
+set_global_assignment -name VHDL_FILE ../devices/BootROM/SysROM_2.vhd
+set_global_assignment -name VHDL_FILE ../devices/BootROM/SysROM_3.vhd
+set_global_assignment -name VHDL_FILE ../devices/SysRAM/SysRAM_0.vhd
+set_global_assignment -name VHDL_FILE ../devices/SysRAM/SysRAM_1.vhd
+set_global_assignment -name VHDL_FILE ../devices/SysRAM/SysRAM_2.vhd
+set_global_assignment -name VHDL_FILE ../devices/SysRAM/SysRAM_3.vhd
+set_global_assignment -name VHDL_FILE ../devices/ioctl/ioctl.vhd
+set_global_assignment -name VHDL_FILE ../devices/RAM/dualport_ram.vhd
+set_global_assignment -name VHDL_FILE ../../em/common/config_pkg.vhd
+#set_global_assignment -name VERILOG_FILE ../cpu/qdiv.v
+#set_global_assignment -name VHDL_FILE ../devices/Peripherals/simple_uart.vhd
+#set_global_assignment -name VHDL_FILE ../devices/SysRAM/SysRAM.vhd
+#set_global_assignment -name VHDL_FILE ../devices/RAM/DualPortRAM.vhd
+#set_global_assignment -name VERILOG_FILE ../devices/RAM/TwoWayCache.v
+#set_global_assignment -name VHDL_FILE ../devices/RAM/sdram_cached.vhd
+#set_global_assignment -name VHDL_FILE ../Toplevel_Config.vhd
+#set_global_assignment -name VHDL_FILE ../DMACache_config.vhd
+#set_global_assignment -name VHDL_FILE ../devices/Video/video_vga_master.vhd
+#set_global_assignment -name VHDL_FILE ../devices/Video/video_vga_dither.vhd
+#set_global_assignment -name VHDL_FILE ../devices/Video/vga_controller.vhd
+#set_global_assignment -name VHDL_FILE ../devices/DMA/DMACache.vhd
+#set_global_assignment -name VHDL_FILE ../devices/DMA/DMACache_pkg.vhd
+#set_global_assignment -name VHDL_FILE ../devices/DMA/FIFO_Counter.vhd
+#set_global_assignment -name VHDL_FILE ../devices/DMA/DMACacheRAM.vhd
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name OPTIMIZATION_MODE "AGGRESSIVE PERFORMANCE"
+
+
+
+
+
+
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

@@ -1,0 +1,363 @@
+#============================================================
+# Build by Terasic V1.0.0
+#============================================================
+
+# Project-Wide Assignments
+# ========================
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "23:35:58  SEPTEMBER 01, 2005"
+set_global_assignment -name LAST_QUARTUS_VERSION "17.1.1 Standard Edition"
+set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
+set_global_assignment -name CDF_FILE QMV.cdf
+
+# Pin & Location Assignments
+# ==========================
+
+# Analysis & Synthesis Assignments
+# ================================
+set_global_assignment -name FAMILY "Cyclone V"
+set_global_assignment -name TOP_LEVEL_ENTITY QMV_zpu
+
+# Fitter Assignments
+# ==================
+set_global_assignment -name DEVICE 5CEFA2F23C8
+set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 256
+
+# Assembler Assignments
+# =====================
+
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 7
+set_global_assignment -name AUTO_RESTART_CONFIGURATION OFF
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 484
+set_global_assignment -name LL_ROOT_REGION ON -section_id "Root Region"
+set_global_assignment -name LL_MEMBER_STATE LOCKED -section_id "Root Region"
+set_global_assignment -name USE_CONFIGURATION_DEVICE ON
+set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED"
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
+set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
+set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
+set_global_assignment -name ALLOW_ANY_RAM_SIZE_FOR_RECOGNITION ON
+set_global_assignment -name SYNTH_MESSAGE_LEVEL HIGH
+
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS ON
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
+set_global_assignment -name OPTIMIZE_MULTI_CORNER_TIMING ON
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+
+set_global_assignment -name ENABLE_SIGNALTAP ON
+set_global_assignment -name USE_SIGNALTAP_FILE stp1.stp
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+
+
+#============================================================
+# CLOCK2
+#============================================================
+
+#============================================================
+# CLOCK3
+#============================================================
+
+#============================================================
+# CLOCK4
+#============================================================
+
+#============================================================
+# CLOCK
+#============================================================
+set_location_assignment PIN_M9 -to CLOCK_50
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLOCK_50
+
+#============================================================
+# DRAM
+#============================================================
+set_location_assignment PIN_Y9 -to SDRAM_ADDR[12]
+set_location_assignment PIN_T9 -to SDRAM_ADDR[11]
+set_location_assignment PIN_R6 -to SDRAM_ADDR[10]
+set_location_assignment PIN_W8 -to SDRAM_ADDR[9]
+set_location_assignment PIN_T8 -to SDRAM_ADDR[8]
+set_location_assignment PIN_U8 -to SDRAM_ADDR[7]
+set_location_assignment PIN_V6 -to SDRAM_ADDR[6]
+set_location_assignment PIN_U7 -to SDRAM_ADDR[5]
+set_location_assignment PIN_U6 -to SDRAM_ADDR[4]
+set_location_assignment PIN_N6 -to SDRAM_ADDR[3]
+set_location_assignment PIN_N8 -to SDRAM_ADDR[2]
+set_location_assignment PIN_P7 -to SDRAM_ADDR[1]
+set_location_assignment PIN_P8 -to SDRAM_ADDR[0]
+set_location_assignment PIN_P9 -to SDRAM_BA[1]
+set_location_assignment PIN_T7 -to SDRAM_BA[0]
+set_location_assignment PIN_AA7 -to SDRAM_CAS
+set_location_assignment PIN_V9 -to SDRAM_CKE
+set_location_assignment PIN_AB11 -to SDRAM_CLK
+set_location_assignment PIN_AB5 -to SDRAM_CS
+set_location_assignment PIN_P12 -to SDRAM_DQ[15]
+set_location_assignment PIN_R12 -to SDRAM_DQ[14]
+set_location_assignment PIN_U12 -to SDRAM_DQ[13]
+set_location_assignment PIN_R11 -to SDRAM_DQ[12]
+set_location_assignment PIN_R10 -to SDRAM_DQ[11]
+set_location_assignment PIN_U11 -to SDRAM_DQ[10]
+set_location_assignment PIN_T10 -to SDRAM_DQ[9]
+set_location_assignment PIN_U10 -to SDRAM_DQ[8]
+set_location_assignment PIN_AA8 -to SDRAM_DQ[7]
+set_location_assignment PIN_AB8 -to SDRAM_DQ[6]
+set_location_assignment PIN_AA9 -to SDRAM_DQ[5]
+set_location_assignment PIN_Y10 -to SDRAM_DQ[4]
+set_location_assignment PIN_AB10 -to SDRAM_DQ[3]
+set_location_assignment PIN_AA10 -to SDRAM_DQ[2]
+set_location_assignment PIN_Y11 -to SDRAM_DQ[1]
+set_location_assignment PIN_AA12 -to SDRAM_DQ[0]
+set_location_assignment PIN_AB7 -to SDRAM_DQM[0]
+set_location_assignment PIN_AB6 -to SDRAM_RAS
+set_location_assignment PIN_V10 -to SDRAM_DQM[1]
+set_location_assignment PIN_W9 -to SDRAM_WE
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[8]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[9]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[10]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[11]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_ADDR[12]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_BA[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_BA[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_CAS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_CKE
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_CLK
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_CS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[2]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[3]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[4]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[5]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[6]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[7]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[8]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[9]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[10]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[11]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[12]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[13]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[14]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQ[15]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQM[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_RAS
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_DQM[1]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDRAM_WE
+
+#============================================================
+# GPIO
+#============================================================
+# U8 5 - 59, odd
+#
+# U8 6 - 58 Even
+set_location_assignment PIN_AA13 -to BANK_4A_AA13
+set_location_assignment PIN_AB15 -to BANK_4A_AB15
+set_location_assignment PIN_Y14 -to BANK_4A_Y14
+set_location_assignment PIN_AB17 -to BANK_4A_AB17
+set_location_assignment PIN_Y16 -to BANK_4A_Y16
+set_location_assignment PIN_AA17 -to BANK_4A_AA17
+set_location_assignment PIN_AA19 -to BANK_4A_AA19
+set_location_assignment PIN_Y19 -to BANK_4A_Y19
+set_location_assignment PIN_AB20 -to BANK_4A_AB20
+set_location_assignment PIN_AB22 -to BANK_4A_AB22
+set_location_assignment PIN_Y22 -to BANK_4A_Y22
+set_location_assignment PIN_W21 -to BANK_4A_W21
+set_location_assignment PIN_V21 -to BANK_4A_V21
+set_location_assignment PIN_W19 -to BANK_4A_W19
+set_location_assignment PIN_U20 -to BANK_4A_U20
+set_location_assignment PIN_T22 -to BANK_5A_T22
+set_location_assignment PIN_R21 -to BANK_5A_R21
+set_location_assignment PIN_T19 -to BANK_5A_T19
+set_location_assignment PIN_P17 -to BANK_5A_P17
+set_location_assignment PIN_N21 -to BANK_5B_N21
+set_location_assignment PIN_M20 -to BANK_5B_M20
+set_location_assignment PIN_N19 -to BANK_5B_N19
+set_location_assignment PIN_L19 -to BANK_5B_L19
+set_location_assignment PIN_L22 -to BANK_5B_L22
+set_location_assignment PIN_K17 -to BANK_5B_K17
+set_location_assignment PIN_K21 -to BANK_5B_K21
+set_location_assignment PIN_N16 -to BANK_5B_N16
+#
+# U7 5 - 59 odd
+#set_location_assignment PIN_AA14 -to BANK_4A_AA14
+#set_location_assignment PIN_AA15 -to BANK_4A_AA15
+#set_location_assignment PIN_Y15 -to BANK_4A_Y15
+#set_location_assignment PIN_AB18 -to BANK_4A_AB18
+set_location_assignment PIN_Y17 -to BANK_4A_Y17
+set_location_assignment PIN_AA18 -to BANK_4A_AA18
+set_location_assignment PIN_AA20 -to BANK_4A_AA20
+set_location_assignment PIN_Y20 -to BANK_4A_Y20
+set_location_assignment PIN_AB21 -to BANK_4A_AB21
+set_location_assignment PIN_AA22 -to BANK_4A_AA22
+set_location_assignment PIN_W22 -to BANK_4A_W22
+set_location_assignment PIN_Y21 -to BANK_4A_Y21
+set_location_assignment PIN_U22 -to BANK_4A_U22
+set_location_assignment PIN_V20 -to BANK_4A_V20
+set_location_assignment PIN_U21 -to BANK_4A_U21
+set_location_assignment PIN_R22 -to BANK_5A_R22
+set_location_assignment PIN_P22 -to BANK_5A_P22
+set_location_assignment PIN_T20 -to BANK_5A_T20
+set_location_assignment PIN_P16 -to BANK_5A_P16
+set_location_assignment PIN_N20 -to BANK_5B_N20
+set_location_assignment PIN_M21 -to BANK_5B_M21
+set_location_assignment PIN_M18 -to BANK_5B_M18
+set_location_assignment PIN_L18 -to BANK_5B_L18
+set_location_assignment PIN_M22 -to BANK_5B_M22
+set_location_assignment PIN_L17 -to BANK_5B_L17
+set_location_assignment PIN_K22 -to BANK_5B_K22
+set_location_assignment PIN_M16 -to BANK_5B_M16
+#
+# U7 6 - 60 even
+set_location_assignment PIN_AA1 -to BANK_2A_AA1
+set_location_assignment PIN_W2 -to BANK_2A_W2
+set_location_assignment PIN_U2 -to BANK_2A_U2
+set_location_assignment PIN_N2 -to BANK_2A_N2
+set_location_assignment PIN_L2 -to BANK_2A_L2
+set_location_assignment PIN_G2 -to BANK_2A_G2
+set_location_assignment PIN_D3 -to BANK_2A_D3
+set_location_assignment PIN_C2 -to BANK_2A_C2
+set_location_assignment PIN_H6 -to BANK_8A_H6
+set_location_assignment PIN_H8 -to BANK_8A_H8
+set_location_assignment PIN_E7 -to BANK_8A_E7
+set_location_assignment PIN_C6 -to BANK_8A_C6
+set_location_assignment PIN_D9 -to BANK_8A_D9
+set_location_assignment PIN_A5 -to BANK_8A_A5
+set_location_assignment PIN_B7 -to BANK_8A_B7
+set_location_assignment PIN_A8 -to BANK_8A_A8
+set_location_assignment PIN_A10 -to BANK_8A_A10
+set_location_assignment PIN_C9 -to BANK_8A_C9
+set_location_assignment PIN_F10 -to BANK_8A_F10
+set_location_assignment PIN_B11 -to BANK_7A_B11
+set_location_assignment PIN_A12 -to BANK_7A_A12
+set_location_assignment PIN_D12 -to BANK_7A_D12
+set_location_assignment PIN_C13 -to BANK_7A_C13
+set_location_assignment PIN_A13 -to BANK_7A_A13
+set_location_assignment PIN_A14 -to BANK_7A_A14
+set_location_assignment PIN_C15 -to BANK_7A_C15
+set_location_assignment PIN_B16 -to BANK_7A_B16
+
+#============================================================
+# KEY
+#============================================================
+set_location_assignment PIN_AB13 -to KEY
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to KEY
+
+#============================================================
+# LEDR
+#============================================================
+set_location_assignment PIN_D17 -to LEDR
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to LEDR
+
+#============================================================
+# PS2
+#============================================================
+
+#============================================================
+# RESET
+#============================================================
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to RESET_N
+set_location_assignment PIN_V18 -to RESET_N
+
+##============================================================
+# SD CARD
+#============================================================
+set_location_assignment PIN_Y17 -to SDCARD_MISO[0]
+set_location_assignment PIN_AA18 -to SDCARD_MOSI[0]
+set_location_assignment PIN_AA20 -to SDCARD_CLK[0]
+set_location_assignment PIN_Y20 -to SDCARD_CS[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_MISO[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_MOSI[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_CLK[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_CS[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_MOSI[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_CLK[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_CS[0]
+
+#============================================================
+# SW
+#============================================================
+
+##============================================================
+# UART
+#============================================================
+set_location_assignment PIN_AA14 -to UART_RX_0
+set_location_assignment PIN_AA15 -to UART_TX_0
+set_location_assignment PIN_Y15 -to UART_RX_1
+set_location_assignment PIN_AB18 -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_1
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_0
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_1
+
+#============================================================
+# End of pin assignments by Terasic System Builder
+#============================================================
+
+set_global_assignment -name CYCLONEII_RESERVE_NCEO_AFTER_CONFIGURATION "USE AS REGULAR IO"
+
+#============================================================
+# Modules and Files
+#============================================================
+
+set_global_assignment -name VHDL_FILE ../QMV_zpu_Toplevel.vhd
+set_global_assignment -name QIP_FILE Clock_50to100.qip
+set_global_assignment -name SDC_FILE QMV_zpu_constraints.sdc
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_flex.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_pkg.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_small.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_medium.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_uart_debug.vhd
+set_global_assignment -name VHDL_FILE ../zpu_soc_pkg.vhd
+set_global_assignment -name VHDL_FILE ../zpu_soc.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/RAM/dpram.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/uart/uart.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/intr/interrupt_controller.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/spi/spi.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/SDMMC/SDCard.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/ps2/io_ps2_com.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/timer/timer_controller.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/BootROM.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/DualPortBootBRAM.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBootBRAM.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBRAM.vhd
+set_global_assignment -name VHDL_FILE ../devices/sysbus/ioctl/ioctl.vhd
+#set_global_assignment -name VHDL_FILE ../devices/sysbus/TCPU/tcpu.vhd
+set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_top.vhd
+set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_byte_ctrl.vhd
+set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_bit_ctrl.vhd
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/sdram.qip
+set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/sdram.vhd
+set_global_assignment -name VHDL_FILE ../devices/WishBone/SRAM/sram.vhd
+set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
+set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
+set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
+set_global_assignment -name ALLOW_ANY_ROM_SIZE_FOR_RECOGNITION ON
+set_global_assignment -name ALLOW_ANY_SHIFT_REGISTER_SIZE_FOR_RECOGNITION ON
+set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
+set_global_assignment -name REMOVE_DUPLICATE_REGISTERS OFF
+set_global_assignment -name PRE_MAPPING_RESYNTHESIS ON
+set_global_assignment -name HDL_MESSAGE_LEVEL LEVEL3
+set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (VHDL)"
+set_global_assignment -name EDA_OUTPUT_DATA_FORMAT VHDL -section_id eda_simulation
+
+
+
+set_global_assignment -name SLD_FILE db/stp1_auto_stripped.stp
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

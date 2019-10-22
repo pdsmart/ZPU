@@ -1,0 +1,215 @@
+
+hello.elf:     file format elf32-zpu
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .fixed_vectors 00000020  00058000  00058000  00000094  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .text         000000ac  00058100  00058100  000000b4  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  2 .rodata       00000073  000581ac  000581ac  00000160  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .data         00000004  00058220  00058220  000001d3  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  4 .bss          00000018  00058224  00058224  000001d7  2**2
+                  ALLOC
+  5 .debug_abbrev 00000094  00000000  00000000  000001d7  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_str    000000e6  00000000  00000000  0000026b  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_info   000000ea  00000000  00000000  00000351  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_line   00000175  00000000  00000000  0000043b  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  9 .debug_frame  00000034  00000000  00000000  000005b0  2**2
+                  CONTENTS, READONLY, DEBUGGING
+ 10 .debug_pubnames 00000028  00000000  00000000  000005e4  2**0
+                  CONTENTS, READONLY, DEBUGGING
+ 11 .debug_aranges 00000028  00000000  00000000  0000060c  2**0
+                  CONTENTS, READONLY, DEBUGGING
+Disassembly of section .text:
+
+00058100 <_premain>:
+   58100:	96          	im 22
+   58101:	84          	im 4
+   58102:	a4          	im 36
+
+00058103 <.clearloop>:
+   58103:	70          	loadsp 0
+   58104:	96          	im 22
+   58105:	84          	im 4
+   58106:	bc          	im 60
+   58107:	27          	ulessthanorequal
+   58108:	8e          	im 14
+   58109:	38          	neqbranch
+   5810a:	80          	im 0
+   5810b:	71          	loadsp 4
+   5810c:	70          	loadsp 0
+   5810d:	84          	im 4
+   5810e:	05          	add
+   5810f:	53          	storesp 12
+   58110:	0c          	store
+   58111:	0b          	nop
+   58112:	0b          	nop
+   58113:	96          	im 22
+   58114:	82          	im 2
+   58115:	83          	im 3
+   58116:	04          	poppc
+
+00058117 <.done>:
+   58117:	0b          	nop
+   58118:	0b          	nop
+   58119:	96          	im 22
+   5811a:	82          	im 2
+   5811b:	bf          	im 63
+   5811c:	51          	storesp 4
+   5811d:	87          	im 7
+   5811e:	3d          	pushspadd
+   5811f:	08          	load
+   58120:	96          	im 22
+   58121:	84          	im 4
+   58122:	b8          	im 56
+   58123:	0c          	store
+   58124:	86          	im 6
+   58125:	3d          	pushspadd
+   58126:	08          	load
+   58127:	96          	im 22
+   58128:	84          	im 4
+   58129:	b4          	im 52
+   5812a:	0c          	store
+   5812b:	85          	im 5
+   5812c:	3d          	pushspadd
+   5812d:	08          	load
+   5812e:	0b          	nop
+   5812f:	85          	im 5
+   58130:	3d          	pushspadd
+   58131:	08          	load
+   58132:	96          	im 22
+   58133:	82          	im 2
+   58134:	ea          	im -22
+   58135:	2d          	call
+   58136:	96          	im 22
+   58137:	84          	im 4
+   58138:	a4          	im 36
+   58139:	08          	load
+   5813a:	96          	im 22
+   5813b:	84          	im 4
+   5813c:	b4          	im 52
+   5813d:	08          	load
+   5813e:	0c          	store
+
+0005813f <.appret>:
+   5813f:	85          	im 5
+   58140:	3d          	pushspadd
+   58141:	0d          	popsp
+   58142:	04          	poppc
+
+00058143 <_syscall>:
+   58143:	3c          	syscall
+   58144:	04          	poppc
+
+00058145 <mytest>:
+   58145:	fe          	im -2
+   58146:	3d          	pushspadd
+   58147:	0d          	popsp
+   58148:	74          	loadsp 16
+   58149:	52          	storesp 8
+   5814a:	0b          	nop
+   5814b:	0b          	nop
+   5814c:	96          	im 22
+   5814d:	83          	im 3
+   5814e:	ac          	im 44
+   5814f:	51          	storesp 4
+   58150:	ea          	im -22
+   58151:	c0          	im -64
+   58152:	8d          	im 13
+   58153:	3f          	callpcrel
+   58154:	0b          	nop
+   58155:	0b          	nop
+   58156:	96          	im 22
+   58157:	84          	im 4
+   58158:	a0          	im 32
+   58159:	08          	load
+   5815a:	81          	im 1
+   5815b:	11          	addsp 4
+   5815c:	0b          	nop
+   5815d:	0b          	nop
+   5815e:	96          	im 22
+   5815f:	84          	im 4
+   58160:	a0          	im 32
+   58161:	0c          	store
+   58162:	96          	im 22
+   58163:	84          	im 4
+   58164:	a4          	im 36
+   58165:	0c          	store
+   58166:	84          	im 4
+   58167:	3d          	pushspadd
+   58168:	0d          	popsp
+   58169:	04          	poppc
+
+0005816a <app>:
+   5816a:	fd          	im -3
+   5816b:	3d          	pushspadd
+   5816c:	0d          	popsp
+   5816d:	75          	loadsp 20
+   5816e:	0b          	nop
+   5816f:	0b          	nop
+   58170:	96          	im 22
+   58171:	83          	im 3
+   58172:	c4          	im -60
+   58173:	52          	storesp 8
+   58174:	54          	storesp 16
+   58175:	ea          	im -22
+   58176:	bf          	im 63
+   58177:	e8          	im -24
+   58178:	3f          	callpcrel
+   58179:	76          	loadsp 24
+   5817a:	53          	storesp 12
+   5817b:	73          	loadsp 12
+   5817c:	52          	storesp 8
+   5817d:	0b          	nop
+   5817e:	0b          	nop
+   5817f:	96          	im 22
+   58180:	83          	im 3
+   58181:	d8          	im -40
+   58182:	51          	storesp 4
+   58183:	ea          	im -22
+   58184:	bf          	im 63
+   58185:	da          	im -38
+   58186:	3f          	callpcrel
+   58187:	73          	loadsp 12
+   58188:	51          	storesp 4
+   58189:	ff          	im -1
+   5818a:	ba          	im 58
+   5818b:	3f          	callpcrel
+   5818c:	96          	im 22
+   5818d:	84          	im 4
+   5818e:	b8          	im 56
+   5818f:	08          	load
+   58190:	84          	im 4
+   58191:	11          	addsp 4
+   58192:	08          	load
+   58193:	53          	storesp 12
+   58194:	54          	storesp 16
+   58195:	0b          	nop
+   58196:	0b          	nop
+   58197:	96          	im 22
+   58198:	83          	im 3
+   58199:	f8          	im -8
+   5819a:	51          	storesp 4
+   5819b:	ea          	im -22
+   5819c:	bf          	im 63
+   5819d:	c2          	im -62
+   5819e:	3f          	callpcrel
+   5819f:	81          	im 1
+   581a0:	aa          	im 42
+   581a1:	0b          	nop
+   581a2:	96          	im 22
+   581a3:	84          	im 4
+   581a4:	a4          	im 36
+   581a5:	0c          	store
+   581a6:	85          	im 5
+   581a7:	3d          	pushspadd
+   581a8:	0d          	popsp
+   581a9:	04          	poppc
+	...

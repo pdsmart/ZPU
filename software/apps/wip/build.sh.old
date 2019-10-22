@@ -1,0 +1,73 @@
+#!/bin/bash
+
+make clean
+make ZPUTA_BASEADDR=0x00000 ZPUTA_APPADDR=0x10000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x00000_0x10000
+mv bin bin.0x00000_0x10000
+
+make clean
+make ZPUTA_BASEADDR=0x01000 ZPUTA_APPADDR=0x10000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x01000_0x10000
+mv bin bin.0x01000_0x10000
+
+make clean
+make ZPUTA_BASEADDR=0x02000 ZPUTA_APPADDR=0x10000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x02000_0x10000
+mv bin bin.0x02000_0x10000
+
+make clean
+make ZPUTA_BASEADDR=0x40000 ZPUTA_APPADDR=0x50000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x40000_0x50000
+mv bin bin.0x40000_0x50000
+
+make clean
+make ZPUTA_BASEADDR=0x01000 ZPUTA_APPADDR=0x0B000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x01000_0x0B000
+mv bin bin.0x01000_0x0B000
+
+make clean
+make ZPUTA_BASEADDR=0x01000 ZPUTA_APPADDR=0x0C000
+if [ $? != 0 ]; then
+	echo "Aborting, failed to build!"
+	exit 1
+fi
+mkdir -p bin
+rm -f bin/*
+make install
+rm -fr bin.0x01000_0x0C000
+mv bin bin.0x01000_0x0C000

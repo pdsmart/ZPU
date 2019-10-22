@@ -1,0 +1,237 @@
+#########################################################################################################
+##
+## Name:            Makefile.inc
+## Created:         July 2019
+## Author(s):       Philip Smart
+## Description:     App Makefile common rules - Build an App for the ZPU Test Application (zputa)
+##                  This include file adds most of the rules to build an app which is stored on an SD card
+##                  and called by the ZPUTA test application. The app generally is for testing some component
+##                  where the code is not built into ZPUTA or memory restrictions prohibit it being built in.
+##
+## Credits:         
+## Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
+##
+## History:         July 2019   - Initial Makefile.inc created for template use.
+##
+## Notes:           Optional component enables:
+##                  USELOADB              - The Byte write command is implemented in hw#sw so use it.
+##                  USE_BOOT_ROM          - The target is ROM so dont use initialised data.
+##                  MINIMUM_FUNTIONALITY  - Minimise functionality to limit code size.
+##                  COREMARK_TEST         - Add the CoreMark test suite.
+##                  DHYRSTONE_TEST        - Add the Dhrystone test suite.
+##                  USE_SDCARD            - Add the SDCard logic.
+##
+#########################################################################################################
+## This source file is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This source file is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#########################################################################################################
+BASE	       = zpu-elf
+CC             = $(BASE)-gcc
+LD             = $(BASE)-gcc
+AS             = $(BASE)-as
+CP             = $(BASE)-objcopy
+DUMP           = $(BASE)-objdump
+
+# APP_NAME, APP_DIR and BASEDIR defined in calling Makefile
+
+# Addresses where the ZPUTA base program loads and where apps load and execute.
+# With IOCP
+#ZPUTA_BASEADDR = 0x02000
+#ZPUTA_APPADDR  = 0x50000
+# Standalone
+ifeq ($(ZPUTA_BASEADDR),)
+ZPUTA_BASEADDR = 0x001000
+endif
+ifeq ($(ZPUTA_APPADDR),)
+ZPUTA_APPADDR  = 0x00C000
+endif
+
+SWDIR          = $(BASEDIR)/software
+ROMGEN         = $(SWDIR)/utils/zpugen
+IOCPDIR        = $(SWDIR)/iocp
+ZPUTADIR       = $(SWDIR)/zputa
+
+# we use mincrt0.s from here
+STARTUP_DIR    = $(SWDIR)/startup
+
+# we fetch RAM prologue / epilogue from here
+RTL_DIR        = $(BASEDIR)/devices/sysbus/BRAM
+
+# we use printf from here
+COMMON_DIR     = $(SWDIR)/common
+FATFS_DIR      = $(SWDIR)/common/FatFS
+#PFS_DIR        = $(SWDIR)/common/PetitFS
+INCLUDE_DIR    = $(SWDIR)/include
+
+# Linker mapping file spec file.
+LINKMAPAPP     = $(STARTUP_DIR)/app_standalone_${ZPUTA_BASEADDR}_${ZPUTA_APPADDR}.ld
+
+# Working directory to build object files.
+BUILD_DIR      = $(APP_NAME)_obj
+
+# Startup code.
+MINSTARTUP_SRC = $(STARTUP_DIR)/appcrt0.s
+MINSTARTUP_OBJ = $(patsubst $(STARTUP_DIR)/%.s,$(BUILD_DIR)/%.o,$(MINSTARTUP_SRC))
+
+# Common modules needed for this app.
+COMMON_SRC     = $(COMMON_DIR)/syscalls.c $(COMMON_DIR)/malloc.c
+#COMMON_SRC    = $(COMMON_DIR)/syscalls.c $(COMMON_DIR)/malloc.c $(COMMON_DIR)/tools.c #$(COMMON_DIR)/utils.c
+COMMON_OBJ     = $(patsubst $(COMMON_DIR)/%.c,$(BUILD_DIR)/%.o,$(COMMON_SRC))
+
+MAIN_PRJ_APP   = $(APP_NAME)
+MAIN_SRC       = $(APP_NAME).c
+MAIN_OBJ      += $(COMMON_OBJ) $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_SRC))
+
+# Commandline options for each tool.
+
+#ZPUOPTS       = -mno-poppcrel -mno-pushspadd -mno-callpcrel -mno-byteop -mno-shortop -mno-neg -mno-div -mno-mod # No-neg requires bugfixed toolchain
+#ZPUOPTS       = -mmult -mno-neg -mno-mod # No-neg requires bugfixed toolchain
+ZPUOPTS        = -mmult \
+		         -mdiv \
+		         -mmod \
+		         -mneg \
+		         -mloadsp \
+		         -mstoresp \
+		         -mpushspadd \
+		         -mneqbranch \
+		         -maddsp \
+		         -mashiftrt \
+		         -mashiftl \
+		         -mlshiftrt \
+		         -mcall \
+		         -mcallpcrel \
+	 	         -mshortop \
+	 	         -mbyteop \
+	 	         -meq \
+	 	         -mcompare \
+	 	         -mpoppcrel \
+	 	         -mmemreg
+#CFLAGS       += -I. -I$(INCLUDE_DIR) -I$(COMMON_DIR)/.  -c -Os $(ZPUOPTS) -DPRINTF_HEX_ONLY -DDISABLE_PRINTF # -DDISABLE_UART_TX -DDISABLE_UART_RX
+CFLAGS        += -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -O3 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
+#CFLAGS       += -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -c -O1 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU
+# Enable debug output.
+OFLAGS        += -DDEBUG
+# Assume loadb as implemented in hardware or software (time penalty).
+OFLAGS        += -DUSELOADB
+# Dont allow an initialised DATA segment so binary can be located in ROM.
+      #OFLAGS += -DUSE_BOOT_ROM
+# Remove functionality to create a minimal system for limited space.
+      #OFLAGS += -DMINIMUM_FUNCTIONALITY
+# Enable SD Card functionality
+OFLAGS        += -DUSE_SDCARD
+FLAGS_STR      = -DFLAGS_STR="$(CFLAGS)"
+LFLAGS         = -nostartfiles -Wl,--gc-sections -Wl,--relax -Os -Wl,--defsym=ZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -Wl,--defsym=ZPUTA_APPADDR=$(ZPUTA_APPADDR)
+#
+# Assembler flags.
+ASFLAGS        = -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -I$(STARTUP_DIR) --defsym ZPUTA_BASEADDR=$(ZPUTA_BASEADDR) --defsym ZPUTA_APPADDR=$(ZPUTA_APPADDR)
+#
+
+# Our target.
+all: $(BUILD_DIR) $(MAIN_PRJ_APP).zpu $(MAIN_PRJ_APP).srec $(MAIN_PRJ_APP).rpt $(MAIN_PRJ_APP).lss $(MAIN_PRJ_APP).dmp $(ROMGEN)
+
+clean:
+	rm -f $(BUILD_DIR)/*.o *.hex *.lss *.elf *.map *.lst *.srec $(MAIN_PRJ_APP).zpu *~ */*.o *.bin *.srec *.dmp *.vhd *.rpt
+
+install:
+	@cp $(MAIN_PRJ_APP).zpu $(APP_DIR)/bin/
+
+# Convert ELF binary to bin file.
+%.bin: %.elf
+	@$(CP) -O binary $< $@
+
+# Convert ELF binary to app file.
+%.zpu: %.elf
+	@$(CP) -O binary $< $@
+
+# Convert ELF to srec format for serial upload.
+%.srec: %.elf
+	@$(CP) -O srec $< $@
+
+%.rpt: %.elf
+	@echo ""
+	@echo >$@ -n  "Start of code:\t"
+	@$(DUMP) -x $< | grep >>$@ _ramstart
+	@echo >>$@ -n "  BOOT start:\t"
+	@$(DUMP) -x $< | grep  >>$@ __boot_start__
+	@echo >>$@ -n "       end:  \t"	
+	@$(DUMP) -x $< | grep >>$@ __boot_end__
+	@echo >>$@ -n "  TEXT start:\t"
+	@$(DUMP) -x $< | grep  >>$@ __text_start__
+	@echo >>$@ -n "       end:  \t"
+	@$(DUMP) -x $< | grep >>$@ __text_end__
+	@echo >>$@ -n "  RODATA start:\t"
+	@$(DUMP) -x $< | grep  >>$@ __rodata_start__
+	@echo >>$@ -n "         end:  \t"
+	@$(DUMP) -x $< | grep >>$@ __rodata_end__
+	@echo >>$@ -n "End of code:\t"
+	@$(DUMP) -x $< | grep >>$@ _ramend
+	@echo >>$@ -n  "Start of data:\t"
+	@$(DUMP) -x $< | grep >>$@ _datastart
+	@echo >>$@ -n "  DATA start: \t"
+	@$(DUMP) -x $< | grep  >>$@ __data_start__
+	@echo >>$@ -n "       end:   \t"
+	@$(DUMP) -x $< | grep >>$@ __data_end__
+	@echo >>$@ -n "  BSS start:  \t"
+	@$(DUMP) -x $< | grep  >>$@ __bss_start__
+	@echo >>$@ -n "      end:    \t"
+	@$(DUMP) -x $< | grep >>$@ __bss_end__
+	@echo >>$@ -n "End of data:\t"
+	@$(DUMP) -x $< | grep >>$@ _dataend
+	@cat $@
+
+%.dmp: %.elf
+	@$(DUMP) -x $< >>$@
+
+# Create extended listing file from ELF output file.
+# testing: option -C
+%.lss: %.elf
+	@echo
+	@$(DUMP) -h -S -C $< > $@
+
+$(ROMGEN): $(SWDIR)/utils/zpugen.c
+	gcc -o $(SWDIR)/utils/zpugen $(SWDIR)/utils/zpugen.c
+
+# Link - this produces an ELF binary.
+
+$(MAIN_PRJ_APP).elf: $(MINSTARTUP_OBJ) $(MAIN_OBJ)
+	$(LD) $(LFLAGS) -T $(LINKMAPAPP) -o $@ $+ $(LIBS)
+
+$(BUILD_DIR)/%.o: %.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
+
+$(BUILD_DIR)/%.o: %.cpp Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
+
+$(BUILD_DIR)/%.o: $(COMMON_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
+
+$(BUILD_DIR)/%.o: $(FATFS_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
+
+$(BUILD_DIR)/%.o: $(PFS_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS)  -o $@ -c $<
+
+$(BUILD_DIR)/%.o: %.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+$(BUILD_DIR)/%.o: $(STARTUP_DIR)/%.s
+	$(AS) $(ASFLAGS) -o $@ $<
+
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR)
+
+$(BUILD_DIR)/%.o: $(DHRY_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
+
+$(BUILD_DIR)/%.o: $(CORE_DIR)/%.c Makefile
+	$(CC) $(CFLAGS) $(OFLAGS) $(FLAGS_STR) -o $@ -c $<

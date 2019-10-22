@@ -1,0 +1,90 @@
+	.file	"ramcrt0.s"
+
+	.section ".fixed_vectors","a"
+
+	.macro fixedim value
+			im \value
+	.endm
+
+	.macro  jmp address
+			fixedim \address
+			poppc
+	.endm
+
+	.macro fast_neg
+	not
+	im 1
+	add
+	.endm
+
+    ; Define the location where the pointer to the interrupt handler is stored.
+    .global _inthandler_fptr
+    .set _inthandler_fptr, 0x00000400
+
+	.global _start
+_start:
+	im _break
+	nop
+	fixedim _premain
+	poppc
+
+	.global _break;
+_break:
+	breakpoint
+	im	_break
+	poppc ; infinite loop
+
+	.global _boot
+_boot:
+	im -1
+	popsp ;	Reset stack to 0x....ffff
+	im 0
+	poppc ; and jump to 0
+
+; Define weak linkage for _premain, so that it can be overridden
+	.section ".text","ax"
+	.weak _premain
+_premain:
+	;	clear BSS data, then call main.
+
+	im __bss_start__	; bssptr
+.clearloop:
+	loadsp 0			; bssptr bssptr 
+	im __bss_end__		; __bss_end__  bssptr bssptr
+	ulessthanorequal	; (bssptr<=__bss_end__?) bssptr
+	impcrel .done		; &.done (bssptr<=__bss_end__?) bssptr
+	neqbranch			; bssptr
+	im 0				; 0 bssptr
+	loadsp 4			; bssptr 0 bssptr
+	loadsp 0			; bssptr bssptr 0 bssptr
+	im 4				; 4 bssptr bssptr 0 bssptr
+	add					; bssptr+4 bssptr 0 bssptr
+	storesp 12			; bssptr 0 bssptr+4
+	store				; (write 0->bssptr)  bssptr+4
+	im .clearloop		; &.clearloop bssptr+4
+	poppc				; bssptr+4
+.done:
+	im _break			; &_break bssptr+4
+	storesp 4			; &_break
+	im main				; &main &break
+	poppc				; &break
+	
+
+	.section ".rodata"
+	.balign 4,0
+_mask:
+	.long 0x00ffffff
+	.long 0xff00ffff
+	.long 0xffff00ff
+	.long 0xffffff00
+
+	.section ".bss"
+    .balign 4,0
+	.globl _memreg
+_memreg:
+		.long 0
+		.long 0
+		.long 0
+		.long 0
+
+
