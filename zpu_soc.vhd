@@ -89,7 +89,7 @@ entity zpu_soc is
         IOCTL_DIN                 : in    std_logic_vector(31 downto 0);              -- Data to be read into HPS.
 
         -- SDRAM signals
-        SDRAM_CLK                 : out   std_logic;                                  -- sdram is accessed at 128MHz
+        SDRAM_CLK                 : out   std_logic;                                  -- sdram is accessed at 100MHz
         SDRAM_CKE                 : out   std_logic;                                  -- clock enable.
         SDRAM_DQ                  : inout std_logic_vector(15 downto 0);              -- 16 bit bidirectional data bus
         SDRAM_ADDR                : out   std_logic_vector(12 downto 0);              -- 13 bit multiplexed address bus
@@ -244,7 +244,6 @@ architecture rtl of zpu_soc is
     signal IO_WAIT_INTR           :       std_logic;
     signal IO_WAIT_TIMER1         :       std_logic;
     signal IO_WAIT_IOCTL          :       std_logic;
---    signal MEM_WAIT               :       std_logic;
     signal MEM_DATA_READ          :       std_logic_vector(WORD_32BIT_RANGE);
     signal MEM_DATA_WRITE         :       std_logic_vector(WORD_32BIT_RANGE);
     signal MEM_ADDR               :       std_logic_vector(ADDR_BIT_RANGE);
@@ -762,8 +761,6 @@ begin
                                  else
                                  '1'                  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1' and MEM_READ_ENABLE = '1'
                                  else
---                                 '1' when MEM_WAIT = '1'
---                                 else
                                  '0';
 
     -- Select CPU input source, memory or IO.
@@ -1740,34 +1737,6 @@ begin
 
     -- SDRAM over WishBone bus.
     ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB_SDRAM = true generate
---        ZPUSDRAM : sdram_v
---            port map (
---                -- interface to the MT48LC16M16 chip
---                sd_clk           => SYSCLK,           -- sdram is accessed at 128MHz
---                sd_rst           => not RESET_n,      -- reset the sdram controller.
---                sd_cke           => SDRAM_CKE,        -- clock enable.
---                sd_dq            => SDRAM_DQ,         -- 16 bit bidirectional data bus
---                sd_addr          => SDRAM_ADDR,       -- 13 bit multiplexed address bus
---                sd_dqm           => SDRAM_DQM,        -- two byte masks
---                sd_ba            => SDRAM_BA,         -- two banks
---                sd_cs_n          => SDRAM_CS_n,       -- a single chip select
---                sd_we_n          => SDRAM_WE_n,       -- write enable
---                sd_ras_n         => SDRAM_RAS_n,      -- row address select
---                sd_cas_n         => SDRAM_CAS_n,      -- columns address select
---                sd_ready         => SDRAM_READY,      -- sd ready.
---
---                -- cpu/chipset interface
---                wb_clk           => WB_CLK_I,         -- 32MHz chipset clock to which sdram state machine is synchonized    
---                wb_dat_i         => WB_DAT_O,         -- data input from chipset/cpu
---                wb_dat_o         => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
---                wb_ack           => WB_SDRAM_ACK, 
---                wb_adr           => WB_ADR_O(23 downto 0), -- lower 2 bits are ignored.
---                wb_sel           => WB_SEL_O,         -- 
---                wb_cti           => "010",            -- cycle type. 
---                wb_stb           => WB_SDRAM_STB,     --
---                wb_cyc           => WB_CYC_O,         -- cpu/chipset requests cycle
---                wb_we            => RAM_WREN          -- cpu/chipset requests write
---            );
 
         ZPUSDRAM : entity work.SDRAM
             port map (
