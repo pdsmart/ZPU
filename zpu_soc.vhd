@@ -3,9 +3,9 @@
 -- Name:            zpu_soc.vhd
 -- Created:         January 2019
 -- Author(s):       Philip Smart
--- Description:     Sharp MZ series compatible logic IO Processor.
+-- Description:     ZPU System On a Chip
 --                                                     
---                  This module contains the embedded IO processor for the SharpMZ series emulation.
+--                  This module contains the System on a Chip definition for the ZPU.
 --
 -- Credits:         
 -- Copyright:       (c) 2018 Philip Smart <philip.smart@net2net.org>
