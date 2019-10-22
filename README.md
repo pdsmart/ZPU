@@ -167,9 +167,8 @@ Where I have used or based any component on a 3rd parties design I have included
 
 ## Links
 
-1: https://github.com/zylin/zpu	                            "Original Zylin ZPU repository"
-2: https://github.com/zylin/zpugcc                          "Original Zylin GCC v3.4.2 toolchain"
-3: https://github.com/robinsonb5/ZPUFlex                    "Flex ZPU repository"
-4: http://papilio.cc/index.php?n=Papilio.ZPUinoIntroduction "ZPUino and Eco System"
-5: https://en.wikipedia.org/wiki/ZPU_(microprocessor)       "Wikipedia ZPU Reference"
-
+1: https://github.com/zylin/zpu	                            "Original Zylin ZPU repository"<br/>
+2: https://github.com/zylin/zpugcc                          "Original Zylin GCC v3.4.2 toolchain"<br/>
+3: https://github.com/robinsonb5/ZPUFlex                    "Flex ZPU repository"<br/>
+4: http://papilio.cc/index.php?n=Papilio.ZPUinoIntroduction "ZPUino and Eco System"<br/>
+5: https://en.wikipedia.org/wiki/ZPU_(microprocessor)       "Wikipedia ZPU Reference"<br/>
