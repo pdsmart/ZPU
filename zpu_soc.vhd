@@ -1741,7 +1741,7 @@ begin
         ZPUSDRAM : entity work.SDRAM
             port map (
                 -- SDRAM Interface
-                SD_CLK           => SYSCLK,           -- sdram is accessed at 128MHz
+                SD_CLK           => SYSCLK,           -- sdram is accessed at 100MHz
                 SD_RST           => not RESET_n,      -- reset the sdram controller.
                 SD_CKE           => SDRAM_CKE,        -- clock enable.
                 SD_DQ            => SDRAM_DQ,         -- 16 bit bidirectional data bus
@@ -1755,7 +1755,7 @@ begin
                 SD_READY         => SDRAM_READY,      -- sd ready.
 
                 -- WishBone interface.
-                WB_CLK           => WB_CLK_I,         -- 32MHz chipset clock to which sdram state machine is synchonized    
+                WB_CLK           => WB_CLK_I,         -- 100MHz chipset clock to which sdram state machine is synchonized    
                 WB_DAT_I         => WB_DAT_O,         -- data input from chipset/cpu
                 WB_DAT_O         => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
                 WB_ACK_O         => WB_SDRAM_ACK, 
@@ -1773,7 +1773,7 @@ begin
 --            )        
 --            port map (
 --                -- WishBone interface.
---                WB_CLK_I         => WB_CLK_I,         -- 32MHz chipset clock to which sdram state machine is synchonized    
+--                WB_CLK_I         => WB_CLK_I,         -- 100MHz chipset clock to which sdram state machine is synchonized    
 --                WB_RST_I         => not RESET_n,      -- high active sync reset
 --                WB_DATA_I        => WB_DAT_O,         -- data input from chipset/cpu
 --                WB_DATA_O        => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
@@ -1784,7 +1784,7 @@ begin
 --                WB_STB_I         => WB_SDRAM_STB, 
 --                WB_CYC_I         => WB_CYC_O,         -- cpu/chipset requests cycle
 --                WB_WE_I          => RAM_WREN,         -- cpu/chipset requests write   
---                WB_TGC_I         => "0000000", -- cycle tag
+--                WB_TGC_I         => "0000000",        -- cycle tag
 --                WB_HALT_O        => open,
 --                WB_ERR_O         => open
 --            );
