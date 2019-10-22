@@ -1,0 +1,4 @@
+*.vhd linguist-detectable=true
+*.c linguist-detectable=true
+*.sh linguist-detectable=true
+*.pl linguist-detectable=true
