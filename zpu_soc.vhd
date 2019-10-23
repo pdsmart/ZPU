@@ -4,8 +4,13 @@
 -- Created:         January 2019
 -- Author(s):       Philip Smart
 -- Description:     ZPU System On a Chip
---                                                     
 --                  This module contains the System on a Chip definition for the ZPU.
+--                  Itś purpose is to provide a functional eco-system around the ZPU to actually perform
+--                  real tasks. As a basic, boot and stack RAM, UART I/O and Timers are needed to at least
+--                  present a monitor via UART for interaction. Upon this can be added an SD card for
+--                  disk storage using the Fat FileSystem, SPI etc. Also, as the Wishbone interface is
+--                  used in the Evo CPU, any number of 3rd party device IP Cores can be added relatively
+--                  easily.
 --
 -- Credits:         
 -- Copyright:       (c) 2018 Philip Smart <philip.smart@net2net.org>
@@ -530,7 +535,8 @@ begin
                 INT_REQ              => INT_TRIGGER,
                 INT_ACK              => INT_ACK,                -- Interrupt acknowledge, ZPU has entered Interrupt Service Routine.
                 INT_DONE             => INT_DONE,               -- Interrupt service routine completed/done.
-                BREAK                => open,
+                BREAK                => open,                   -- A break instruction encountered.
+                CONTINUE             => '1',                    -- When break activated, processing stops. Setting CONTINUE to logic 1 resumes processing with next instruction.
                 DEBUG_TXD            => UART2_TX                -- Debug serial output.
             );
     end generate;
@@ -613,7 +619,8 @@ begin
                 INT_REQ              => INT_TRIGGER,
                 INT_ACK              => INT_ACK,                -- Interrupt acknowledge, ZPU has entered Interrupt Service Routine.
                 INT_DONE             => INT_DONE,               -- Interrupt service routine completed/done.
-                BREAK                => open,
+                BREAK                => open,                   -- A break instruction encountered.
+                CONTINUE             => '1',                    -- When break activated, processing stops. Setting CONTINUE to logic 1 resumes processing with next instruction.
                 DEBUG_TXD            => UART2_TX                -- Debug serial output.
             );
     end generate;
@@ -647,34 +654,6 @@ begin
                 memBRead             => BRAM_DATA_READ
             );
     end generate;
---    ZPUDPROMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_INSN_BRAM = true and SOC_IMPL_BRAM = true generate
---        ZPUROM : entity work.BootROM
---            port map (
---                clk                  => MEMCLK,
---                memAWriteEnable      => BRAM_WREN,
---                memAAddr             => MEM_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
---                memAWrite            => MEM_DATA_WRITE,
---                memBWriteEnable      => '0',
---                memBAddr             => MEM_ADDR_INSN(ADDR_BIT_BRAM_32BIT_RANGE),
---                memBWrite            => (others => '0'),
---                memARead             => BRAM_DATA_READ,
---                memBRead             => MEM_DATA_READ_INSN
---            );
---    end generate;
---    ZPUROMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_INSN_BRAM = false and SOC_IMPL_BRAM = true generate
---        ZPUROM : entity work.BootROM
---            port map (
---                clk                  => MEMCLK,
---                memAWriteEnable      => BRAM_WREN,
---                memAAddr             => MEM_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
---                memAWrite            => MEM_DATA_WRITE,
---                memBWriteEnable      => '0',
---                memBAddr             => (others => 'X'),
---                memBWrite            => (others => 'X'),
---                memARead             => BRAM_DATA_READ,
---                memBRead             => open
---            );
---    end generate;
 
     -- Evo system BRAM, dual port to allow for seperate instruction bus read.
     ZPUDPBRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_INSN_BRAM = true and SOC_IMPL_BRAM = true generate

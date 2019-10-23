@@ -2,10 +2,8 @@
 --
 -- Name:            uart.vhd
 -- Created:         January 2019
--- Author(s):       Philip Smart (based on the simplistic UART 
--- Description:     ZPU SOC IOCTL Interface to an Emulator (Sharp MZ series).
---                  This module interfaces the ZPU IO processor to the Emulator IO Control backdoor
---                  for updating ROM/RAM, OSD and providing IO services.
+-- Author(s):       Philip Smart
+-- Description:     A simplistic UART fixed at 8N1 but with configurable baud rate and RX/TX Fifoś.
 -- Credits:         Originally using the simplistic UART as a guide, which was written by the following
 --                  authors:-
 --                  Philippe Carton, philippe.carton2 libertysurf.fr

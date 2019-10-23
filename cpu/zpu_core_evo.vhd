@@ -34,14 +34,20 @@
 -- are those of the authors and should not be interpreted as representing
 -- official policies, either expressed or implied, of the ZPU Project.
 --
--- History:
---    v0.1 Initial version created by merging items of the Small, Medium and Flex versions.
---  181230
---    v0.5 Working with Instruction, Emulation or No Cache with or without seperate instruction
---  190328 bus. Runs numerous tests and output same as the Medium CPU. One small issue is running
+-- Evo History:
+--  181230 v0.1 Initial version created by merging items of the Small, Medium and Flex versions.
+--  190328 v0.5 Working with Instruction, Emulation or No Cache with or without seperate instruction
+--         bus. Runs numerous tests and output same as the Medium CPU. One small issue is running
 --         without an instruction bus and instruction/emulation cache enabled, the DMIPS value is lower
 --         that just with instruction bus or emulation bus, seems some clash which reuults in waits states
 --         slowing the CPU down.
+--  191021 v1.0 First release. All variations tested but more work needed on the SDRAM controller to
+--         make use of burst mode in order to populate the L2 cache in fewer cycles.
+--         Additional instructions need to be added back in after test and verification, albeit some
+--         which are sepcific to the Sharp Emulator should be skipped.
+--         Additional effort needs spending on the Wishbone Error signal to retry the bus transaction,
+--         currently it just aborts it which is not ideal.
+--         
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -50,8 +56,12 @@ use ieee.numeric_std.all;
 library work;
 use work.zpu_pkg.all;
 
-
+--------------------------------------------------------------------------------------------------------------------------------------------
+-- ZPU Evo Signal Description.
+--------------------------------------------------------------------------------------------------------------------------------------------
+--
 -- Main Memory/IO Bus.
+-- -------------------
 -- This bus is used to access all external memory and IO, it can also, via configuration, be used to read instructions from attahed memory.
 --
 -- MEM_WRITE_ENABLE     - set to '1' for a single cycle to send off a write request.
@@ -69,7 +79,49 @@ use work.zpu_pkg.all;
 --                        MEM_READ_ENABLE='1' for a single cycle.
 -- MEM_DATA_OUT         - data to write
 --
+-- Wishbone Bus B4 Specification
+-- -----------------------------
+-- This bus is the industry standard for FPGA IP designs and the one primarily used in OpenCores. In this implementation it is
+-- 32bit wide using a Master/Multi-Slave configuration with the ZPU acting as Master. It is a compile time configurable extension as
+-- some uses of the ZPU Evo wont need it and thus saves fabric area. The description below is taken from the OpenCores Wishbone B4 
+-- specification.
+--
+-- WB_CLK_I             - The clock input [WB_CLK_I] coordinates all activities for the internal logic within the WISHBONE interconnect.
+--                      - All WISHBONE output signals are registered at the rising edge of [WB_CLK_I]. All WISHBONE input signals are
+--                      - stable before the rising edge of [WB_CLK_I].
+-- WB_RST_I             - The reset input [WB_RST_I] forces the WISHBONE interface to restart. In this design,  this signal is tied to the
+--                      - ZPU reset via an OR mechanism, forcing the ZPU to reset if activated.
+-- WB_ACK_I             - The acknowledge input [WB_ACK_I], when asserted, indicates the normal termination of a bus cycle.
+-- WB_DAT_I             - The data input array [WB_DAT_I] is used to pass binary data. The array boundaries are determined by the port size,
+--                      - with a port size of 32-bits in this design.
+-- WB_DAT_O             - The data output array [DAT_O()] is used to pass binary data. The array boundaries are determined by the port size,
+--                      - with a port size of 32-bits in this design.
+-- WB_ADR_O             - The address output array [WB_ADR_O] is used to pass a binary address. The higher array boundary is specific to the
+--                      - address width of the core, and the lower array boundary is determined by the data port size and granularity.
+--                      - This design is 32bit so WB_ADR[1:0] specify the byte level granularity.
+-- WB_CYC_O             - The cycle output [WB_CYC_O], when asserted, indicates that a valid bus cycle is in progress. The signal is asserted
+--                      - for the duration of all bus cycles.
+-- WB_STB_O             - The strobe output [WB_STB_O] indicates a valid data transfer cycle. It is used to qualify various other signals on
+--                      - the interface such as [WB_SEL_O]. The SLAVE asserts either the [WB_ACK_I], [WB_ERR_I] or [WB_RTY_I] signals in
+--                      - response to every assertion of the [WB_STB_O] signal.
+-- WB_CTI_O             - The Cycle Type Idenfier [WB_CTI_O] Address Tag provides additional information about the current cycle. The MASTER
+--                      - sends this information to the SLAVE. The SLAVE can use this information to prepare the response for the next cycle.
+-- WB_WE_O              - The write enable output [WB_WE_O] indicates whether the current local bus cycle is a READ or WRITE cycle. The
+--                      - signal is negated during READ cycles, and is asserted during WRITE cycles.
+-- WB_SEL_O             - The select output array [WB_SEL_O] indicates where valid data is expected on the [WB_DAT_I] signal array during
+--                      - READ cycles, and where it is placed on the [WB_DAT_O] signal array during WRITE cycles. The array boundaries are
+--                      - determined by the granularity of a port which is 32bit in this design leading to a WB_SEL_O width of 4 bits, 1
+--                      - bit to represent each byte. ie. WB_SEL_O[3] = MSB, WB_SEL_O[0] = LSB.
+-- WB_HALT_I            - 
+-- WB_ERR_I             - The error input [WB_ERR_I] indicates an abnormal cycle termination. The source of the error, and the response
+--                      - generated by the MASTER is defined by the IP core supplier, in this case the intention (NYI) is to retry
+--                      - the transaction.
+-- WB_INTA_I            - A non standard signal to allow a wishbone device to interrupt the ZPU when set to logic '1'. The interrupt is
+--                      - registered on the next rising edge.
+--
+--
 -- Instruction Memory Bus
+-- ----------------------
 -- This bus is used for dedicated faster response read only memory containing the code to be run. Using this bus results in faster
 -- CPU performance. If this bus is not used/disabled, all instructions will be fetched via the main bus.
 --
@@ -445,7 +497,7 @@ architecture behave of zpu_core_evo is
     signal mxMemVal                        : WordRecord;                     -- Direct memory read result.
     signal mxHoldCycles                    : integer range 0 to 3;           -- Cycles to hold and extend memory transactions.
     
-    -- Debugging.
+    -- Hardware Debugging.
     --
     signal debugPC                         : unsigned(ADDR_BIT_RANGE);       -- Debug PC for reading L1, L2 and memory for debugger output.
     signal debugPC_StartAddr               : unsigned(ADDR_BIT_RANGE);       -- Start address for dump of memory contents.
@@ -478,7 +530,8 @@ begin
     ---------------------------------------------
     
     -- Level 2 cache is instantiated rather than inferred. In Altera, numerous attempts failed at describing a cache with 1 write and 2 reads for inferrence
-    -- hence resorting to instantiating a defined IP component.
+    -- hence resorting to instantiating a defined IP component. 
+    -- NB TODO: This needs to be split into a byte addressable IP so that L2 Cache Write Thru can work at byte/half-word level to increase througput.
     CACHEL2 : dpram
         generic map (
             init_file                      => "",
@@ -544,10 +597,10 @@ begin
     -- Memory transaction processor MXP.
     ------------------------------------
     -- The mxp localises all memory/io operations into a single process. This aids in adaptation to differing bus topolgies as only this process
-    -- needs updating (the local INSN bus uses BRAM so direct connection). This logic processes a queue of transactions in fifo order and fetches instructions
-    -- as required.. The processor unit commits requests to the queue and this logic fulfills them. If the CPU is only using one bus for all memory and IO
-    -- operations then memory transactions in the queue are completed before instruction fetches. If the instruction queue is empty then the processor will
-    -- stall until instructions are fetched.
+    -- needs updating (the local INSN bus uses a direct BRAM/ROM connection and bypasses the MXP). This logic processes a queue of transactions in fifo
+    -- order and fetches instructions as required.. The processor unit commits requests to the queue and this logic fulfills them. If the CPU is only
+    -- using one bus for all memory and IO operations then memory transactions in the queue are completed before instruction fetches. If the instruction
+    -- queue is empty then the processor will stall until instructions are fetched.
     --
     MEMXACT: process(CLK, ZPURESET, TOS, NOS, debugState)
     begin
@@ -625,7 +678,7 @@ begin
                 WB_STB_O                                     <= '0';
             end if;
 
--- WB_ERR_I needs handling. 
+            -- TODO: WB_ERR_I needs better handling, should retry at least once and then issue a BREAK.
             if IMPL_USE_WB_BUS = true and WB_ERR_I = '1' then
                 wbXactActive                                 <= '0';
                 WB_CYC_O                                     <= '0';
@@ -1131,12 +1184,8 @@ begin
                     cacheL2StartAddr                            <= cacheL2StartAddr + 16;
                 end if;
 
-                --    if pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE) and (pc(ADDR_32BIT_RANGE) - cacheL2FetchIdx(ADDR_32BIT_RANGE)) < 256 and cacheL2Full = '1' then
-                --    cacheL2StartAddr                            <= cacheL2StartAddr + 256;
-                --    end if;
-
                 -- If the PC goes out of scope of L2 data, reset and start fetching a fresh from the current PC address.
-                if cacheL2Invalid = '1' then --pc(ADDR_32BIT_RANGE) < cacheL2StartAddr(ADDR_32BIT_RANGE) or ((pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE))) then -- and (pc(ADDR_32BIT_RANGE) - cacheL2FetchIdx(ADDR_32BIT_RANGE)) >= 256) then
+                if cacheL2Invalid = '1' then
                     cacheL2FetchIdx                             <= pc(ADDR_32BIT_RANGE) & "00";
                     cacheL2StartAddr                            <= pc(ADDR_32BIT_RANGE) & "00";
                     cacheL2Write                                <= '0';
@@ -1144,10 +1193,6 @@ begin
                     if (mxFifoWriteIdx - mxFifoReadIdx) = 0 and (mxState = MemXact_Idle or mxState = MemXact_OpcodeFetch) then
                         mxState                                 <= MemXact_Idle;
                     end if;
-                end if;
-
-                -- Do nothing if PC overshoots data we have fetched upto threshold, takes longer to reset and reread and then we waste potential instructions that will be jumped back to.
-                if pc(ADDR_32BIT_RANGE) >= cacheL2FetchIdx(ADDR_32BIT_RANGE) and (pc(ADDR_32BIT_RANGE) - cacheL2FetchIdx(ADDR_32BIT_RANGE)) < 512 then
                 end if;
             end if;
         end if;
@@ -1358,9 +1403,9 @@ begin
                         l1State                                                         <= State_PreSetAddr;
                 end case;
 
-            -- If there is only a set number of instructions remaining in the cache then we need to creeep the start address forward. 
-            -- We do this to ensure as many past instructions are available for backward jumps which are most common in C. Adjust the threshold
-            -- if forward jumps are more common.
+            -- If there is only a set number of instructions remaining in the cache then we need to creep the start address forward so that
+            -- more instructions are fetched and decoded. We do this to ensure as many past instructions are available for backward jumps which
+            -- are most common in C. Adjust the threshold if forward jumps are more common.
             elsif cacheL1InsnAfterPC < 8 and cacheL1Full = '1' then
                 cacheL1StartAddr                                                        <= cacheL1StartAddr + 8;
             end if;
@@ -1724,10 +1769,11 @@ begin
                                                     debugRec.STACK_NOS                  <= std_logic_vector(muxNOS.word);
                                                     debugLoad                           <= '1';
                                                 end if;
---
--- USE cacheL1InsnAfterPC in this loop to preserve logic.
--- Same for extended instructions.
---
+
+                                                -- TODO:
+                                                -- Perhaps use cacheL1InsnAfterPC in this loop to preserve logic.
+                                                -- Same for extended instructions.
+                                                --
                                                 -- 5 Consecutive IM's
                                                 if cacheL1FetchIdx - pc > 5    and cacheL1(to_integer(pc))(7) = '1' and cacheL1(to_integer(pc)+1)(7) = '1' and cacheL1(to_integer(pc)+2)(7) = '1' and cacheL1(to_integer(pc)+3)(7) = '1' and cacheL1(to_integer(pc)+4)(7) = '1' and cacheL1(to_integer(pc)+5)(7) = '0' then
                                                     TOS.word(31 downto 0)               <= unsigned(cacheL1(to_integer(pc))(3 downto 0)) & unsigned(cacheL1(to_integer(pc)+1)(OPCODE_IM_RANGE)) & unsigned(cacheL1(to_integer(pc)+2)(OPCODE_IM_RANGE)) & unsigned(cacheL1(to_integer(pc)+3)(OPCODE_IM_RANGE)) & unsigned(cacheL1(to_integer(pc)+4)(OPCODE_IM_RANGE));
@@ -2543,6 +2589,7 @@ begin
                                         tInsnExec                                       := '1';
 
                                         -- For instructions which use a parameter, build the value ready for use.
+                                        -- TODO: This should be variables to meet the 1 cycle requirement or set during decode.
                                         case cacheL1(to_integer(pc)+1)(OPCODE_PARAM_RANGE) is
                                             when "00" => insnExParameter                <= X"00000000";
                                             when "01" => insnExParameter                <= X"000000" & unsigned(cacheL1(to_integer(pc)+2)(OPCODE_RANGE));
@@ -2553,7 +2600,7 @@ begin
                                         -- Decode the extended instruction at this point as we have access to 8 future instructions or bytes so can work out what is required and execute.
                                         -- 1:0 = 00 means an instruction which operates with a default, byte, half-word or word parameter. ie. Extend,<insn>,[<byte>,<byte>,<byte>,<byte>]
     
-                                        -- Memory fill instruction. Fill memory starting at address in NOSwith zero, 8 bit, 16 or 32 bit repeating value for TOS bytes.
+                                        -- Memory fill instruction. Fill memory starting at address in NOS with zero, 8 bit, 16 or 32 bit repeating value for TOS bytes.
                                         if cacheL1(to_integer(pc)+1)(OPCODE_INSN_RANGE) = Opcode_Ex_Fill then
                                         end if;
     
@@ -2590,7 +2637,7 @@ begin
                                         end if;
                                     end if;
 
-                                -- Breakpoint, this is not a mornal instruction and used by debuggers to suspend a program exection. At the moment
+                                -- Breakpoint, this is not a nornal instruction and used by debuggers to suspend a program exection. At the moment
                                 -- this instuction sets the BREAK flag and just continues.
                                 when Insn_Break =>
                                     tInsnExec                                           := '1';
@@ -3202,7 +3249,6 @@ begin
                                 debugRec.FMT_PRE_CR                       <= '1';
                                 debugRec.FMT_SPLIT_DATA                   <= "01";
                                 if debugPC = debugPC_EndAddr or debugPC_WidthCounter = debugPC_Width-4 then
---if debugPC = debugPC_EndAddr or debugPC = debugPC_WidthdebugPC(4 downto 2) = "111" then
                                     debugRec.FMT_POST_CRLF                <= '1';
                                     debugPC_WidthCounter                  <= 0;
                                 else

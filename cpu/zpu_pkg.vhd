@@ -117,7 +117,7 @@ package zpu_pkg is
           --mem_writeMask        
             interrupt_request         : in  std_logic;
             interrupt_ack             : out std_logic;          -- Interrupt acknowledge, ZPU has entered Interrupt Service Routine.
-            interrupt_done            : out std_logic;          -- Interrupt service routine completed/done.        : out std_logic_vector(wordBytes-1 downto 0);
+            interrupt_done            : out std_logic;          -- Interrupt service routine completed/done.
             break                     : out std_logic;
             debug_txd                 : out std_logic;          -- Debug serial output.
             --
@@ -287,8 +287,10 @@ package zpu_pkg is
             INT_REQ                   : in  std_logic;
             INT_ACK                   : out std_logic;          -- Interrupt acknowledge, ZPU has entered Interrupt Service Routine.
             INT_DONE                  : out std_logic;          -- Interrupt service routine completed/done.
-            BREAK                     : out std_logic;
-            DEBUG_TXD                 : out std_logic           -- Debug serial output.
+            -- Break and debug signals.
+            BREAK                     : out std_logic;          -- A break instruction encountered.
+            CONTINUE                  : in  std_logic;          -- When break activated, processing stops. Setting CONTINUE to logic 1 resumes processing with next instruction.
+            DEBUG_TXD                 : out std_logic           -- Debug serial output.        
         );
     end component zpu_core_evo;
 
@@ -318,41 +320,6 @@ package zpu_pkg is
             q_b                       : out std_logic_vector (width_b-1 downto 0)
       );
     end component;
-
-    component signed_divider is
-        port (
-            clk                       : in  std_logic;
-            ena                       : in  std_logic;
-            z                         : in  unsigned(63 downto 0);
-            d                         : in  unsigned(WORD_32BIT_RANGE);
-            q                         : out signed(63 downto 0);
-            s                         : out signed(63 downto 0)
-        );
-    end component;        
-
-    component unsigned_divider is
-        port (
-            clk                       : in  std_logic;
-            ena                       : in  std_logic;
-            z                         : in  unsigned(63 downto 0);
-            d                         : in  unsigned(WORD_32BIT_RANGE);
-            q                         : out unsigned(WORD_32BIT_RANGE);
-            s                         : out unsigned(WORD_32BIT_RANGE);
-			div0                      : out std_logic;
-            ovf                       : out std_logic
-        );
-    end component;        
-
-    component qdiv is
-        port (
-            dividend                  : in  signed(WORD_32BIT_RANGE);
-            divisor                   : in  signed(WORD_32BIT_RANGE);
-            start                     : in  std_logic;
-            clk                       : in  std_logic;
-            quotient_out              : out signed(WORD_32BIT_RANGE);
-            complete                  : out std_logic
-        );
-    end component;        
 
     ------------------------------------------------------------ 
     -- constants

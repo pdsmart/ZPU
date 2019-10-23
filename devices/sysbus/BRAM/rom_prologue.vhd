@@ -1,7 +1,7 @@
 -- ZPU
 --
 -- Copyright 2004-2008 oharboe - �yvind Harboe - oyvind.harboe@zylin.com
--- Modified by Alastair M. Robinson for the ZPUFlex project.
+-- Modified by Philip Smart 02/2019 for the ZPU Evo implementation.
 --
 -- The FreeBSD license
 -- 

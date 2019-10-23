@@ -1,10 +1,40 @@
+---------------------------------------------------------------------------------------------------------
+--
+-- Name:            zpu_uart_debug.vhd
+-- Created:         January 2019
+-- Author(s):       Philip Smart
+-- Description:     An extension of the simplistic UART Tx, still fixed at 8N1 with configurable baud rate
+--                  but adding a debug serialisaztion FSM for output of ZPU runtime data.
+-- Credits:         Originally using the simplistic UART as a guide, which was written by the following
+--                  authors:-
+--                  Philippe Carton, philippe.carton2 libertysurf.fr
+--                  Juan Pablo Daniel Borgna, jpdborgna gmail.com
+--                  Salvador E. Tropea, salvador inti.gob.ar
+-- Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
+--
+-- History:         January 2019  - Initial module written using the simplistic UART as a guide but
+--                                  adding cache and debug serialisation FSM.
+--
+---------------------------------------------------------------------------------------------------------
+-- This source file is free software: you can redistribute it and-or modify
+-- it under the terms of the GNU General Public License as published
+-- by the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This source file is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http:--www.gnu.org-licenses->.
+---------------------------------------------------------------------------------------------------------
 library ieee;
 library pkgs;
 library work;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.zpu_pkg.all;
---use work.zpu_soc_pkg.all;
 
 -- Based on the simplistic UART, handles 8N1 RS232 Rx/Tx with independent programmable baud rate and selectable FIFO buffers.
 entity zpu_uart_debug is

@@ -2,7 +2,7 @@
 --
 -- Name:            dpram.vhd
 -- Created:         January 2019
--- Author(s):       Altera/Intel - refactored by Philip Smart for the ZPU Evo
+-- Author(s):       Altera/Intel Quartus II - refactored by Philip Smart for the ZPU Evo
 -- Description:     Dual Port RAM as provided by Altera in the Megafunctions suite.
 --
 -- Credits:         
@@ -10,19 +10,6 @@
 --
 -- History:         January 2019   - Initial module taken and refactored, customizing for the ZPU Evo.
 --
----------------------------------------------------------------------------------------------------------
--- This source file is free software: you can redistribute it and-or modify
--- it under the terms of the GNU General Public License as published
--- by the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This source file is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http:--www.gnu.org-licenses->.
 ---------------------------------------------------------------------------------------------------------
 
 LIBRARY ieee;
@@ -163,7 +150,5 @@ BEGIN
         data_b                           => data_b,
         q_b                              => sub_wire1
     );
-
-
 
 END SYN;
