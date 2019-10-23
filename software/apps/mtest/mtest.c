@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// Name:            mdump.c
-// Created:         July 2019
+// Name:            mtest.c
+// Created:         September 2019
 // Author(s):       Philip Smart
 // Description:     Standalone App for the ZPU test application.
 //                  This program implements a loadable appliation which can be loaded from SD card by
@@ -55,8 +55,8 @@
 
 // Version info.
 #define VERSION      "v1.0"
-#define VERSION_DATE "18/07/2019"
-#define APP_NAME     "MDUMP"
+#define VERSION_DATE "17/10/2019"
+#define APP_NAME     "MTEST"
 
 // Simple 8 bit memory write/read test.
 void test8bit(uint32_t start, uint32_t end)
