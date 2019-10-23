@@ -58,6 +58,112 @@
 #define VERSION_DATE "18/07/2019"
 #define APP_NAME     "MDUMP"
 
+// Simple 8 bit memory write/read test.
+void test8bit(uint32_t start, uint32_t end)
+{
+    // Locals.
+    unsigned char* memPtr;
+    unsigned long  count;
+    uint8_t        data;
+
+    xprintf( "\rWrite 8bit ascending test pattern...    " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count-- )
+    {
+        *memPtr++ = data++;
+        if ( data >= 0xFF )
+            data = 0x00;
+    }
+
+    xprintf( "\rRead 8bit ascending test pattern...     " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count-- )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (8bit) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        data++;
+        if ( data >= 0xFF )
+            data = 0x00;
+    }
+}
+
+// Simple 16 bit memory write/read test.
+void test16bit(uint32_t start, uint32_t end)
+{
+    // Locals.
+    uint16_t  *memPtr;
+    uint32_t   count;
+    uint16_t   data;
+
+    xprintf( "\rWrite 16bit ascending test pattern...    " );
+    memPtr = (uint16_t*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        *memPtr++ = data++;
+        if ( data >= 0xFFFF )
+            data = 0x00;
+        count = count > 2 ? count -= 2 : 0;
+    }
+
+    xprintf( "\rRead 16bit ascending test pattern...     " );
+    memPtr = (uint16_t*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (16bit) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        data++;
+        if ( data >= 0xFFFF )
+            data = 0x00;
+        count = count > 2 ? count -= 2 : 0;
+    }
+}
+
+// Simple 32 bit memory write/read test.
+void test32bit(uint32_t start, uint32_t end)
+{
+    // Locals.
+    uint32_t  *memPtr;
+    uint32_t   count;
+    uint32_t   data;
+
+    xprintf( "\rWrite 32bit ascending test pattern...    " );
+    memPtr = (uint32_t*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        *memPtr++ = data++;
+        if ( data >= 0xFFFFFFFE )
+            data = 0x00;
+        count = count > 4 ? count -= 4 : 0;
+    }
+
+    xprintf( "\rRead 32bit ascending test pattern...     " );
+    memPtr = (uint32_t*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (32bit) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        data++;
+        if ( data >= 0xFFFFFFFE )
+            data = 0;
+        count = count > 4 ? count -= 4 : 0;
+    }
+}
+
 // Main entry and start point of a ZPUTA Application. Only 2 parameters are catered for and a 32bit return code, additional parameters can be added by changing the appcrt0.s
 // startup code to add them to the stack prior to app() call.
 //
@@ -70,12 +176,10 @@ uint32_t app(uint32_t param1, uint32_t param2)
     char           *ptr = (char *)param1;
     long           startAddr;
     long           endAddr;
-    uint32_t       iterations;
+    unsigned long  iterations;
     uint32_t       idx;
-    unsigned char* memPtr;
-    unsigned long  count;
-    unsigned char  data;
 
+    // Get parameters or use defaults if not provided.
     if (!xatoi(&ptr, &startAddr))
     {
         if(cfgSoC->implInsnBRAM)  { startAddr = cfgSoC->addrInsnBRAM; }
@@ -99,31 +203,11 @@ uint32_t app(uint32_t param1, uint32_t param2)
     xprintf( "Check memory addr 0x%08X to 0x%08X for %d iterations.\n", startAddr, endAddr, iterations );
     for(idx=0; idx < iterations; idx++)
     {
-        xprintf( "\r%03d - Write test pattern...    ", idx );
-        memPtr = (unsigned char*)( startAddr );
-        data = 0x00;
-        count = endAddr - startAddr;
-        while ( count-- )
-        {
-          *memPtr++ = data++;
-          if ( data >= 253 )
-            data = 0;
-        }
-    
-        xprintf( "\r%03d - Read test pattern...     ", idx );
-        memPtr = (unsigned char*)( startAddr );
-        data = 0x00;
-        count = endAddr - startAddr;
-        while ( count-- )
-        {
-          if ( *memPtr != data )
-            xprintf( "Error at address 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-          *memPtr++;
-          data++;
-          if ( data >= 253 )
-            data = 0;
-        }
+        test8bit(startAddr,  endAddr);
+        test16bit(startAddr, endAddr);
+        test32bit(startAddr, endAddr);
     }
+    xputs("\n");
 
     return(0);
 }
