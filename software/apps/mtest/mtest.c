@@ -84,11 +84,39 @@ void test8bit(uint32_t start, uint32_t end)
     while ( count-- )
     {
         if ( *memPtr != data )
-            xprintf( "\rError (8bit) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+            xprintf( "\rError (8bit ap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
         *memPtr++;
         data++;
         if ( data >= 0xFF )
             data = 0x00;
+    }
+
+    xprintf( "\rWrite 8bit walking test pattern...    " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x55;
+    count  = end - start;
+    while ( count-- )
+    {
+        *memPtr++ = data;
+        if ( data == 0x55 )
+            data = 0xAA;
+	else
+            data = 0x55;
+    }
+
+    xprintf( "\rRead 8bit walking test pattern...     " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x55;
+    count  = end - start;
+    while ( count-- )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (8bit wp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        if ( data == 0x55 )
+            data = 0xAA;
+	else
+            data = 0x55;
     }
 }
 
@@ -119,11 +147,41 @@ void test16bit(uint32_t start, uint32_t end)
     while ( count > 0 )
     {
         if ( *memPtr != data )
-            xprintf( "\rError (16bit) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
+            xprintf( "\rError (16bit ap) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
         *memPtr++;
         data++;
         if ( data >= 0xFFFF )
             data = 0x00;
+        count = count > 2 ? count -= 2 : 0;
+    }
+
+    xprintf( "\rWrite 16bit walking test pattern...    " );
+    memPtr = (uint16_t*)( start );
+    data   = 0xAA55;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        *memPtr++ = data;
+        if ( data == 0xAA55 )
+            data = 0x55AA;
+	else
+            data = 0xAA55;
+        count = count > 2 ? count -= 2 : 0;
+    }
+
+    xprintf( "\rRead 16bit walking test pattern...     " );
+    memPtr = (uint16_t*)( start );
+    data   = 0xAA55;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (16bit wp) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        if ( data == 0xAA55 )
+            data = 0x55AA;
+	else
+            data = 0xAA55;
         count = count > 2 ? count -= 2 : 0;
     }
 }
@@ -155,11 +213,42 @@ void test32bit(uint32_t start, uint32_t end)
     while ( count > 0 )
     {
         if ( *memPtr != data )
-            xprintf( "\rError (32bit) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
+            xprintf( "\rError (32bit ap) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
         *memPtr++;
         data++;
         if ( data >= 0xFFFFFFFE )
             data = 0;
+        count = count > 4 ? count -= 4 : 0;
+    }
+
+    xprintf( "\rWrite 32bit walking test pattern...    " );
+    memPtr = (uint32_t*)( start );
+    data   = 0xAA55AA55;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        *memPtr++ = data;
+        if ( data == 0xAA55AA55 )
+            data   = 0x55AA55AA;
+	else
+            data   = 0xAA55AA55;
+        count = count > 4 ? count -= 4 : 0;
+    }
+
+    xprintf( "\rRead 32bit walking test pattern...     " );
+    memPtr = (uint32_t*)( start );
+    data   = 0x00;
+    data   = 0xAA55AA55;
+    count  = end - start;
+    while ( count > 0 )
+    {
+        if ( *memPtr != data )
+            xprintf( "\rError (32bit wp) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
+        *memPtr++;
+        if ( data == 0xAA55AA55 )
+            data   = 0x55AA55AA;
+	else
+            data   = 0xAA55AA55;
         count = count > 4 ? count -= 4 : 0;
     }
 }

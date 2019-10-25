@@ -222,7 +222,7 @@ Some extended instructions are under development (ie. LDIR) an exact opcode valu
 
 ##### Implemented Instructions Comparison Table
 
-![alt text](https://github.com/pdsmart/ZPU/blob/master/ImplInstructions.png)
+![alt text](https://github.com/pdsmart/ZPU/blob/master/docs/ImplInstructions.png)
 
 #### Hardware Variable Byte Write
 
@@ -336,13 +336,13 @@ Tiny - IOCP is the smallest size possible to boot from SD Card. It is useful for
 
 Minimum - Full - IOCP has various inbuilt functions, such as application upload from serial port, memory edit/exam.
 
-![alt text](https://github.com/pdsmart/ZPU/blob/master/IOCPMemoryMap.png)
+![alt text](https://github.com/pdsmart/ZPU/blob/master/docs/IOCPMemoryMap.png)
 
 
 
 For ZPUTA, it can either be configured to be the boot application (ie. no IOCP) or it can be configured as an App booted by IOCP. Depending upon how ZPUTA is built. it can have applets (portions of its functionality created as dedicated executables on the SD card) or standalone with all functionality inbuilt. The former is used when there is limited memory or a set of loadable programs is desired.
 
-![alt text](https://github.com/pdsmart/ZPU/blob/master/ZPUTAMemoryMap.png)
+![alt text](https://github.com/pdsmart/ZPU/blob/master/docs/ZPUTAMemoryMap.png)
 
 
 
