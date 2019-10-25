@@ -57,10 +57,8 @@ Where ParamSize = 00 - No parameter bytes
 
 Some extended instructions are under development (ie. LDIR) an exact opcode value and extended instruction set has not yet been fully defined. The GNU AS assembler will be updated with these instructions so they can be invoked within a C program and eventually if they have benefit to C will be migrated into the GCC compiler (ie. ADD32/DIV32/MULT32/LDIR/LDDR as from what I have seen, these will have a big impact on CoreMark/Dhrystone tests).
 
-Implemented Instructions
 
-![alt text](https://github.com/pdsmart/ZPU/blob/master/ImplInstructions.png)
-
+#####Instruction Set
 
 | Name             | Opcode    |           | Description                                                                                                                                                                                                                                                            |
 |------------------|-----------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -221,6 +219,10 @@ Implemented Instructions
 | EQ               | 46        |           | pushIntStack((popIntStack() == popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
 | NEQ              | 47        |           | pushIntStack((popIntStack() != popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
 | NEG              | 48        |           | pushIntStack(-popIntStack());                                                                                                                                                                                                                                          |
+
+#####Implemented Instructions
+
+![alt text](https://github.com/pdsmart/ZPU/blob/master/ImplInstructions.png)
 
 #### Hardware Variable Byte Write
 
