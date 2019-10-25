@@ -1,6 +1,6 @@
 ## Foreword
 
-This document is a work in progress with the intention of it ending up as a comprehensive user guide. The same goes for the ZPU Evo and SoC RTL as both are evolving as I further the emulator project it was originally destined to go into and any improvements/deficiencies corrected.
+This document is a work in progress with the intention of it ending up as a comprehensive user guide. It may appear a bit disjointed but will get better. The same goes for the ZPU Evo and SoC RTL as both are evolving as I further the emulator project it was originally destined to go into and any improvements/deficiencies corrected.
 
 
 
@@ -58,7 +58,7 @@ Where ParamSize = 00 - No parameter bytes
 Some extended instructions are under development (ie. LDIR) an exact opcode value and extended instruction set has not yet been fully defined. The GNU AS assembler will be updated with these instructions so they can be invoked within a C program and eventually if they have benefit to C will be migrated into the GCC compiler (ie. ADD32/DIV32/MULT32/LDIR/LDDR as from what I have seen, these will have a big impact on CoreMark/Dhrystone tests).
 
 
-#####Instruction Set
+##### Implemented Instruction Set
 
 | Name             | Opcode    |           | Description                                                                                                                                                                                                                                                            |
 |------------------|-----------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -220,7 +220,7 @@ Some extended instructions are under development (ie. LDIR) an exact opcode valu
 | NEQ              | 47        |           | pushIntStack((popIntStack() != popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
 | NEG              | 48        |           | pushIntStack(-popIntStack());                                                                                                                                                                                                                                          |
 
-#####Implemented Instructions
+##### Implemented Instructions Comparison Table
 
 ![alt text](https://github.com/pdsmart/ZPU/blob/master/ImplInstructions.png)
 
