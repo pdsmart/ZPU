@@ -61,7 +61,7 @@ Implemented Instructions
 
 ![alt text](https://github.com/pdsmart/ZPU/blob/master/ImplInstructions.png)
 
-Instruction Set
+
 | Name             | Opcode    |           | Description                                                                                                                                                                                                                                                            |
 |------------------|-----------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | BREAKPOINT       | 0         | 00000000  | The debugger sets a memory location to this value to set a breakpoint. Once a JTAG-like debugger interface is added, it will be convenient to be able to distinguish between a breakpoint and an illegal(possibly emulated) instruction.                               |
