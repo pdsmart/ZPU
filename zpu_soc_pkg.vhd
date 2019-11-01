@@ -98,8 +98,8 @@ package zpu_soc_pkg is
     constant SOC_MAX_ADDR_BRAM_BIT    :     integer    := 16;                                               -- Max address bit of the System BRAM ROM/Stack in bytes, ie. 15 = 32KB or 8K 32bit words. NB. For non evo CPUS you must adjust the maxMemBit parameter in zpu_pkg.vhd to be the same.
     constant SOC_ADDR_BRAM_START      :     integer    := 0;                                                -- Start address of BRAM.
     constant SOC_ADDR_BRAM_END        :     integer    := SOC_ADDR_BRAM_START+(2**SOC_MAX_ADDR_BRAM_BIT);   -- End address of BRAM = START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
-    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 23;                                               -- Max address bit of the System RAM.
-    constant SOC_ADDR_RAM_START       :     integer    := 16777216;                                         -- Start address of RAM.
+    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 24;                                               -- Max address bit of the System RAM.
+    constant SOC_ADDR_RAM_START       :     integer    := (2**(maxAddrBit-WB_ACTIVE));                      -- Start address of RAM.
     constant SOC_ADDR_RAM_END         :     integer    := SOC_ADDR_RAM_START+(2**SOC_MAX_ADDR_RAM_BIT);     -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     constant SOC_MAX_ADDR_INSN_BRAM_BIT:    integer    := SOC_MAX_ADDR_BRAM_BIT;                            -- Max address bit of the dedicated instruction BRAM in bytes, ie. 15 = 32KB or 8K 32bit words.
     constant SOC_ADDR_INSN_BRAM_START :     integer    := 0;                                                -- Start address of dedicated instrution BRAM.
@@ -109,8 +109,8 @@ package zpu_soc_pkg is
     constant SOC_STACK_ADDR           :     integer    := SOC_ADDR_BRAM_END - 8;                            -- Stack start address (BRAM/RAM).
     constant SOC_ADDR_IO_START        :     integer    := (2**(maxAddrBit-WB_ACTIVE)) - (2**maxIOBit);      -- Start address of the Evo Direct Memory Mapped IO region.
     constant SOC_ADDR_IO_END          :     integer    := (2**(maxAddrBit-WB_ACTIVE)) - 1;                  -- End address of the Evo Direct Memory Mapped IO region.
-    constant SOC_WB_IO_START          :     integer    := 32505856;                                         -- Start address of IO range.
-    constant SOC_WB_IO_END            :     integer    := 33554431;                                         -- End address of IO range.
+    constant SOC_WB_IO_START          :     integer    := (2**(maxAddrBit)) - (2**maxIOBit);                -- Start address of IO range.
+    constant SOC_WB_IO_END            :     integer    := (2**(maxAddrBit)) - 1;                            -- End address of IO range.
 
     -- Ranges used throughout the SOC source.
     subtype ADDR_BIT_BRAM_RANGE       is natural range SOC_MAX_ADDR_BRAM_BIT-1 downto 0;                    -- Address range of the onboard B(lock)RAM - 1 byte aligned

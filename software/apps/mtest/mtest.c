@@ -66,6 +66,37 @@ void test8bit(uint32_t start, uint32_t end)
     unsigned long  count;
     uint8_t        data;
 
+    xprintf( "\rR/W 8bit ascending test pattern...    " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x00;
+    count  = end - start;
+    while ( count-- )
+    {
+        *memPtr = data;
+        if ( *memPtr != data )
+            xprintf( "\rError (8bit rwap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	*memPtr++;
+	data++;
+        if ( data >= 0xFF )
+            data = 0x00;
+    }
+
+    xprintf( "\rR/W 8bit walking test pattern...    " );
+    memPtr = (unsigned char*)( start );
+    data   = 0x55;
+    count  = end - start;
+    while ( count-- )
+    {
+        *memPtr = data;
+        if ( *memPtr != data )
+            xprintf( "\rError (8bit rwwp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	*memPtr++;
+	if ( data == 0x55 )
+	    data = 0xAA;
+	else
+	    data = 0x55;
+    }
+
     xprintf( "\rWrite 8bit ascending test pattern...    " );
     memPtr = (unsigned char*)( start );
     data   = 0x00;
@@ -84,7 +115,12 @@ void test8bit(uint32_t start, uint32_t end)
     while ( count-- )
     {
         if ( *memPtr != data )
-            xprintf( "\rError (8bit ap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	{
+            if ( *memPtr != data )
+                xprintf( "\rError (8bit ap2) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	    else
+                xprintf( "\rError (8bit ap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	} 
         *memPtr++;
         data++;
         if ( data >= 0xFF )
@@ -111,7 +147,12 @@ void test8bit(uint32_t start, uint32_t end)
     while ( count-- )
     {
         if ( *memPtr != data )
-            xprintf( "\rError (8bit wp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	{
+            if ( *memPtr != data )
+                xprintf( "\rError (8bit wp2) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	    else
+                xprintf( "\rError (8bit wp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+	}
         *memPtr++;
         if ( data == 0x55 )
             data = 0xAA;

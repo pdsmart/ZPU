@@ -662,7 +662,7 @@ begin
                 addrbits             => SOC_MAX_ADDR_BRAM_BIT
             )
             port map (
-                clk                  => MEMCLK,
+                clk                  => SYSCLK,
                 memAAddr             => MEM_ADDR(ADDR_BIT_BRAM_RANGE),
                 memAWriteEnable      => BRAM_WREN,
                 memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
@@ -683,7 +683,7 @@ begin
                 addrbits             => SOC_MAX_ADDR_BRAM_BIT
             )
             port map (
-                clk                  => MEMCLK,
+                clk                  => SYSCLK,
                 memAAddr             => MEM_ADDR(ADDR_BIT_BRAM_RANGE),
                 memAWriteEnable      => BRAM_WREN,
                 memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
@@ -700,7 +700,7 @@ begin
                 addrbits             => SOC_MAX_ADDR_RAM_BIT
             )
             port map (
-                clk                  => MEMCLK,
+                clk                  => SYSCLK,
                 memAAddr             => MEM_ADDR(ADDR_BIT_RAM_RANGE),
                 memAWriteEnable      => RAM_WREN,
                 memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
@@ -1769,7 +1769,8 @@ begin
 --            );
 
         -- RAM Range SOC_ADDR_RAM_START) -> SOC_ADDR_RAM_END
-        RAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, WB_ADR_O'LENGTH)))
+      --  RAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, WB_ADR_O'LENGTH)))
+        RAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END - 8192, WB_ADR_O'LENGTH)))
                                     else '0';
 
         -- Enable write to RAM when selected and CPU in write state.

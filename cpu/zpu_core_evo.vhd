@@ -674,6 +674,7 @@ begin
             -- If wishbone interface is active and an ACK is received, deassert the signals.
             if IMPL_USE_WB_BUS = true and wbXactActive = '1' and WB_ACK_I = '1' and WB_HALT_I = '0' and mxHoldCycles = 0 then
                 wbXactActive                                 <= '0';
+                WB_WE_O                                      <= '0';
                 WB_CYC_O                                     <= '0';
                 WB_STB_O                                     <= '0';
             end if;
@@ -681,6 +682,7 @@ begin
             -- TODO: WB_ERR_I needs better handling, should retry at least once and then issue a BREAK.
             if IMPL_USE_WB_BUS = true and WB_ERR_I = '1' then
                 wbXactActive                                 <= '0';
+                WB_WE_O                                      <= '0';
                 WB_CYC_O                                     <= '0';
                 WB_STB_O                                     <= '0';
             end if;
