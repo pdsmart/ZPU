@@ -2,7 +2,7 @@
 
 This document is a work in progress with the intention of it ending up as a comprehensive user guide. It may appear a bit disjointed but will get better. The same goes for the ZPU Evo and SoC RTL as both are evolving as I further the emulator project it was originally destined to go into and any improvements/deficiencies corrected.
 
-
+Please consult my [GitHub](https://pdsmart.github.io) website for more upto date information.
 
 ## Overview
 
