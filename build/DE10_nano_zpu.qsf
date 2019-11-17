@@ -463,7 +463,6 @@ set_global_assignment -name VHDL_FILE ../cpu/zpu_core_flex.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_pkg.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_small.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_medium.vhd
-set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo_cacheL2.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_uart_debug.vhd
 set_global_assignment -name VHDL_FILE ../zpu_soc_pkg.vhd

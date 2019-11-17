@@ -17,7 +17,7 @@ entity DE10_nano_zpu is
         TDI             : out   std_logic;
         TCK             : out   std_logic;
         TCS             : out   std_logic;
-        TDO             : in   std_logic;
+        TDO             : in    std_logic;
     --  I2C_SDAT        : inout std_logic;
     --  I2C_SCLK        : out   std_logic;
     --  GPIO_0          : inout std_logic_vector(33 downto 0);
@@ -90,7 +90,7 @@ reset<=(not SW(0) xor KEY(0)) and pll_locked;
 myVirtualToplevel : entity work.zpu_soc
 generic map
 (
-    SYSCLK_FREQUENCY => SYSCLK_DE10_FREQ
+    SYSCLK_FREQUENCY  => SYSCLK_DE10_FREQ
 )
 port map
 (    

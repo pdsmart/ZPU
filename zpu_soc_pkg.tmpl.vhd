@@ -53,6 +53,8 @@ package zpu_soc_pkg is
     -- Frequencies for the various boards.
     --
     constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
     constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
     constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
 

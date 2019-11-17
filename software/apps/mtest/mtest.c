@@ -65,19 +65,24 @@ void test8bit(uint32_t start, uint32_t end)
     unsigned char* memPtr;
     unsigned long  count;
     uint8_t        data;
+    uint32_t       errCnt = 0;
 
     xprintf( "\rR/W 8bit ascending test pattern...    " );
     memPtr = (unsigned char*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count-- )
+    while( count-- && errCnt <= 20)
     {
         *memPtr = data;
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (8bit rwap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	*memPtr++;
-	data++;
-        if ( data >= 0xFF )
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit rwap) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
+        *memPtr++;
+        data++;
+        if( data >= 0xFF )
             data = 0x00;
     }
 
@@ -85,26 +90,31 @@ void test8bit(uint32_t start, uint32_t end)
     memPtr = (unsigned char*)( start );
     data   = 0x55;
     count  = end - start;
-    while ( count-- )
+    errCnt = 0;
+    while( count-- && errCnt <= 20)
     {
         *memPtr = data;
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (8bit rwwp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	*memPtr++;
-	if ( data == 0x55 )
-	    data = 0xAA;
-	else
-	    data = 0x55;
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit rwwp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
+        *memPtr++;
+        if( data == 0x55 )
+            data = 0xAA;
+        else
+            data = 0x55;
     }
 
     xprintf( "\rWrite 8bit ascending test pattern...    " );
     memPtr = (unsigned char*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count-- )
+    while( count-- )
     {
         *memPtr++ = data++;
-        if ( data >= 0xFF )
+        if( data >= 0xFF )
             data = 0x00;
     }
 
@@ -112,18 +122,18 @@ void test8bit(uint32_t start, uint32_t end)
     memPtr = (unsigned char*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count-- )
+    errCnt = 0;
+    while( count-- && errCnt <= 20)
     {
-        if ( *memPtr != data )
-	{
-            if ( *memPtr != data )
-                xprintf( "\rError (8bit ap2) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	    else
-                xprintf( "\rError (8bit ap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	} 
+        if( *memPtr != data )
+        {
+            xprintf( "\rError (8bit ap) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit ap) > 20, stopping test.\n", memPtr, *memPtr, data );
+        } 
         *memPtr++;
         data++;
-        if ( data >= 0xFF )
+        if( data >= 0xFF )
             data = 0x00;
     }
 
@@ -131,12 +141,12 @@ void test8bit(uint32_t start, uint32_t end)
     memPtr = (unsigned char*)( start );
     data   = 0x55;
     count  = end - start;
-    while ( count-- )
+    while( count-- )
     {
         *memPtr++ = data;
-        if ( data == 0x55 )
+        if( data == 0x55 )
             data = 0xAA;
-	else
+        else
             data = 0x55;
     }
 
@@ -144,19 +154,19 @@ void test8bit(uint32_t start, uint32_t end)
     memPtr = (unsigned char*)( start );
     data   = 0x55;
     count  = end - start;
-    while ( count-- )
+    errCnt = 0;
+    while( count-- && errCnt <= 20)
     {
-        if ( *memPtr != data )
-	{
-            if ( *memPtr != data )
-                xprintf( "\rError (8bit wp2) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	    else
-                xprintf( "\rError (8bit wp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
-	}
+        if( *memPtr != data )
+        {
+            xprintf( "\rError (8bit wp) at 0x%08lX (%02x:%02x)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit wp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
         *memPtr++;
-        if ( data == 0x55 )
+        if( data == 0x55 )
             data = 0xAA;
-	else
+        else
             data = 0x55;
     }
 }
@@ -165,18 +175,19 @@ void test8bit(uint32_t start, uint32_t end)
 void test16bit(uint32_t start, uint32_t end)
 {
     // Locals.
-    uint16_t  *memPtr;
-    uint32_t   count;
-    uint16_t   data;
+    uint16_t      *memPtr;
+    uint32_t       count;
+    uint16_t       data;
+    uint32_t       errCnt = 0;
 
     xprintf( "\rWrite 16bit ascending test pattern...    " );
     memPtr = (uint16_t*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 )
     {
         *memPtr++ = data++;
-        if ( data >= 0xFFFF )
+        if( data >= 0xFFFF )
             data = 0x00;
         count = count > 2 ? count -= 2 : 0;
     }
@@ -185,13 +196,17 @@ void test16bit(uint32_t start, uint32_t end)
     memPtr = (uint16_t*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 && errCnt <= 20)
     {
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (16bit ap) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit wp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
         *memPtr++;
         data++;
-        if ( data >= 0xFFFF )
+        if( data >= 0xFFFF )
             data = 0x00;
         count = count > 2 ? count -= 2 : 0;
     }
@@ -200,12 +215,12 @@ void test16bit(uint32_t start, uint32_t end)
     memPtr = (uint16_t*)( start );
     data   = 0xAA55;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 )
     {
         *memPtr++ = data;
-        if ( data == 0xAA55 )
+        if( data == 0xAA55 )
             data = 0x55AA;
-	else
+        else
             data = 0xAA55;
         count = count > 2 ? count -= 2 : 0;
     }
@@ -214,14 +229,19 @@ void test16bit(uint32_t start, uint32_t end)
     memPtr = (uint16_t*)( start );
     data   = 0xAA55;
     count  = end - start;
-    while ( count > 0 )
+    errCnt = 0;
+    while( count > 0 && errCnt <= 20)
     {
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (16bit wp) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit wp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
         *memPtr++;
-        if ( data == 0xAA55 )
+        if( data == 0xAA55 )
             data = 0x55AA;
-	else
+        else
             data = 0xAA55;
         count = count > 2 ? count -= 2 : 0;
     }
@@ -231,18 +251,19 @@ void test16bit(uint32_t start, uint32_t end)
 void test32bit(uint32_t start, uint32_t end)
 {
     // Locals.
-    uint32_t  *memPtr;
-    uint32_t   count;
-    uint32_t   data;
+    uint32_t      *memPtr;
+    uint32_t       count;
+    uint32_t       data;
+    uint32_t       errCnt = 0;
 
     xprintf( "\rWrite 32bit ascending test pattern...    " );
     memPtr = (uint32_t*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 )
     {
         *memPtr++ = data++;
-        if ( data >= 0xFFFFFFFE )
+        if( data >= 0xFFFFFFFE )
             data = 0x00;
         count = count > 4 ? count -= 4 : 0;
     }
@@ -251,13 +272,17 @@ void test32bit(uint32_t start, uint32_t end)
     memPtr = (uint32_t*)( start );
     data   = 0x00;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 && errCnt <= 20)
     {
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (32bit ap) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit wp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
         *memPtr++;
         data++;
-        if ( data >= 0xFFFFFFFE )
+        if( data >= 0xFFFFFFFE )
             data = 0;
         count = count > 4 ? count -= 4 : 0;
     }
@@ -266,12 +291,12 @@ void test32bit(uint32_t start, uint32_t end)
     memPtr = (uint32_t*)( start );
     data   = 0xAA55AA55;
     count  = end - start;
-    while ( count > 0 )
+    while( count > 0 )
     {
         *memPtr++ = data;
-        if ( data == 0xAA55AA55 )
+        if( data == 0xAA55AA55 )
             data   = 0x55AA55AA;
-	else
+        else
             data   = 0xAA55AA55;
         count = count > 4 ? count -= 4 : 0;
     }
@@ -281,14 +306,19 @@ void test32bit(uint32_t start, uint32_t end)
     data   = 0x00;
     data   = 0xAA55AA55;
     count  = end - start;
-    while ( count > 0 )
+    errCnt = 0;
+    while( count > 0 && errCnt <= 20)
     {
-        if ( *memPtr != data )
+        if( *memPtr != data )
+        {
             xprintf( "\rError (32bit wp) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
+            if(errCnt++ == 20)
+                xprintf( "\rError count (8bit wp) > 20, stopping test.\n", memPtr, *memPtr, data );
+        }
         *memPtr++;
-        if ( data == 0xAA55AA55 )
+        if( data == 0xAA55AA55 )
             data   = 0x55AA55AA;
-	else
+        else
             data   = 0xAA55AA55;
         count = count > 4 ? count -= 4 : 0;
     }
@@ -310,21 +340,21 @@ uint32_t app(uint32_t param1, uint32_t param2)
     uint32_t       idx;
 
     // Get parameters or use defaults if not provided.
-    if (!xatoi(&ptr, &startAddr))
+    if(!xatoi(&ptr, &startAddr))
     {
         if(cfgSoC->implInsnBRAM)  { startAddr = cfgSoC->addrInsnBRAM; }
         else if(cfgSoC->implBRAM) { startAddr = cfgSoC->addrBRAM; }
         else if(cfgSoC->implRAM || cfgSoC->implDRAM) { startAddr = cfgSoC->addrRAM; }
         else { startAddr = cfgSoC->stackStartAddr - 512; }
     }
-    if (!xatoi(&ptr,  &endAddr))
+    if(!xatoi(&ptr,  &endAddr))
     {
         if(cfgSoC->implInsnBRAM)  { endAddr = cfgSoC->sizeInsnBRAM; }
         else if(cfgSoC->implBRAM) { endAddr = cfgSoC->sizeBRAM; }
         else if(cfgSoC->implRAM || cfgSoC->implDRAM) { endAddr = cfgSoC->sizeRAM; }
         else { endAddr = cfgSoC->stackStartAddr + 8; }
     }
-    if (!xatoi(&ptr,  &iterations))
+    if(!xatoi(&ptr,  &iterations))
     {
         iterations = 1;
     }
