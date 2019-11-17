@@ -291,6 +291,7 @@ For ZPUTA, it can either be configured to be the boot application (ie. no IOCP) 
 ![ZPUTA Memory Map](https://github.com/pdsmart/ZPU/blob/master/docs/ZPUTAMemoryMap.png)
 
 <br>
+
 # Build
 
 This section shows how to make a basic build and assumes the target development board is the [QMTECH Cyclone V board](https://github.com/ChinaQMTECH/QM_CYCLONE_V). There are many configuration options but these will be covered seperately.
@@ -366,8 +367,8 @@ set_location_assignment PIN_Y20  -to SDCARD_CS[0]
 6. Open the Quartus Programmer (ie. Quartus Prime -> Tools -> Programmer), select the sof file via 'Add File' which will be in the directory \<zpu evo dir>/build/QMV_zpu.sof (QMV_EVO.sof if build was via Makefile) and setup the hardware via 'Hardware Setup'. 
 7. Program the FPGA via 'Start' and on success, in the serial terminal window you will see the ZPUTA sign on message.
 
-
 <br>
+
 # Repository Structure
 
 The GIT Repository is organised as per the build environment shown in the tables below.
