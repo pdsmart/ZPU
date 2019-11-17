@@ -1,7 +1,7 @@
 Please consult my [GitHub](https://pdsmart.github.io) website for more upto date information.
 <br>
 <br>
-The ZPU is a 32bit Stack based microprocessor and was designed by Øyvind Harboe from [Zylin AS](https://opensource.zylin.com/) and original documentation can be found on the [Zylin/OpenCore website or Wikipedia](https://en.wikipedia.org/wiki/ZPU_(microprocessor). It is a microprocessor intended for FPGA embedded applications with minimal logic element and BRAM usage with the sacrifice of speed of execution. 
+The ZPU is a 32bit Stack based microprocessor and was designed by Øyvind Harboe from [Zylin AS](https://opensource.zylin.com/) and original documentation can be found on the [Zylin/OpenCore website or Wikipedia](https://en.wikipedia.org/wiki/ZPU_\(microprocessor\)). It is a microprocessor intended for FPGA embedded applications with minimal logic element and BRAM usage with the sacrifice of speed of execution. 
 
 Zylin produced two designs which it made open source, namely the Small and Medium ZPU versions. Additional designs were produced by external developers such as the Flex and ZPUino variations, each offering enhancements to the original design such as Wishbone interface, performance etc.
 
