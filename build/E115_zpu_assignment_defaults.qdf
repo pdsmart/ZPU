@@ -367,7 +367,7 @@ set_global_assignment -name RESERVE_OTHER_AP_PINS_AFTER_CONFIGURATION "Use as re
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "Use as programming pin"
 set_global_assignment -name ENABLE_CONFIGURATION_PINS On
 set_global_assignment -name ENABLE_JTAG_PIN_SHARING Off
-set_global_assignment -name ENABLE_NCE_PIN Off
+set_global_assignment -name ENABLE_NCE_PIN On
 set_global_assignment -name ENABLE_BOOT_SEL_PIN On
 set_global_assignment -name CRC_ERROR_CHECKING Off
 set_global_assignment -name INTERNAL_SCRUBBING Off

@@ -33,18 +33,21 @@ entity E115_zpu is
         UART_RX_0       : in    std_logic;
         UART_TX_0       : out   std_logic;
         UART_RX_1       : in    std_logic;
-        UART_TX_1       : out   std_logic 
+        UART_TX_1       : out   std_logic;
 
---      SDRAM_CLK       : out   std_logic;                                  -- sdram is accessed at 128MHz
---      SDRAM_CKE       : out   std_logic;                                  -- clock enable.
---      SDRAM_DQ        : inout std_logic_vector(15 downto 0);              -- 16 bit bidirectional data bus
---      SDRAM_ADDR      : out   std_logic_vector(12 downto 0);              -- 13 bit multiplexed address bus
---      SDRAM_DQM       : out   std_logic_vector(1 downto 0);               -- two byte masks
---      SDRAM_BA        : out   std_logic_vector(1 downto 0);               -- two banks
---      SDRAM_CS        : out   std_logic;                                  -- a single chip select
---      SDRAM_WE        : out   std_logic;                                  -- write enable
---      SDRAM_RAS       : out   std_logic;                                  -- row address select
---      SDRAM_CAS       : out   std_logic                                   -- columns address select
+        -- DDR2 DRAM
+        DDR2_ADDR       : out   std_logic_vector(13 downto 0);              -- 14 bit multiplexed address bus
+        DDR2_DQ         : inout std_logic_vector(63 downto 0);              -- 64 bit bidirectional data bus
+        DDR2_DQS        : inout std_logic_vector(7 downto 0);               -- 8 bit bidirectional data bus
+        DDR2_DQM        : out   std_logic_vector(17 downto 0);               -- eight byte masks
+        DDR2_ODT        : out   std_logic_vector(1 downto 0);               -- 14 bit multiplexed address bus
+        DDR2_BA         : out   std_logic_vector(2 downto 0);               -- 8 banks 
+        DDR2_CS         : out   std_logic_vector(1 downto 0);               -- 2 chip selects.
+        DDR2_WE         : out   std_logic;                                  -- write enable
+        DDR2_RAS        : out   std_logic;                                  -- row address select
+        DDR2_CAS        : out   std_logic;                                  -- columns address select
+        DDR2_CKE        : out   std_logic_vector(1 downto 0);               -- 2 clock enable.
+        DDR2_CLK        : out   std_logic_vector(1 downto 0)                -- 2 clocks.
     );
 END entity;
 
@@ -142,7 +145,7 @@ port map
     IOCTL_DOUT        => open,                             -- Data to be written into FPGA.
     IOCTL_DIN         => (others => '0'),                  -- Data to be read into HPS.
 
-    -- SDRAM signals
+    -- SDRAM signals which do not exist on the E115
     SDRAM_CLK         => open, --SDRAM_CLK,                -- sdram is accessed at 128MHz
     SDRAM_CKE         => open, --SDRAM_CKE,                -- clock enable.
     SDRAM_DQ          => open, --SDRAM_DQ,                 -- 16 bit bidirectional data bus
@@ -153,7 +156,21 @@ port map
     SDRAM_WE_n        => open, --SDRAM_WE,                 -- write enable
     SDRAM_RAS_n       => open, --SDRAM_RAS,                -- row address select
     SDRAM_CAS_n       => open, --SDRAM_CAS,                -- columns address select
-    SDRAM_READY       => open                              -- sd ready.
+    SDRAM_READY       => open,                             -- sd ready.
+
+    -- DDR2 DRAM
+    DDR2_ADDR         => DDR2_ADDR,                        -- 14 bit multiplexed address bus
+    DDR2_DQ           => DDR2_DQ,                          -- 64 bit bidirectional data bus
+    DDR2_DQS          => DDR2_DQS,                         -- 8 bit bidirectional data bus
+    DDR2_DQM          => DDR2_DQM,                         -- eight byte masks
+    DDR2_ODT          => DDR2_ODT,                         -- 14 bit multiplexed address bus
+    DDR2_BA           => DDR2_BA,                          -- 8 banks 
+    DDR2_CS           => DDR2_CS,                          -- 2 chip selects.
+    DDR2_WE           => DDR2_WE,                          -- write enable
+    DDR2_RAS          => DDR2_RAS,                         -- row address select
+    DDR2_CAS          => DDR2_CAS,                         -- columns address select
+    DDR2_CKE          => DDR2_CKE,                         -- 2 clock enable.
+    DDR2_CLK          => DDR2_CLK                          -- 2 clocks.
 );
 
 

@@ -154,7 +154,21 @@ port map
     SDRAM_WE_n        => SDRAM_WE,                         -- write enable
     SDRAM_RAS_n       => SDRAM_RAS,                        -- row address select
     SDRAM_CAS_n       => SDRAM_CAS,                        -- columns address select
-    SDRAM_READY       => open                              -- sd ready.
+    SDRAM_READY       => open,                             -- sd ready.
+
+    -- DDR2 DRAM - doesnt exist on the QMV.
+    DDR2_ADDR         => open,                             -- 14 bit multiplexed address bus
+    DDR2_DQ           => open,                             -- 64 bit bidirectional data bus
+    DDR2_DQS          => open,                             -- 8 bit bidirectional data bus
+    DDR2_DQM          => open,                             -- eight byte masks
+    DDR2_ODT          => open,                             -- 14 bit multiplexed address bus
+    DDR2_BA           => open,                             -- 8 banks 
+    DDR2_CS           => open,                             -- 2 chip selects.
+    DDR2_WE           => open,                             -- write enable
+    DDR2_RAS          => open,                             -- row address select
+    DDR2_CAS          => open,                             -- columns address select
+    DDR2_CKE          => open,                             -- 2 clock enable.
+    DDR2_CLK          => open                              -- 2 clocks.    
 );
 
 

@@ -104,7 +104,21 @@ entity zpu_soc is
         SDRAM_WE_n                : out   std_logic;                                  -- write enable
         SDRAM_RAS_n               : out   std_logic;                                  -- row address select
         SDRAM_CAS_n               : out   std_logic;                                  -- columns address select
-        SDRAM_READY               : out   std_logic                                   -- sd ready.
+        SDRAM_READY               : out   std_logic;                                  -- sd ready.
+
+        -- DDR2 DRAM
+        DDR2_ADDR                 : out   std_logic_vector(13 downto 0);              -- 14 bit multiplexed address bus
+        DDR2_DQ                   : inout std_logic_vector(63 downto 0);              -- 64 bit bidirectional data bus
+        DDR2_DQS                  : inout std_logic_vector(7 downto 0);               -- 8 bit bidirectional data bus
+        DDR2_DQM                  : out   std_logic_vector(17 downto 0);               -- eight byte masks
+        DDR2_ODT                  : out   std_logic_vector(1 downto 0);               -- 14 bit multiplexed address bus
+        DDR2_BA                   : out   std_logic_vector(2 downto 0);               -- 8 banks 
+        DDR2_CS                   : out   std_logic_vector(1 downto 0);               -- 2 chip selects.
+        DDR2_WE                   : out   std_logic;                                  -- write enable
+        DDR2_RAS                  : out   std_logic;                                  -- row address select
+        DDR2_CAS                  : out   std_logic;                                  -- columns address select
+        DDR2_CKE                  : out   std_logic_vector(1 downto 0);               -- 2 clock enable.
+        DDR2_CLK                  : out   std_logic_vector(1 downto 0)                -- 2 clocks.
 );
 end entity;
 
