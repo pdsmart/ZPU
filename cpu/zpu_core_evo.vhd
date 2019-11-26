@@ -47,6 +47,7 @@
 --         which are sepcific to the Sharp Emulator should be skipped.
 --         Additional effort needs spending on the Wishbone Error signal to retry the bus transaction,
 --         currently it just aborts it which is not ideal.
+--  191126 v1.1 Bug fixes. When switching off WishBone the CPU wouldnt run.
 --         
 
 library ieee;
@@ -520,8 +521,7 @@ begin
     WB_INIT: if IMPL_USE_WB_BUS = true generate
       --WB_CLK_I                           <= open;
         ZPURESET                           <= RESET or WB_RST_I;
-    end generate;
-    NO_WB: if IMPL_USE_WB_BUS = false generate
+    else generate
         ZPURESET                           <= RESET;
     end generate;
 
@@ -575,11 +575,8 @@ begin
                                                   else '0';
     cacheL2Empty                           <= '1' when cacheL2FetchIdx(ADDR_32BIT_RANGE) = cacheL2StartAddr(ADDR_32BIT_RANGE)
                                                   else '0';
-    cacheL2Invalid                         <= --'0' when pc(ADDR_32BIT_RANGE) >= cacheL2StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL2FetchIdx(ADDR_32BIT_RANGE)+64
-                                              '1' when pc(ADDR_32BIT_RANGE) < cacheL2StartAddr(ADDR_32BIT_RANGE) or (pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE))
-                                                  -- or (pc(ADDR_32BIT_RANGE) = cacheL2StartAddr(ADDR_32BIT_RANGE) and cacheL2StartAddr(ADDR_32BIT_RANGE) = cacheL2FetchIdx(ADDR_32BIT_RANGE))) and cacheL2Active = '1'
+    cacheL2Invalid                         <= '1' when pc(ADDR_32BIT_RANGE) < cacheL2StartAddr(ADDR_32BIT_RANGE) or (pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE))
                                                   else '0';
-                                                  --else '1';
     cacheL2Mux2Addr                        <= cacheL1FetchIdx(L2CACHE_32BIT_RANGE) when DEBUG_CPU = false or (DEBUG_CPU = true and debugState = Debug_Idle)
                                                   else
                                                   debugPC(L2CACHE_32BIT_RANGE) when DEBUG_CPU = true
@@ -616,16 +613,14 @@ begin
             MEM_WRITE_HWORD                                  <= '0';
             MEM_READ_ENABLE                                  <= '0';
             MEM_WRITE_ENABLE                                 <= '0';
-            if IMPL_USE_WB_BUS = true then
-                WB_ADR_O(ADDR_32BIT_RANGE)                   <= (others => '0');
-                WB_DAT_O                                     <= (others => '0');
-                WB_WE_O                                      <= '0';
-                WB_CYC_O                                     <= '0';
-                WB_STB_O                                     <= '0';
-                WB_CTI_O                                     <= "000";
-                WB_SEL_O                                     <= "1111";
-                wbXactActive                                 <= '0';
-            end if;
+            WB_ADR_O(ADDR_32BIT_RANGE)                       <= (others => '0');
+            WB_DAT_O                                         <= (others => '0');
+            WB_WE_O                                          <= '0';
+            WB_CYC_O                                         <= '0';
+            WB_STB_O                                         <= '0';
+            WB_CTI_O                                         <= "000";
+            WB_SEL_O                                         <= "1111";
+            wbXactActive                                     <= '0';
             cacheL2Write                                     <= '0';
             cacheL2IncAddr                                   <= '0';
             cacheL2FetchIdx                                  <= (others => '0');
@@ -696,7 +691,7 @@ begin
             end if;
         
             -- If the external memory is busy (1) or the wishbone interface is active and no ACK received then we have to back off and wait till next clock cycle and check again.
-            if MEM_BUSY = '0' and (IMPL_USE_WB_BUS = true and ((wbXactActive = '1' and WB_ACK_I = '1') or wbXactActive = '0')) and mxHoldCycles = 0 then
+            if MEM_BUSY = '0' and ((IMPL_USE_WB_BUS = true and ((wbXactActive = '1' and WB_ACK_I = '1') or wbXactActive = '0')) or IMPL_USE_WB_BUS = false) and mxHoldCycles = 0 then
 
                 -- Memory transaction processor state machine. Idle is the control state and depending upon entries in the queue, debug or L2 usage, it
                 -- directs the FSM states accordingly. 
@@ -958,7 +953,7 @@ begin
     
                     when MemXact_MemoryFetch =>
                         if DEBUG_CPU = true then
-                            if wbXactActive   = '1' then
+                            if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                                 mxMemVal.word                       <= unsigned(WB_DAT_I);
                             else
                                 mxMemVal.word                       <= unsigned(MEM_DATA_IN);
@@ -968,7 +963,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_OpcodeFetch =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             cacheL2WriteData                        <= WB_DAT_I;
                         else
                             cacheL2WriteData                        <= MEM_DATA_IN;
@@ -980,7 +975,7 @@ begin
                         mxState                                     <= MemXact_Idle;
 
                     when MemXact_TOS =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             mxTOS.word                              <= unsigned(WB_DAT_I);
                         else
                             mxTOS.word                              <= unsigned(MEM_DATA_IN);
@@ -989,7 +984,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_NOS =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             mxNOS.word                              <= unsigned(WB_DAT_I);
                         else
                             mxNOS.word                              <= unsigned(MEM_DATA_IN);
@@ -998,7 +993,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_TOSNOS =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             mxTOS.word                              <= unsigned(WB_DAT_I);
                         else
                             mxTOS.word                              <= unsigned(MEM_DATA_IN);
@@ -1028,7 +1023,7 @@ begin
                         end if;
 
                     when MemXact_TOSNOS_3 =>
-                        if wbXactActive  = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive  = '1' then
                             mxNOS.word                              <= unsigned(WB_DAT_I);
                             mxNOS.valid                             <= '1';
                             mxFifoReadIdx                           <= mxFifoReadIdx + 1;
@@ -1048,7 +1043,7 @@ begin
     
                     when MemXact_ReadWordToTOS =>
                         mxTOS.word                                  <= (others => '0');
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             mxTOS.word(15 downto 0)                 <= unsigned(WB_DAT_I(((wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16));
                         else
                             mxTOS.word(15 downto 0)                 <= unsigned(MEM_DATA_IN(((wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16));
@@ -1058,7 +1053,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_ReadAddToTOS =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             mxTOS.word                              <= muxTOS.word + unsigned(WB_DAT_I);
                         else
                             mxTOS.word                              <= muxTOS.word + unsigned(MEM_DATA_IN);
@@ -1067,7 +1062,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_WriteToAddr =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             WB_ADR_O(ADDR_32BIT_RANGE)              <= WB_DAT_I(ADDR_32BIT_RANGE);
                             WB_ADR_O(minAddrBit-1 downto 0)         <= (others => '0');
                             WB_DAT_O                                <= mxFifo(to_integer(mxFifoReadIdx)).data;
@@ -1097,7 +1092,7 @@ begin
     
                     when MemXact_WriteByteToAddr =>
                         -- For wishbone, we need to store the data and terminate the current cycle before we can commence a write cycle.
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             WB_DAT_O                                <= WB_DAT_I;
                             WB_DAT_O(((wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 0))))*8+7) downto (wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 0))))*8) <= std_logic_vector(mxFifo(to_integer(mxFifoReadIdx)).data(7 downto 0));
                             cacheL2WriteData                        <= WB_DAT_I;
@@ -1133,7 +1128,7 @@ begin
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_WriteHWordToAddr =>
-                        if wbXactActive   = '1' then
+                        if IMPL_USE_WB_BUS = true and wbXactActive   = '1' then
                             WB_DAT_O                                <= WB_DAT_I;
                             WB_DAT_O(((wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16) <= std_logic_vector(mxFifo(to_integer(mxFifoReadIdx)).data(15 downto 0));
                             cacheL2WriteData                        <= WB_DAT_I;
@@ -1145,8 +1140,8 @@ begin
                             MEM_DATA_OUT(((wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(byteBits-1 downto 1))))*16) <= std_logic_vector(mxFifo(to_integer(mxFifoReadIdx)).data(15 downto 0));
                             cacheL2WriteData                        <= MEM_DATA_IN;
                             MEM_WRITE_ENABLE                        <= '1';
-                        mxFifoReadIdx                               <= mxFifoReadIdx + 1;
-                        mxState                                     <= MemXact_Idle;
+                            mxFifoReadIdx                           <= mxFifoReadIdx + 1;
+                            mxState                                 <= MemXact_Idle;
                         end if;
                         -- If the data write is to a cached location, we have read the original value, so update cache with modified version.
                         if cacheL2MxAddrInCache = '1' then
@@ -1272,7 +1267,7 @@ begin
                   ((cacheL2Active = '0' and MEM_BUSY_INSN = '0') or (cacheL2Active = '1'))
                   and
                   -- If using L2 cache then only process when cached data is available in L2.
-                  (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Empty = '0' and cacheL2Full = '1' and cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL1FetchIdx(ADDR_32BIT_RANGE)+1 ))
+                  (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Empty = '0' and cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL1FetchIdx(ADDR_32BIT_RANGE)+1 ))
                   and
                   -- If debugging, only process if the debug FSM is idle as the L2 address is muxed with the debug address.
                   ((DEBUG_CPU = false or (DEBUG_CPU = true and debugState = Debug_Idle))) then
@@ -1626,7 +1621,7 @@ begin
                             end if;
 
                         -- Act immediately if an interrupt has occurred. Do not recurse into ISR while interrupt line is active 
-                        elsif (INT_REQ = '1' or WB_INTA_I = '1') and inInterrupt = '0' and idimFlag = '0' then
+                        elsif (INT_REQ = '1' or (IMPL_USE_WB_BUS = true and WB_INTA_I = '1')) and inInterrupt = '0' and idimFlag = '0' then
 
                             -- We have to wait for TOS and NOS to become valid so they can be saved, so loop until they are valid.
                             if muxTOS.valid = '1' and muxNOS.valid = '1' then
@@ -1634,7 +1629,7 @@ begin
                                 inInterrupt                                             <= '1';
                                 INT_ACK                                                 <= '1';                                           -- Acknowledge interrupt.
                                 interruptSuspendedAddr                                  <= pc(ADDR_BIT_RANGE);                            -- Save address which got interrupted.
-                           --     TOS.word                                                <= (others => DontCareValue);
+                           --   TOS.word                                                <= (others => DontCareValue);
                                 TOS.word(ADDR_BIT_RANGE)                                <= pc;
                                 NOS.word                                                <= muxTOS.word;
                                 pc                                                      <= to_unsigned(32+START_ADDR_MEM, maxAddrBit);    -- Load Vector 0x20 (from memory start) as next address to execute from.
@@ -1683,7 +1678,7 @@ begin
                             state                                                       <= State_Idle;
 
                         -- Execution depends on the L1 having decoded instructions stored at the current PC.
-                        -- As a minimum the cache must be valid and that there is at least 1 instructions in the cache.
+                        -- As a minimum the cache must be valid and that there is at least 1 instruction in the cache.
                         elsif cacheL1Invalid = '0' and cacheL1InsnAfterPC > 4 then -- and (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Full = '1')) then
 
                             -- Remember the last PC location executed, used for jump detection.
@@ -1903,7 +1898,7 @@ begin
                                         tInsnExec                                       := '1';
                                         idimFlag                                        <= '0';
                                         sp                                              <= decSp;
-                                  --      TOS.word                                        <= (others => DontCareValue);
+                                  --    TOS.word                                        <= (others => DontCareValue);
                                         TOS.word(ADDR_BIT_RANGE)                        <= incPC;
                                         NOS.word                                        <= muxTOS.word;
     
@@ -1927,7 +1922,7 @@ begin
                                         if muxTOS.valid = '1' and muxNOS.valid = '1' then
                                             tInsnExec                                   := '1';
                                             idimFlag                                    <= '0';
-                                   --         TOS.word                                    <= (others => DontCareValue);
+                                   --       TOS.word                                    <= (others => DontCareValue);
                                             TOS.word(ADDR_BIT_RANGE)                    <= incPC;
                                             pc                                          <= pc + muxTOS.word(ADDR_BIT_RANGE);
                                         end if;
@@ -1939,7 +1934,7 @@ begin
                                         if muxTOS.valid = '1' and muxNOS.valid = '1' then
                                             tInsnExec                                   := '1';
                                             idimFlag                                    <= '0';
-                                    --        TOS.word                                    <= (others => DontCareValue);
+                                    --      TOS.word                                    <= (others => DontCareValue);
                                             TOS.word(ADDR_BIT_RANGE)                    <= incPC;
                                             pc                                          <= muxTOS.word(ADDR_BIT_RANGE);
                                         end if;
@@ -2750,7 +2745,7 @@ begin
                                 debugRec.WRITE_STACK_TOS                                <= '1';
                                 debugRec.WRITE_STACK_NOS                                <= '1';
                                 debugRec.DATA(63 downto 0)                              <= std_logic_vector(to_unsigned(to_integer(pc), 16)) & std_logic_vector(to_unsigned(to_integer(cacheL1FetchIdx), 16))  & std_logic_vector(to_unsigned(to_integer(cacheL1StartAddr), 16)) & std_logic_vector(to_unsigned(to_integer(cacheL1InsnAfterPC), 16));
-                                debugRec.DATA2(63 downto 0)                             <= std_logic_vector(to_unsigned(to_integer(cacheL2FetchIdx), 24))  & std_logic_vector(to_unsigned(to_integer(cacheL2StartAddr), 24)) & "10000000" & cacheL2IncAddr & idimFlag & tInsnExec & cacheL2Full & cacheL2Active & cacheL2Empty & cacheL2Write;
+                                debugRec.DATA2(63 downto 0)                             <= std_logic_vector(to_unsigned(to_integer(cacheL2FetchIdx), 24))  & std_logic_vector(to_unsigned(to_integer(cacheL2StartAddr), 24)) & "10000000" & '0' & cacheL2IncAddr & idimFlag & tInsnExec & cacheL2Full & cacheL2Active & cacheL2Empty & cacheL2Write;
                                 debugRec.DATA3(63 downto 0)                             <= "00" & cacheL1(to_integer(pc))(DECODED_RANGE)   & cacheL1(to_integer(pc))(OPCODE_RANGE)   & "00" & cacheL1(to_integer(pc)+1)(DECODED_RANGE) & cacheL1(to_integer(pc)+1)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+2)(DECODED_RANGE) & cacheL1(to_integer(pc)+2)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+3)(DECODED_RANGE) & cacheL1(to_integer(pc)+3)(OPCODE_RANGE);
                                 debugRec.DATA4(63 downto 0)                             <= "00" & cacheL1(to_integer(pc)+4)(DECODED_RANGE) & cacheL1(to_integer(pc)+4)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+5)(DECODED_RANGE) & cacheL1(to_integer(pc)+5)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+6)(DECODED_RANGE) & cacheL1(to_integer(pc)+6)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+7)(DECODED_RANGE) & cacheL1(to_integer(pc)+7)(OPCODE_RANGE);
                                 debugRec.OPCODE                                         <= cacheL1(to_integer(pc))(OPCODE_RANGE);
@@ -2791,7 +2786,7 @@ begin
                                     debugRec.WRITE_STACK_TOS                            <= '1';
                                     debugRec.WRITE_STACK_NOS                            <= '1';
                                     debugRec.DATA(63 downto 0)                          <= std_logic_vector(to_unsigned(to_integer(pc), 16)) & std_logic_vector(to_unsigned(to_integer(cacheL1FetchIdx), 16))  & std_logic_vector(to_unsigned(to_integer(cacheL1StartAddr), 16)) & std_logic_vector(to_unsigned(to_integer(cacheL1InsnAfterPC), 16));
-                                    debugRec.DATA2(63 downto 0)                         <= std_logic_vector(to_unsigned(to_integer(cacheL2FetchIdx), 24))  & std_logic_vector(to_unsigned(to_integer(cacheL2StartAddr), 24)) & "00000000" & cacheL2IncAddr & idimFlag & tInsnExec & cacheL2Full & cacheL2Active & cacheL2Empty & cacheL2Write;
+                                    debugRec.DATA2(63 downto 0)                         <= std_logic_vector(to_unsigned(to_integer(cacheL2FetchIdx), 24))  & std_logic_vector(to_unsigned(to_integer(cacheL2StartAddr), 24)) & "00000000" & '0' & cacheL2IncAddr & idimFlag & tInsnExec & cacheL2Full & cacheL2Active & cacheL2Empty & cacheL2Write;
                                     debugRec.DATA3(63 downto 0)                         <= "00" & cacheL1(to_integer(pc))(DECODED_RANGE)   & cacheL1(to_integer(pc))(OPCODE_RANGE)   & "00" & cacheL1(to_integer(pc)+1)(DECODED_RANGE) & cacheL1(to_integer(pc)+1)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+2)(DECODED_RANGE) & cacheL1(to_integer(pc)+2)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+3)(DECODED_RANGE) & cacheL1(to_integer(pc)+3)(OPCODE_RANGE);
                                     debugRec.DATA4(63 downto 0)                         <= "00" & cacheL1(to_integer(pc)+4)(DECODED_RANGE) & cacheL1(to_integer(pc)+4)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+5)(DECODED_RANGE) & cacheL1(to_integer(pc)+5)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+6)(DECODED_RANGE) & cacheL1(to_integer(pc)+6)(OPCODE_RANGE) & "00" & cacheL1(to_integer(pc)+7)(DECODED_RANGE) & cacheL1(to_integer(pc)+7)(OPCODE_RANGE);
                                     debugRec.OPCODE                                     <= cacheL1(to_integer(pc))(OPCODE_RANGE);
@@ -3356,8 +3351,7 @@ begin
                 end if;
             end if;
         end process;        
-    end generate;
-    NODIVIDER : if IMPL_DIV = false and IMPL_FIDIV32 = false and IMPL_MOD = false generate
+    else generate
         dividendCopy                                     <= (others => DontCareValue);
     end generate;
     
@@ -3408,8 +3402,7 @@ begin
                 end if;
             end if;
         end process;
-    end generate;
-    NOFIADD32: if IMPL_FIADD32 = false generate
+    else generate
         fpAddResult                                      <= (others => DontCareValue);
     end generate;
     
@@ -3479,8 +3472,7 @@ begin
                 fpMultResult(30 downto 0)                <= result(30+quotientFractional downto quotientFractional);
             end if;
         end process;
-    end generate;
-    NOFIMULT32: if IMPL_FIMULT32 = false generate
+    else generate
         fpMultResult                                     <= (others => DontCareValue);
         quotientFractional                               <= 0;
     end generate;

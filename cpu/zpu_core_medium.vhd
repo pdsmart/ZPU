@@ -226,7 +226,7 @@ architecture behave of zpu_core_medium is
     signal trace_topOfStack                : std_logic_vector(WORD_32BIT_RANGE);
     signal trace_topOfStackB               : std_logic_vector(WORD_32BIT_RANGE);
 
-    signal clkDivider                      : unsigned(31 downto 0);
+    signal clkDivider                      : std_logic;
     
 begin
 
@@ -302,7 +302,7 @@ begin
             mem_writeMask                  <= (others => '1');
             interrupt_ack                  <= '0';
             interrupt_done                 <= '0';
-            clkDivider                     <= (others => '0');
+            clkDivider                     <= '0';
             if DEBUG_CPU = true then
                 debugRec                   <= ZPU_DBG_T_INIT;
                 debugCnt                   <= 0;
@@ -337,9 +337,9 @@ begin
             
             -- At the moment, the main state machine wont run at full (100MHz) speed, only 1/2 speed, hence the divider.
             -- Once the delay causing it to fail is removed, freq reduced or re-engineered, remove this divider.
-            clkDivider                     <= clkDivider + 1;
-            if clkDivider(4) = '1' then
-                clkDivider                 <= (others => '0');
+            clkDivider                     <= '1';
+            if clkDivider = '1' then
+                clkDivider                 <= '0';
                 if DEBUG_CPU = false or (DEBUG_CPU = true and debugReady = '1') then
                     tCPURun                := '1';
                 end if;
@@ -667,7 +667,7 @@ begin
                     when State_Execute =>
     
                         -- Debug code, if enabled, writes out the current instruction.
-                        if DEBUG_CPU = true and insn /= State_InsnFetch then
+                        if DEBUG_CPU = true and insn /= State_InsnFetch and pc >= X"9000" then
 
                             debugRec.FMT_DATA_PRTMODE               <= "00";
                             debugRec.FMT_PRE_SPACE                  <= '0';
@@ -1150,7 +1150,7 @@ begin
                             state                                   <= State_Decode;
     
                             -- If debug enabled, write out state during fetch.
-                            if DEBUG_CPU = true then
+                            if DEBUG_CPU = true and pc >= X"9000" then
                                 debugRec.FMT_DATA_PRTMODE           <= "00";
                                 debugRec.FMT_PRE_SPACE              <= '0';
                                 debugRec.FMT_POST_SPACE             <= '0';

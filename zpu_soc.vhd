@@ -104,21 +104,21 @@ entity zpu_soc is
         SDRAM_WE_n                : out   std_logic;                                  -- write enable
         SDRAM_RAS_n               : out   std_logic;                                  -- row address select
         SDRAM_CAS_n               : out   std_logic;                                  -- columns address select
-        SDRAM_READY               : out   std_logic;                                  -- sd ready.
+        SDRAM_READY               : out   std_logic                                   -- sd ready.
 
         -- DDR2 DRAM
-        DDR2_ADDR                 : out   std_logic_vector(13 downto 0);              -- 14 bit multiplexed address bus
-        DDR2_DQ                   : inout std_logic_vector(63 downto 0);              -- 64 bit bidirectional data bus
-        DDR2_DQS                  : inout std_logic_vector(7 downto 0);               -- 8 bit bidirectional data bus
-        DDR2_DQM                  : out   std_logic_vector(17 downto 0);               -- eight byte masks
-        DDR2_ODT                  : out   std_logic_vector(1 downto 0);               -- 14 bit multiplexed address bus
-        DDR2_BA                   : out   std_logic_vector(2 downto 0);               -- 8 banks 
-        DDR2_CS                   : out   std_logic_vector(1 downto 0);               -- 2 chip selects.
-        DDR2_WE                   : out   std_logic;                                  -- write enable
-        DDR2_RAS                  : out   std_logic;                                  -- row address select
-        DDR2_CAS                  : out   std_logic;                                  -- columns address select
-        DDR2_CKE                  : out   std_logic_vector(1 downto 0);               -- 2 clock enable.
-        DDR2_CLK                  : out   std_logic_vector(1 downto 0)                -- 2 clocks.
+      --DDR2_ADDR                 : out   std_logic_vector(13 downto 0);              -- 14 bit multiplexed address bus
+      --DDR2_DQ                   : inout std_logic_vector(63 downto 0);              -- 64 bit bidirectional data bus
+      --DDR2_DQS                  : inout std_logic_vector(7 downto 0);               -- 8 bit bidirectional data bus
+      --DDR2_DQM                  : out   std_logic_vector(17 downto 0);               -- eight byte masks
+      --DDR2_ODT                  : out   std_logic_vector(1 downto 0);               -- 14 bit multiplexed address bus
+      --DDR2_BA                   : out   std_logic_vector(2 downto 0);               -- 8 banks 
+      --DDR2_CS                   : out   std_logic_vector(1 downto 0);               -- 2 chip selects.
+      --DDR2_WE                   : out   std_logic;                                  -- write enable
+      --DDR2_RAS                  : out   std_logic;                                  -- row address select
+      --DDR2_CAS                  : out   std_logic;                                  -- columns address select
+      --DDR2_CKE                  : out   std_logic_vector(1 downto 0);               -- 2 clock enable.
+      --DDR2_CLK                  : out   std_logic_vector(1 downto 0)                -- 2 clocks.
 );
 end entity;
 
@@ -258,7 +258,6 @@ architecture rtl of zpu_soc is
     -- ZPU signals
     signal MEM_BUSY               :       std_logic;
     signal IO_WAIT_SPI            :       std_logic;
-    signal IO_WAIT_SD             :       std_logic;
     signal IO_WAIT_PS2            :       std_logic;
     signal IO_WAIT_INTR           :       std_logic;
     signal IO_WAIT_TIMER1         :       std_logic;
@@ -323,8 +322,6 @@ architecture rtl of zpu_soc is
     signal RAM_WREN               :       std_logic;
     signal BRAM_DATA_READ         :       std_logic_vector(WORD_32BIT_RANGE);
     signal RAM_DATA_READ          :       std_logic_vector(WORD_32BIT_RANGE);
---    signal BRAM_READ_STATE      :       integer range 0 to 2 := 0;
---    signal BRAM_WRITE_STATE     :       integer range 0 to 2 := 0;
     
     -- IOCTL
     signal IOCTL_RDINT            :       std_logic;
@@ -376,7 +373,7 @@ begin
                 IMPL_CALL            => true,
                 IMPL_SHIFT           => true,
                 IMPL_XOR             => true,
-                CACHE                => false,
+                CACHE                => true,
         --      IMPL_EMULATION       => minimal,
         --      REMAP_STACK          => false  --true, -- We need to remap the Boot ROM / Stack RAM so we can access SDRAM
                 CLK_FREQ             => SYSCLK_FREQUENCY,
@@ -561,7 +558,7 @@ begin
                 IMPL_HW_BYTE_WRITE   => EVO_USE_HW_BYTE_WRITE,  -- Enable use of hardware direct byte write rather than read 33bits-modify 8 bits-write 32bits.
                 IMPL_HW_WORD_WRITE   => EVO_USE_HW_WORD_WRITE,  -- Enable use of hardware direct byte write rather than read 32bits-modify 16 bits-write 32bits.
                 IMPL_OPTIMIZE_IM     => true,                   -- If the instruction cache is enabled, optimise Im instructions to gain speed.
-                IMPL_USE_INSN_BUS    => SOC_IMPL_INSN_BRAM,    -- Use a seperate bus to read instruction memory, normally implemented in BRAM.
+                IMPL_USE_INSN_BUS    => SOC_IMPL_INSN_BRAM,     -- Use a seperate bus to read instruction memory, normally implemented in BRAM.
                 IMPL_USE_WB_BUS      => EVO_USE_WB_BUS,         -- Use the wishbone interface in addition to direct access bus.    
                 -- Optional instructions to be implemented in hardware:
                 IMPL_ASHIFTLEFT      => false,                  -- Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT).
@@ -640,7 +637,7 @@ begin
     end generate;
     
     -- ROM
-    ZPUROMFLEX : if (ZPU_FLEX = 1 or ZPU_SMALL = 1) and SOC_IMPL_BRAM = true generate
+    ZPUROMSMALL : if (ZPU_SMALL = 1 or ZPU_FLEX = 1) and SOC_IMPL_BRAM = true generate
         ZPUROM : entity work.BootROM
             port map (
                 clk                  => SYSCLK,
@@ -654,6 +651,30 @@ begin
                 memBRead             => MEM_B_READ
             );
     end generate;
+
+    -- This block should provide byte addressable dual port BRAM for the Flex but for some reason Quartus quarks when compiling when the B port is used for writes. Not sure why
+    -- but needs revisiting as it will gain some performance improvements for the flex core.
+  --ZPUROMFLEX : if ZPU_FLEX = 1 and SOC_IMPL_BRAM = true generate
+  --    ZPUROM : entity work.DualPortBootBRAM
+  --        generic map (
+  --            addrbits             => SOC_MAX_ADDR_BRAM_BIT
+  --        )
+  --        port map (
+  --            clk                  => SYSCLK,
+  --            memAAddr             => MEM_A_ADDR(17 downto 2),
+  --            memAWriteEnable      => MEM_A_WRITE_ENABLE,
+  --            memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
+  --            memAWriteHalfWord    => MEM_WRITE_HWORD_ENABLE,
+  --            memAWrite            => MEM_A_WRITE,
+  --            memARead             => MEM_A_READ,
+
+  --            memBAddr             => MEM_B_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+  --            memBWrite            => MEM_B_WRITE,
+  --            memBWriteEnable      => MEM_B_WRITE_ENABLE,
+  --            memBRead             => MEM_B_READ
+  --        );
+  --end generate;
+
     ZPUROMMEDIUM : if ZPU_MEDIUM = 1 and SOC_IMPL_BRAM = true generate
         ZPUROM : entity work.BootROM
             port map (
@@ -736,21 +757,21 @@ begin
     -- Force the CPU to wait when slower memory/IO is accessed and it cant deliver an immediate result.
     MEM_BUSY                  <= '1'                  when (UART0_CS = '1' or UART1_CS = '1' or TIMER0_CS = '1') and MEM_READ_ENABLE = '1'
                                  else
-                           --      '1' when BRAM_SELECT = '1'       and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
-                           --      else
-                           --      '1' when IO_SELECT = '1'         and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
-                           --      else
-                                 '1'                  when SOC_IMPL_SD = true      and IO_WAIT_SD = '1'
+                           --    '1'                  when BRAM_SELECT = '1'       and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
+                           --    else
+                           --    '1'                  when IO_SELECT = '1'         and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
+                           --    else
+                                 '1'                  when SOC_IMPL_SD = true      and SD_CS = '1'     and MEM_READ_ENABLE = '1'
                                  else
-                                 '1'                  when SOC_IMPL_SPI = true     and IO_WAIT_SPI = '1'
+                                 '1'                  when SOC_IMPL_SPI = true     and SPI_CS = '1'    and MEM_READ_ENABLE = '1' and IO_WAIT_SPI = '1'
                                  else
-                                 '1'                  when SOC_IMPL_PS2 = true     and IO_WAIT_PS2 = '1'
+                                 '1'                  when SOC_IMPL_PS2 = true     and PS2_CS = '1'    and MEM_READ_ENABLE = '1' and IO_WAIT_PS2 = '1'
                                  else
-                                 '1'                  when SOC_IMPL_INTRCTL = true and IO_WAIT_INTR = '1'
+                                 '1'                  when SOC_IMPL_INTRCTL = true and INTR0_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_INTR = '1'
                                  else
-                                 '1'                  when SOC_IMPL_TIMER1 = true  and IO_WAIT_TIMER1 = '1'
+                                 '1'                  when SOC_IMPL_TIMER1 = true  and TIMER1_CS = '1' and MEM_READ_ENABLE = '1' and IO_WAIT_TIMER1 = '1'
                                  else
-                                 '1'                  when SOC_IMPL_IOCTL = true   and IO_WAIT_IOCTL = '1'
+                                 '1'                  when SOC_IMPL_IOCTL = true   and IOCTL_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_IOCTL = '1'
                                  else
                                  '1'                  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1' and MEM_READ_ENABLE = '1'
                                  else
@@ -815,8 +836,8 @@ begin
                                  else '0';
 
         WB_CLK_I              <= SYSCLK;
-    end generate;
-    NO_WISHBONE: if SOC_IMPL_WB = false generate
+
+    else generate
         WB_DAT_I              <= (others => '0');
         WB_ACK_I              <= '0';
         WB_HALT_I             <= '0';
@@ -841,10 +862,10 @@ begin
                                  '1'                  when (ZPU_MEDIUM = 1 or ZPU_FLEX = 1 or ZPU_SMALL = 1) and MEM_ADDR(ioBit) = '0'
                                  else '0';
                                  -- IO Range for EVO CPU
-    IO_SELECT                 <= '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and ((SOC_IMPL_WB = true and MEM_ADDR(WB_SELECT_BIT) = '0') or SOC_IMPL_WB = false) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit-1 - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
-    --IO_SELECT                 <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit-1 - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
+    IO_SELECT                 <= '1'                  when (ZPU_SMALL = 1 or ZPU_MEDIUM = 1 or ZPU_FLEX = 1) and MEM_ADDR(ioBit) = '1'                         -- IO Range for Small, Medium and Flex CPU
                                  else
-                                 '1'                  when (ZPU_SMALL = 1 or ZPU_MEDIUM = 1 or ZPU_FLEX = 1) and MEM_ADDR(ioBit) = '1'                         -- IO Range for Small, Medium and Flex CPU
+                          --       '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
+                                 '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and ((SOC_IMPL_WB = true and MEM_ADDR(WB_SELECT_BIT) = '0') or SOC_IMPL_WB = false) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit-WB_ACTIVE - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
                                  else '0';
     IO_TIMER_SELECT           <= '1'                  when IO_SELECT = '1'         and MEM_ADDR(11 downto 8) = X"C"                                            -- Timer Range 0x<msb=0>FFFFCxx
                                  else '0';
@@ -860,8 +881,7 @@ begin
     -- Mux the UART debug channel outputs. DBG1 is from the software controlled UART, DBG2 from the cpu channel.
     DEBUGUART: if DEBUG_CPU = true generate
         UART_TX_1             <= UART2_TX;
-    end generate; 
-    UART2: if DEBUG_CPU = false generate
+    else generate
         UART_TX_1             <= UART1_TX;
     end generate;
 
@@ -1188,16 +1208,12 @@ begin
                 SD_DATA_VALID                                       <= '0';
                 SD_RESET_TIMER                                      <= 0;
                 SD_STATE                                            <= SD_STATE_RESET;
-                IO_WAIT_SD                                          <= '0';
 
             -----------------------
             -- RISING CLOCK EDGE --
             -----------------------                
             elsif rising_edge(SYSCLK) then
 
-                -- Reset wait state, only 1 cycle long under normal circumstances.
-                IO_WAIT_SD                                          <= '0';
-    
                 -- CPU Write?
                 if MEM_WRITE_ENABLE = '1' and SD_CS = '1' then
 
@@ -1237,11 +1253,9 @@ begin
                         -- Read back stored address.
                         when "00"  =>
                             IO_DATA_READ_SD                         <= SD_ADDR(tChannel);
-                            IO_WAIT_SD                              <= '0';
 
                         -- Read Data, only valid if the SD_DATA_VALID bit is set.
                         when "01"  =>
-                            IO_WAIT_SD                              <= '0';
                             IO_DATA_READ_SD(31 downto 16)           <= SD_ERROR(tChannel);
                             IO_DATA_READ_SD(7 downto 0)             <= SD_DATA_READ(tChannel);
                             SD_DATA_VALID                           <= '0';
@@ -1260,7 +1274,6 @@ begin
                             IO_DATA_READ_SD(14)                     <= SD_WR(tChannel);
                             IO_DATA_READ_SD(15)                     <= SD_RESET(tChannel);
                             IO_DATA_READ_SD(31 downto 16)           <= SD_ERROR(tChannel);
-                            IO_WAIT_SD                              <= '0';
                             SD_OVERRUN                              <= '0'; 
 
                         when others =>
@@ -1419,8 +1432,8 @@ begin
 
         INTR0_CS                     <= '1' when IO_SELECT = '1'   and MEM_ADDR(11 downto 4) = "10110000"  -- Interrupt Range 0xFFFFFBxx, 0xB00-B0F
                                         else '0';
-    end generate;
-    NOINTRCTL: if SOC_IMPL_INTRCTL = false generate
+
+    else generate
         INT_TRIGGER                  <= '0';
     end generate;
 
@@ -1686,7 +1699,7 @@ begin
     -- WISHBONE devices
     ------------------------------------------------------------------------------------
 
-    I2C : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB_I2C = true generate
+    I2C : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and EVO_USE_WB_BUS = true and SOC_IMPL_WB_I2C = true generate
         I2C_MASTER_0: work.i2c_master_top
         generic map (
             ARST_LVL             => '1' -- asynchronous reset level
@@ -1729,7 +1742,7 @@ begin
     end generate;
 
     -- SDRAM over WishBone bus.
-    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB_SDRAM = true generate
+    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and EVO_USE_WB_BUS = true and SOC_IMPL_WB_SDRAM = true generate
 
         ZPUSDRAM : entity work.SDRAM
             port map (

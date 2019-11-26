@@ -35,6 +35,7 @@ entity CYC1000_zpu is
         UART_RX_1       : in    std_logic;
         UART_TX_1       : out   std_logic;
 
+        -- SDRAM signals
         SDRAM_CLK       : out   std_logic;                                  -- sdram is accessed at 128MHz
         SDRAM_CKE       : out   std_logic;                                  -- clock enable.
         SDRAM_DQ        : inout std_logic_vector(15 downto 0);              -- 16 bit bidirectional data bus
@@ -109,7 +110,7 @@ port map
     SPI_MISO          => '1',                              -- Allow the SPI interface not to be plumbed in.
     SPI_MOSI          => open,    
     SPI_CLK           => open,    
-    SPI_CS            => open,    
+    SPI_CS            => open,   
 
     -- SD Card (SPI) signals
     SDCARD_MISO       => SDCARD_MISO,
@@ -144,7 +145,7 @@ port map
     IOCTL_DIN         => (others => '0'),                  -- Data to be read into HPS.
 
     -- SDRAM signals
-    SDRAM_CLK         => SDRAM_CLK,                           -- sdram is accessed at 128MHz
+    SDRAM_CLK         => SDRAM_CLK,                        -- sdram is accessed at 128MHz
     SDRAM_CKE         => SDRAM_CKE,                        -- clock enable.
     SDRAM_DQ          => SDRAM_DQ,                         -- 16 bit bidirectional data bus
     SDRAM_ADDR        => SDRAM_ADDR,                       -- 13 bit multiplexed address bus
@@ -154,21 +155,21 @@ port map
     SDRAM_WE_n        => SDRAM_WE,                         -- write enable
     SDRAM_RAS_n       => SDRAM_RAS,                        -- row address select
     SDRAM_CAS_n       => SDRAM_CAS,                        -- columns address select
-    SDRAM_READY       => open,                             -- sd ready.
+    SDRAM_READY       => open                              -- sd ready.
 
     -- DDR2 DRAM - doesnt exist on the QMV.
-    DDR2_ADDR         => open,                             -- 14 bit multiplexed address bus
-    DDR2_DQ           => open,                             -- 64 bit bidirectional data bus
-    DDR2_DQS          => open,                             -- 8 bit bidirectional data bus
-    DDR2_DQM          => open,                             -- eight byte masks
-    DDR2_ODT          => open,                             -- 14 bit multiplexed address bus
-    DDR2_BA           => open,                             -- 8 banks 
-    DDR2_CS           => open,                             -- 2 chip selects.
-    DDR2_WE           => open,                             -- write enable
-    DDR2_RAS          => open,                             -- row address select
-    DDR2_CAS          => open,                             -- columns address select
-    DDR2_CKE          => open,                             -- 2 clock enable.
-    DDR2_CLK          => open                              -- 2 clocks.    
+  --DDR2_ADDR         => open,                             -- 14 bit multiplexed address bus
+  --DDR2_DQ           => open,                             -- 64 bit bidirectional data bus
+  --DDR2_DQS          => open,                             -- 8 bit bidirectional data bus
+  --DDR2_DQM          => open,                             -- eight byte masks
+  --DDR2_ODT          => open,                             -- 14 bit multiplexed address bus
+  --DDR2_BA           => open,                             -- 8 banks 
+  --DDR2_CS           => open,                             -- 2 chip selects.
+  --DDR2_WE           => open,                             -- write enable
+  --DDR2_RAS          => open,                             -- row address select
+  --DDR2_CAS          => open,                             -- columns address select
+  --DDR2_CKE          => open,                             -- 2 clock enable.
+  --DDR2_CLK          => open                              -- 2 clocks.    
 );
 
 

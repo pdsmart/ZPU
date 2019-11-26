@@ -45,7 +45,7 @@ create_clock -name {clk_50} -period 20.000 -waveform { 0.000 0.500 } [get_ports 
 #**************************************************************
 
 create_generated_clock -name {SYSCLK} -source [get_ports {CLOCK_50}] -duty_cycle 50.000 -multiply_by 2 -master_clock {clk_50} [get_nets {mypll|altpll_component|auto_generated|wire_generic_pll1_outclk}] 
-create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_50}] -duty_cycle 50.000 -phase 0 -multiply_by 4 -master_clock {clk_50} [get_nets {mypll|altpll_component|auto_generated|wire_generic_pll2_outclk}] 
+#create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_50}] -duty_cycle 50.000 -phase 0 -multiply_by 4 -master_clock {clk_50} [get_nets {mypll|altpll_component|auto_generated|wire_generic_pll2_outclk}] 
 
 
 #**************************************************************
@@ -57,33 +57,31 @@ create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_50}] -duty_cycle
 # Set Clock Uncertainty
 #**************************************************************
 
-set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
-set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
-
-
-#derive_clock_uncertainty
+#set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {MEMCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -hold 0.060  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -hold 0.060  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -rise_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {MEMCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {MEMCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -rise_to [get_clocks {SYSCLK}] -hold 0.060  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -setup 0.080  
+#set_clock_uncertainty -fall_from [get_clocks {SYSCLK}] -fall_to [get_clocks {SYSCLK}] -hold 0.060  
+derive_clock_uncertainty
 
 
 #**************************************************************
@@ -129,8 +127,8 @@ set_false_path -from [get_keepers {SW*}]
 # Set Multicycle Path
 #**************************************************************
 
-set_multicycle_path -setup -start -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] 1
-set_multicycle_path -hold -start -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] 0
+#set_multicycle_path -setup -start -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] 1
+#set_multicycle_path -hold -start -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] 0
 
 #set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|cacheFetchIdx[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|TOS.word[*]}] -setup -start 2
 #set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|cacheFetchIdx[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|TOS.word[*]}] -hold -start 0

@@ -195,6 +195,9 @@ int cmdProcessor(void)
     FRESULT           fr;
     BYTE              b1;
     RTC               rtc;
+    #if defined(BUILTIN_FS_CHANGETIME) && BUILTIN_FS_CHANGETIME == 1
+    FILINFO           Finfo;
+    #endif
 
     // Initialise any globals in the structure used to pass working variables to apps.
     G.Sector = 0;
@@ -205,7 +208,7 @@ int cmdProcessor(void)
     if(!disk_initialize(0, 1))
     {
         xsprintf(line, "0:");
-        fr = f_mount(&G.FatFs[0], line, NULL);
+        fr = f_mount(&G.FatFs[0], line, 0);
     }
 
     if(fr)

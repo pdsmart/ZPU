@@ -73,17 +73,18 @@ INCLUDE_DIR     = $(SWDIR)/include
 
 # Linker mapping file spec file.
 LINKMAPBOOTSTANDALONE = $(STARTUP_DIR)/zputa_standalone_boot_in_bram.ld
-LINKMAPBOOTIOCP       = $(STARTUP_DIR)/zputa_as_app_with_iocp_in_bram.ld
-LINKMAPBOOTTINYIOCP   = $(STARTUP_DIR)/zputa_as_app_with_tiny_iocp_in_bram.ld
+LINKMAPBOOTIOCP       = $(STARTUP_DIR)/zputa_with_iocp_in_bram.ld
+LINKMAPBOOTTINYIOCP   = $(STARTUP_DIR)/zputa_with_tiny_iocp_in_bram.ld
 LINKMAPRAM            = $(STARTUP_DIR)/zputa_as_app_in_ram.ld
 
 # Working directory to build object files.
 BUILD_DIR       = zpu_obj
 
-#MINSTARTUP_SRC = $(STARTUP_DIR)/mincrt0.s $(STARTUP_DIR)/pre_ram_main.s
-#MINSTARTUP_SRC = $(STARTUP_DIR)/crt0.s $(STARTUP_DIR)/pre_ram_main.s
-MINSTARTUP_SRC  = $(STARTUP_DIR)/ramcrt0.s $(STARTUP_DIR)/pre_ram_main.s
-MINSTARTUP_OBJ  = $(patsubst $(STARTUP_DIR)/%.s,$(BUILD_DIR)/%.o,$(MINSTARTUP_SRC))
+# Startup files, RAM has no microcode, ROM has microcode.
+RAMSTARTUP_SRC  = $(STARTUP_DIR)/ramcrt0.s $(STARTUP_DIR)/pre_ram_main.s
+RAMSTARTUP_OBJ  = $(patsubst $(STARTUP_DIR)/%.s,$(BUILD_DIR)/%.o,$(RAMSTARTUP_SRC))
+ROMSTARTUP_SRC  = $(STARTUP_DIR)/zputaromcrt0.s #$(STARTUP_DIR)/pre_rom_main.s
+ROMSTARTUP_OBJ  = $(patsubst $(STARTUP_DIR)/%.s,$(BUILD_DIR)/%.o,$(ROMSTARTUP_SRC))
 
 COMMON_SRC      = $(COMMON_DIR)/utils.c $(COMMON_DIR)/uart.c $(COMMON_DIR)/zpu_soc.c $(COMMON_DIR)/interrupts.c $(COMMON_DIR)/ps2.c $(COMMON_DIR)/swap.c $(COMMON_DIR)/spi.c $(COMMON_DIR)/syscalls.c $(COMMON_DIR)/malloc.c $(COMMON_DIR)/xprintf.c
 DHRY_SRC        = $(DHRY_DIR)/dhry_1.c $(DHRY_DIR)/dhry_2.c
@@ -97,7 +98,7 @@ CORE_OBJ        = $(patsubst $(CORE_DIR)/%.c,$(BUILD_DIR)/%.o,$(CORE_SRC))
 FATFS_OBJ       = $(patsubst $(FATFS_DIR)/%.c,$(BUILD_DIR)/%.o,$(FATFS_SRC))
 PFS_OBJ         = $(patsubst $(PFS_DIR)/%.c,$(BUILD_DIR)/%.o,$(PFS_SRC))
 
-MAIN_PRJ_TO_BOOT= zputa_standalone_boot
+MAIN_PRJ_TO_BOOT= zputa_standalone_boot_in_bram
 MAIN_PRJ_IN_BOOT= zputa_with_iocp_in_bram
 MAIN_PRJ_TINY_BOOT=zputa_with_tiny_iocp_in_bram
 MAIN_PRJ_RAM    = zputa_as_app_in_ram
@@ -105,29 +106,36 @@ MAIN_SRC        = zputa.c
 MAIN_OBJ        = $(COMMON_OBJ) $(FATFS_OBJ) $(DHRY_OBJ) $(CORE_OBJ) $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_SRC))
 
 # Commandline options for each tool.
+# To disable use of a given instruction, prefix it with no-
+ZPUOPTS         = -mloadsp \
+	          	  -mstoresp \
+	          	  -mpushspadd \
+	          	  -mneqbranch \
+	          	  -maddsp \
+	          	  -mashiftrt \
+	          	  -mashiftl \
+	          	  -mlshiftrt \
+	          	  -mcall \
+	          	  -mcallpcrel \
+	          	  -mshortop \
+	          	  -mbyteop \
+	          	  -meq \
+	          	  -mcompare \
+	          	  -mpoppcrel \
+	          	  -mmemreg
+ifeq ($(CPU), $(filter $(CPU),SMALL MEDIUM FLEX))
+ZPUOPTS        += -mno-mult \
+				  -mno-div \
+				  -mno-mod \
+				  -mno-neg
+endif
+ifeq ($(CPU), $(filter $(CPU),EVO))
+ZPUOPTS        += -mmult \
+	 	          -mdiv \
+	          	  -mmod \
+	          	  -mneg
+endif
 
-#ZPUOPTS= -mno-poppcrel -mno-pushspadd -mno-callpcrel -mno-byteop -mno-shortop -mno-neg -mno-div -mno-mod # No-neg requires bugfixed toolchain
-#ZPUOPTS= -mmult -mno-neg -mno-mod # No-neg requires bugfixed toolchain
-ZPUOPTS         =-mmult \
-		         -mdiv \
-	         	 -mmod \
-	         	 -mneg \
-	         	 -mloadsp \
-	         	 -mstoresp \
-	         	 -mpushspadd \
-	         	 -mneqbranch \
-	         	 -maddsp \
-	         	 -mashiftrt \
-	         	 -mashiftl \
-	         	 -mlshiftrt \
-	         	 -mcall \
-	         	 -mcallpcrel \
-	         	 -mshortop \
-	         	 -mbyteop \
-	         	 -meq \
-	         	 -mcompare \
-	         	 -mpoppcrel \
-	         	 -mmemreg
 #CFLAGS         = -I. -I$(INCLUDE_DIR) -I$(COMMON_DIR)/.  -c -Os $(ZPUOPTS) -DPRINTF_HEX_ONLY -DDISABLE_PRINTF # -DDISABLE_UART_TX -DDISABLE_UART_RX
 CFLAGS          = -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(DHRY_DIR) -I$(CORE_DIR) -I$(INCLUDE_DIR) -c -Os -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
 # Enable debug output.
@@ -281,16 +289,16 @@ $(ROMGEN): $(SWDIR)/utils/zpugen.c
 	@echo "IOCP_ZPUTA_SinglePortBRAM updated."
 
 # Link - this produces an ELF binary.
-$(MAIN_PRJ_TO_BOOT).elf: $(MINSTARTUP_OBJ) $(MAIN_OBJ)
+$(MAIN_PRJ_TO_BOOT).elf: $(ROMSTARTUP_OBJ) $(MAIN_OBJ)
 	$(LD) $(LFLAGS) -T $(LINKMAPBOOTSTANDALONE) -o $@ $+ $(LIBS)
 
-$(MAIN_PRJ_IN_BOOT).elf: $(MINSTARTUP_OBJ) $(MAIN_OBJ)
+$(MAIN_PRJ_IN_BOOT).elf: $(RAMSTARTUP_OBJ) $(MAIN_OBJ)
 	$(LD) $(LFLAGS) -T $(LINKMAPBOOTIOCP) -o $@ $+ $(LIBS)
 
-$(MAIN_PRJ_TINY_BOOT).elf: $(MINSTARTUP_OBJ) $(MAIN_OBJ)
+$(MAIN_PRJ_TINY_BOOT).elf: $(RAMSTARTUP_OBJ) $(MAIN_OBJ)
 	$(LD) $(LFLAGS) -T $(LINKMAPBOOTTINYIOCP) -o $@ $+ $(LIBS)
 
-$(MAIN_PRJ_RAM).elf: $(MINSTARTUP_OBJ) $(MAIN_OBJ)
+$(MAIN_PRJ_RAM).elf: $(RAMSTARTUP_OBJ) $(MAIN_OBJ)
 	$(LD) $(LFLAGS) -T $(LINKMAPRAM) -o $@ $+ $(LIBS)
 
 $(BUILD_DIR)/%.o: %.c Makefile

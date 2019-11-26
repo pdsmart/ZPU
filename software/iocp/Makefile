@@ -75,12 +75,8 @@ LINKMAP         = $(STARTUP_DIR)/iocp_bram_${IOCP_BASEADDR}.ld
 # Working directory to build object files.
 BUILD_DIR       = iocp_obj
 
-#MINSTARTUP_SRC = $(STARTUP_DIR)/mincrt0.s $(STARTUP_DIR)/pre_rom_main.s
-#MINSTARTUP_SRC = $(STARTUP_DIR)/crt0.s $(STARTUP_DIR)/pre_rom_main.s
-#MINSTARTUP_SRC = $(STARTUP_DIR)/atari_crt0.s 
+# Startup code which is first run before the C program.
 MINSTARTUP_SRC  = $(STARTUP_DIR)/romcrt0.s $(STARTUP_DIR)/pre_rom_main.s
-
-#MINSTARTUP_SRC = $(STARTUP_DIR)/crt0_phi.S $(STARTUP_DIR)/pre_rom_main.s
 MINSTARTUP_OBJ  = $(patsubst $(STARTUP_DIR)/%.s,$(BUILD_DIR)/%.o,$(MINSTARTUP_SRC))
 
 COMMON_SRC      = $(COMMON_DIR)/uart.c
@@ -99,11 +95,7 @@ MAIN_OBJ        = $(COMMON_OBJ) $(PFS_OBJ) $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAI
 # Commandline options for each tool.
 #
 # To disable use of a given instruction, prefix it with no-
-ZPUOPTS         = -mmult \
-	 	          -mdiv \
-	          	  -mmod \
-	          	  -mneg \
-	          	  -mloadsp \
+ZPUOPTS         = -mloadsp \
 	          	  -mstoresp \
 	          	  -mpushspadd \
 	          	  -mneqbranch \
@@ -119,6 +111,20 @@ ZPUOPTS         = -mmult \
 	          	  -mcompare \
 	          	  -mpoppcrel \
 	          	  -mmemreg
+ifeq ($(CPU), $(filter $(CPU),SMALL MEDIUM FLEX))
+ZPUOPTS        += -mno-mult \
+				  -mno-div \
+				  -mno-mod \
+				  -mno-neg
+endif
+ifeq ($(CPU), $(filter $(CPU),EVO))
+ZPUOPTS        += -mmult \
+	 	          -mdiv \
+	          	  -mmod \
+	          	  -mneg
+endif
+
+
 #CFLAGS          = -I. -I$(COMMON_DIR) -I$(PFS_DIR) -I$(INCLUDE_DIR) -c -Os $(ZPUOPTS) -DZPU -DIOCP -DPFS -DIOCP_BASEADDR=$(IOCP_BASEADDR) -DIOCP_APPADDR=$(IOCP_APPADDR) -DFUNCTIONALITY=$(FUNCTIONALITY)
 CFLAGS          = -I. -I$(COMMON_DIR) -I$(PFS_DIR) -I$(INCLUDE_DIR) -c -Os -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DIOCP -DPFS -DIOCP_BASEADDR=$(IOCP_BASEADDR) -DIOCP_APPADDR=$(IOCP_APPADDR) -DFUNCTIONALITY=$(FUNCTIONALITY)
 #
@@ -145,7 +151,6 @@ all: $(BUILD_DIR) $(MAIN_PRJ).bin $(MAIN_PRJ).srec $(MAIN_PRJ).rpt $(MAIN_PRJ).l
 
 clean:
 	rm -f $(BUILD_DIR)/*.o *.hex *.lss *.elf *.map *.lst *.srec $(MAIN_PRJ).rom *~ */*.o *.bin *.srec *.dmp *.vhd *.rpt
-
 
 # Convert ELF binary to bin file.
 %.bin: %.elf

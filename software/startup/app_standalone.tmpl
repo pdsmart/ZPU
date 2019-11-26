@@ -82,7 +82,7 @@ SECTIONS
   _dataend = . ;
 
   /* Top of stack pointer, used for sbrk validation. */
-  _stack = 0x1fff8 ;
+  _stack = STACK_ADDR;
 
 	/* Debug information */
   .debug_loc 0 : { *(.debug_loc) }

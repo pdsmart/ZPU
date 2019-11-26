@@ -1,37 +1,31 @@
--- ZPU
+---------------------------------------------------------------------------------------------------------
 --
--- Copyright 2004-2008 oharboe - �yvind Harboe - oyvind.harboe@zylin.com
--- Copyright 2018-2019 psmart  - Philip Smart 
--- 
--- The FreeBSD license
--- 
--- Redistribution and use in source and binary forms, with or without
--- modification, are permitted provided that the following conditions
--- are met:
--- 
--- 1. Redistributions of source code must retain the above copyright
---    notice, this list of conditions and the following disclaimer.
--- 2. Redistributions in binary form must reproduce the above
---    copyright notice, this list of conditions and the following
---    disclaimer in the documentation and/or other materials
---    provided with the distribution.
--- 
--- THIS SOFTWARE IS PROVIDED BY THE ZPU PROJECT ``AS IS'' AND ANY
--- EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
--- THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
--- PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
--- ZPU PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
--- INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
--- (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
--- OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
--- HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
--- STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
--- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
--- 
--- The views and conclusions contained in the software and documentation
--- are those of the authors and should not be interpreted as representing
--- official policies, either expressed or implied, of the ZPU Project.
+-- Name:            zpu_soc_pkg.vhd
+-- Created:         January 2019
+-- Author(s):       Philip Smart
+-- Description:     ZPU System On a Chip Configuration
+--                                                     
+--                  This module contains the System on a Chip configuration for the ZPU.
+--
+-- Credits:         
+-- Copyright:       (c) 2018 Philip Smart <philip.smart@net2net.org>
+--
+-- History:         January 2019 - Initial creation.
+--
+---------------------------------------------------------------------------------------------------------
+-- This source file is free software: you can redistribute it and-or modify
+-- it under the terms of the GNU General Public License as published
+-- by the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This source file is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http:--www.gnu.org-licenses->.
+---------------------------------------------------------------------------------------------------------
 
 library ieee;
 library pkgs;
@@ -69,7 +63,7 @@ package zpu_soc_pkg is
     constant MAX_EVO_L1CACHE_BITS     :     integer    := 5;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_L2CACHE_BITS     :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
     constant MAX_EVO_MXCACHE_BITS     :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
-    constant MAX_EVO_MIN_L1CACHE_BITS :     integer    := 4;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
+    constant MAX_EVO_MIN_L1CACHE_BITS :     integer    := 5;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_MIN_L2CACHE_BITS :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
     constant MAX_EVO_MIN_MXCACHE_BITS :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
 
@@ -80,14 +74,11 @@ package zpu_soc_pkg is
     constant MAX_UART_DIVISOR_BITS    :     integer    := 16;                                               -- Maximum number of bits for the UART clock rate generator divisor.
     constant INTR_MAX                 :     integer    := 16;                                               -- Maximum number of interrupt inputs.
     constant SYSTEM_FREQUENCY         :     integer    := 100000000;                                        -- Default system clock frequency if not overriden by top level.
---    constant SYSCLK_FREQUENCY         :     integer    := 1000;                                             -- System clock in MHz x 10
---    constant SYSCLK_HZ                :     integer    := SYSCLK_FREQUENCY*100000;                          -- System clock in Hertz
---    constant UART_RESET_COUNT         :     integer    := ((SYSCLK_FREQUENCY*100000)/300)*8;                -- Count of system clock ticks for a UART break to be recognised as a system reset.
 
     -- SoC specific options.
     --
     constant SOC_IMPL_WB              :     boolean    := EVO_USE_WB_BUS;                                   -- Implement the Wishbone bus and all enabled devices.
-    constant SOC_IMPL_WB_I2C          :     boolean    := true;                                             -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
     constant SOC_IMPL_WB_SDRAM        :     boolean    := true;                                             -- Implement SDRAM over wishbone interface.
     constant SOC_IMPL_TIMER1          :     boolean    := true;                                             -- Implement Timer 1, an array of prescaled downcounter with enable.
     constant SOC_TIMER1_COUNTERS      :     integer    := 0;                                                -- Number of downcounters in Timer 1. Value is a 2^ array of counters, so 0 = 1 counter.
@@ -131,16 +122,12 @@ package zpu_soc_pkg is
     subtype IO_DECODE_RANGE           is natural range maxAddrBit-WB_ACTIVE-1  downto maxIOBit;             -- Upper bits in memory defining the IO block within the address space for the EVO cpu IO. All other models use ioBit.
 --    subtype WB_IO_DECODE_RANGE        is natural range maxAddrBit-1            downto maxIOBit;             -- Upper bits in memory defining the IO block within the address space for the EVO cpu IO. All other models use ioBit.
  
-    -- Start byte address of stack for non-EVO CPU. Point to top of BRAM or a dedicated blcck of RAM - 2*words. Once booted the stack frame can be shifted to any memory location.
---    constant spStart                  :     std_logic_vector(maxAddrBit-1 downto 0) := std_logic_vector(to_unsigned((2**(SOC_MAX_ADDR_BRAM_BIT))-8, maxAddrBit));    
-
     -- Device options
     type CardType_t is (SD_CARD_E, SDHC_CARD_E);                                                     -- Define the different types of SD cards.
 
-    
 
     ------------------------------------------------------------ 
-    -- constants
+    -- Constants
     ------------------------------------------------------------ 
     
     constant YES  : std_logic := '1';
@@ -152,21 +139,21 @@ package zpu_soc_pkg is
     constant HIZ  : std_logic := 'Z';
 
     ------------------------------------------------------------ 
-    -- functions
+    -- Function prototypes
     ------------------------------------------------------------ 
     -- Find the maximum of two integers.
     function IntMax(a : in integer; b : in integer) return integer;
 
     ------------------------------------------------------------ 
-    -- records
+    -- Records
     ------------------------------------------------------------ 
 
     ------------------------------------------------------------ 
-    -- components
+    -- Components
     ------------------------------------------------------------
     component dualport_ram is
         port (
-            clk : in std_logic;
+            clk                       : in    std_logic;
             memAWriteEnable           : in    std_logic;
             memAAddr                  : in    std_logic_vector(ADDR_32BIT_RANGE);
             memAWrite                 : in    std_logic_vector(WORD_32BIT_RANGE);
@@ -175,24 +162,6 @@ package zpu_soc_pkg is
             memBAddr                  : in    std_logic_vector(ADDR_32BIT_RANGE);
             memBWrite                 : in    std_logic_vector(WORD_32BIT_RANGE);
             memBRead                  : out   std_logic_vector(WORD_32BIT_RANGE)
-        );
-    end component;        
-
-    component cacheL2 is
-        generic (
-            MAX_CACHE_BITS            : integer := 12
-        );
-        port (
-            clk                       : in    std_logic;
-            areset                    : in    std_logic := '0';
-            memAWriteEnable           : in    std_logic;
-            memAAddr                  : in    std_logic_vector(MAX_CACHE_BITS-3 downto 0);
-            memAWrite                 : in    std_logic_vector(55 downto 0);
-            memBWriteEnable           : in    std_logic;
-            memBAddr                  : in    std_logic_vector(MAX_CACHE_BITS-3 downto 0);
-            memBWrite                 : in    std_logic_vector(55 downto 0);
-            memARead                  : out   std_logic_vector(55 downto 0);
-            memBRead                  : out   std_logic_vector(55 downto 0)
         );
     end component;        
 
@@ -223,114 +192,52 @@ package zpu_soc_pkg is
       );
     end component;
 
-    component signed_divider is
-        port (
-            clk                       : in    std_logic;
-            ena                       : in    std_logic;
-            z                         : in    unsigned(63 downto 0);
-            d                         : in    unsigned(WORD_32BIT_RANGE);
-            q                         : out   signed(63 downto 0);
-            s                         : out   signed(63 downto 0)
-        );
-    end component;        
-
-    component unsigned_divider is
-        port (
-            clk                       : in    std_logic;
-            ena                       : in    std_logic;
-            z                         : in    unsigned(63 downto 0);
-            d                         : in    unsigned(WORD_32BIT_RANGE);
-            q                         : out   unsigned(WORD_32BIT_RANGE);
-            s                         : out   unsigned(WORD_32BIT_RANGE);
-            div0                      : out   std_logic;
-            ovf                       : out   std_logic
-        );
-    end component;        
-
-    component qdiv is
-        port (
-            dividend                  : in    signed(WORD_32BIT_RANGE);
-            divisor                   : in    signed(WORD_32BIT_RANGE);
-            start                     : in    std_logic;
-            clk                       : in    std_logic;
-            quotient_out              : out   signed(WORD_32BIT_RANGE);
-            complete                  : out   std_logic
-        );
-    end component;        
-
     component SDCard is
         generic (
-          FREQ_G                      : real            := 100.0;       -- Master clock frequency (MHz).
-          INIT_SPI_FREQ_G             : real            := 0.4;         -- Slow SPI clock freq. during initialization (MHz).
-          SPI_FREQ_G                  : real            := 25.0;        -- Operational SPI freq. to the SD card (MHz).
-          BLOCK_SIZE_G                : natural         := 512;         -- Number of bytes in an SD card block or sector.
-          CARD_TYPE_G                 : CardType_t      := SD_CARD_E    -- Type of SD card connected to this controller.
+          FREQ_G                      : real              := 100.0;       -- Master clock frequency (MHz).
+          INIT_SPI_FREQ_G             : real              := 0.4;         -- Slow SPI clock freq. during initialization (MHz).
+          SPI_FREQ_G                  : real              := 25.0;        -- Operational SPI freq. to the SD card (MHz).
+          BLOCK_SIZE_G                : natural           := 512;         -- Number of bytes in an SD card block or sector.
+          CARD_TYPE_G                 : CardType_t        := SD_CARD_E    -- Type of SD card connected to this controller.
           );
         port (
           -- Host-side interface signals.
-          clk_i                       : in    std_logic;                -- Master clock.
-          reset_i                     : in    std_logic   := NO;        -- active-high, synchronous  reset.
-          rd_i                        : in    std_logic   := NO;        -- active-high read block request.
-          wr_i                        : in    std_logic   := NO;        -- active-high write block request.
-          continue_i                  : in    std_logic   := NO;        -- If true, inc address and continue R/W.
+          clk_i                       : in    std_logic;                  -- Master clock.
+          reset_i                     : in    std_logic   := NO;          -- active-high, synchronous  reset.
+          rd_i                        : in    std_logic   := NO;          -- active-high read block request.
+          wr_i                        : in    std_logic   := NO;          -- active-high write block request.
+          continue_i                  : in    std_logic   := NO;          -- If true, inc address and continue R/W.
           addr_i                      : in    std_logic_vector(31 downto 0) := x"00000000";  -- Block address.
           data_i                      : in    std_logic_vector(7 downto 0)  := x"00";        -- Data to write to block.
           data_o                      : out   std_logic_vector(7 downto 0)  := x"00";        -- Data read from block.
-          busy_o                      : out   std_logic;                -- High when controller is busy performing some operation.
-          hndShk_i                    : in    std_logic;                -- High when host has data to give or has taken data.
-          hndShk_o                    : out   std_logic;                -- High when controller has taken data or has data to give.
+          busy_o                      : out   std_logic;                  -- High when controller is busy performing some operation.
+          hndShk_i                    : in    std_logic;                  -- High when host has data to give or has taken data.
+          hndShk_o                    : out   std_logic;                  -- High when controller has taken data or has data to give.
           error_o                     : out   std_logic_vector(15 downto 0) := (others => NO);
           -- I/O signals to the external SD card.
-          cs_bo                       : out   std_logic   := HI;        -- Active-low chip-select.
-          sclk_o                      : out   std_logic   := LO;        -- Serial clock to SD card.
-          mosi_o                      : out   std_logic   := HI;        -- Serial data output to SD card.
-          miso_i                      : in    std_logic   := ZERO       -- Serial data input from SD card.
-        );
-    end component;
-
-    component sdram_v is
-        port (
-          -- interface to the MT48LC16M16 chip
-          sd_clk                      : in    std_logic;                -- sdram is accessed at 128MHz
-          sd_rst                      : in    std_logic;                -- reset the sdram controller.
-          sd_cke                      : out   std_logic;                -- clock enable.
-          sd_dq                       : inout std_logic_vector(15 downto 0);  -- 16 bit bidirectional data bus
-          sd_addr                     : out   std_logic_vector(12 downto 0);  -- 13 bit multiplexed address bus
-          sd_dqm                      : out   std_logic_vector(1 downto 0); -- two byte masks
-          sd_ba                       : out   std_logic_vector(1 downto 0); -- two banks
-          sd_cs_n                     : out   std_logic;                -- a single chip select
-          sd_we_n                     : out   std_logic;                -- write enable
-          sd_ras_n                    : out   std_logic;                -- row address select
-          sd_cas_n                    : out   std_logic;                -- columns address select
-          sd_ready                    : out   std_logic;                -- sd ready.
-
-          -- cpu/chipset interface
-          wb_clk                      : in    std_logic;                -- 32MHz chipset clock to which sdram state machine is synchonized    
-          wb_dat_i                    : in    std_logic_vector(31 downto 0);  -- data input from chipset/cpu
-          wb_dat_o                    : out   std_logic_vector(31 downto 0);  -- data output to chipset/cpu
-          wb_ack                      : out   std_logic; 
-          wb_adr                      : in    std_logic_vector(23 downto 0);  -- lower 2 bits are ignored.
-          wb_sel                      : in    std_logic_vector(3 downto 0); 
-          wb_cti                      : in    std_logic_vector(2 downto 0);   -- cycle type. 
-          wb_stb                      : in    std_logic;
-          wb_cyc                      : in    std_logic;                -- cpu/chipset requests cycle
-          wb_we                       : in    std_logic                 -- cpu/chipset requests write
+          cs_bo                       : out   std_logic   := HI;          -- Active-low chip-select.
+          sclk_o                      : out   std_logic   := LO;          -- Serial clock to SD card.
+          mosi_o                      : out   std_logic   := HI;          -- Serial data output to SD card.
+          miso_i                      : in    std_logic   := ZERO         -- Serial data input from SD card.
         );
     end component;
 
 end zpu_soc_pkg;
 
+------------------------------------------------------------ 
+-- Function definitions.
+------------------------------------------------------------ 
 package body zpu_soc_pkg is
     
-  -- Find the maximum of two integers.
-  function IntMax(a : in integer; b : in integer) return integer is
-  begin
-    if a > b then
-      return a;
-    else
-      return b;
-    end if;
-    return a;
-  end function IntMax;
+    -- Find the maximum of two integers.
+    function IntMax(a : in integer; b : in integer) return integer is
+    begin
+        if a > b then
+            return a;
+        else
+            return b;
+        end if;
+        return a;
+    end function IntMax;
 
 end package body;

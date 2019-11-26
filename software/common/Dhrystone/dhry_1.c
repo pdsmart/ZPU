@@ -69,7 +69,7 @@ long            Microseconds,
                 
 /* end of variables for time measurement */
 
-int             Number_Of_Runs = 25000;
+int             Number_Of_Runs = 50000;
 
 //long _readMilliseconds()
 //{

@@ -128,13 +128,13 @@
             im      _memreg+12     ; Save the return address into the 4th memreg
             store 
 
-			im      \name
+            im      \name
             call
             
             im      _memreg+12     ; Retrieve the return address ready.
             load
             im      ZPUTA_APPADDR+16
-			poppc
+            poppc
 	.endm
 
     .macro  defapifunc name offset

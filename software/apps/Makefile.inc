@@ -93,31 +93,38 @@ MAIN_SRC       = $(APP_NAME).c
 MAIN_OBJ      += $(COMMON_OBJ) $(patsubst %.c,$(BUILD_DIR)/%.o,$(MAIN_SRC))
 
 # Commandline options for each tool.
+# To disable use of a given instruction, prefix it with no-
+ZPUOPTS         = -mloadsp \
+	          	  -mstoresp \
+	          	  -mpushspadd \
+	          	  -mneqbranch \
+	          	  -maddsp \
+	          	  -mashiftrt \
+	          	  -mashiftl \
+	          	  -mlshiftrt \
+	          	  -mcall \
+	          	  -mcallpcrel \
+	          	  -mshortop \
+	          	  -mbyteop \
+	          	  -meq \
+	          	  -mcompare \
+	          	  -mpoppcrel \
+	          	  -mmemreg
+ifeq ($(CPU), $(filter $(CPU),SMALL MEDIUM FLEX))
+ZPUOPTS        += -mno-mult \
+				  -mno-div \
+				  -mno-mod \
+				  -mno-neg
+endif
+ifeq ($(CPU), $(filter $(CPU),EVO))
+ZPUOPTS        += -mmult \
+	 	          -mdiv \
+	          	  -mmod \
+	          	  -mneg
+endif
 
-#ZPUOPTS       = -mno-poppcrel -mno-pushspadd -mno-callpcrel -mno-byteop -mno-shortop -mno-neg -mno-div -mno-mod # No-neg requires bugfixed toolchain
-#ZPUOPTS       = -mmult -mno-neg -mno-mod # No-neg requires bugfixed toolchain
-ZPUOPTS        = -mmult \
-		         -mdiv \
-		         -mmod \
-		         -mneg \
-		         -mloadsp \
-		         -mstoresp \
-		         -mpushspadd \
-		         -mneqbranch \
-		         -maddsp \
-		         -mashiftrt \
-		         -mashiftl \
-		         -mlshiftrt \
-		         -mcall \
-		         -mcallpcrel \
-	 	         -mshortop \
-	 	         -mbyteop \
-	 	         -meq \
-	 	         -mcompare \
-	 	         -mpoppcrel \
-	 	         -mmemreg
 #CFLAGS       += -I. -I$(INCLUDE_DIR) -I$(COMMON_DIR)/.  -c -Os $(ZPUOPTS) -DPRINTF_HEX_ONLY -DDISABLE_PRINTF # -DDISABLE_UART_TX -DDISABLE_UART_RX
-CFLAGS        += -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -O3 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
+CFLAGS        += -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -Os -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
 #CFLAGS       += -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -c -O1 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU
 # Enable debug output.
 OFLAGS        += -DDEBUG
@@ -133,7 +140,11 @@ FLAGS_STR      = -DFLAGS_STR="$(CFLAGS)"
 LFLAGS         = -nostartfiles -Wl,--gc-sections -Wl,--relax -Os -Wl,--defsym=ZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -Wl,--defsym=ZPUTA_APPADDR=$(ZPUTA_APPADDR)
 #
 # Assembler flags.
+ifeq ($(ZPUTA_BASEADDR),0x000000)
+ASFLAGS        = -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -I$(STARTUP_DIR) --defsym ZPUTA_BASEADDR=0x400 --defsym ZPUTA_APPADDR=$(ZPUTA_APPADDR)
+else
 ASFLAGS        = -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -I$(STARTUP_DIR) --defsym ZPUTA_BASEADDR=$(ZPUTA_BASEADDR) --defsym ZPUTA_APPADDR=$(ZPUTA_APPADDR)
+endif
 #
 
 # Our target.

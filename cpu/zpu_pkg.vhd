@@ -39,42 +39,16 @@ use ieee.numeric_std.all;
 
 package zpu_pkg is
 
-    -- Constants common to all ZPU models source code.
-    constant Generate_Trace           :     boolean          := false;                               -- generate trace output or not.
-    constant wordPower                :     integer          := 5;                                   -- The number of bits in a word, defined as 2^wordPower).
-    constant DontCareValue            :     std_logic        := 'X';                                 -- during simulation, set this to '0' to get matching trace.txt 
-    constant byteBits                 :     integer          := wordPower-3;                         -- # of bits in a word that addresses bytes
-    constant wordSize                 :     integer          := 2**wordPower;
-    constant wordBytes                :     integer          := wordSize/8;
-    constant minAddrBit               :     integer          := byteBits;
-    constant WB_ACTIVE                :     integer          := 1;                                   -- Set to 1 if the wishbone interface is active to divide the address space in two, lower = direct access, upper = wishbone.
-    constant maxAddrBit               :     integer          := 24 + WB_ACTIVE;                      -- Maximum address limit in bits.
-    constant maxAddrSize              :     integer          := (2**maxAddrBit);                     -- Maximum address space size in bytes.
-    constant maxIOBit                 :     integer          := maxAddrBit - WB_ACTIVE - 4;          -- Upper bit (to define range) of IO space in top section of address space.
---  constant maxMemBit                :     integer          := 16;                                  -- Non-EVO: Maximum memory bit, should be equal to maxAddrBit-1, Memory and IO each have 1/2 address space.
-    constant ioBit                    :     integer          := maxAddrBit - 1;                      -- Non-EVO: MSB is used to differentiate IO and memory.
-
-
-    constant ADDR_32BIT_SIZE          :     integer          := maxAddrBit - minAddrBit;             -- Bits in the address bus relevant for 32bit access.
-    constant WB_SELECT_BIT            :     integer          := maxAddrBit - 1;                      -- Bit which divides the wishbone interface from normal memory space.
-
-    -- Ranges used throughout the SOC/ZPU source.
-    subtype ADDR_BIT_RANGE            is natural range maxAddrBit-1    downto 0;                     -- Full address range - 1 byte aligned
-    subtype ADDR_16BIT_RANGE          is natural range maxAddrBit-1    downto 1;                     -- Full address range - 2 bytes (16bit) aligned 
-    subtype ADDR_32BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit;            -- Full address range - 4 bytes (32bit) aligned
-    subtype ADDR_64BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit+1;          -- Full address range - 8 bytes (64bit) aligned
---    subtype ADDR_MEM_32BIT_RANGE      is natural range maxAddrBit-1    downto minAddrBit;            -- Non-EVO: Memory range.
-    subtype ADDR_IOBIT_RANGE          is natural range ioBit           downto minAddrBit;            -- Non-EVO: IO range.
-    subtype WORD_32BIT_RANGE          is natural range wordSize-1      downto 0;                     -- Number of bits in a word (normally 32 for this CPU).
-    subtype WORD_4BYTE_RANGE          is natural range wordBytes-1     downto 0;                     -- Bits needed to represent wordSize in bytes (normally 4 for 32bits).
-    subtype BYTE_RANGE                is natural range 7               downto 0;                     -- Number of bits in a byte.
+    -- Necessary functions for type conversion.
+    --
+    function bool_to_integer(level : boolean) return integer;
 
     -- Evo specific options.
     --
     constant EVO_USE_INSN_BUS         :     boolean          := true;                                -- Use a seperate instruction bus to connect to the BRAM memory. All other operations go over the normal bus.
     constant EVO_USE_HW_BYTE_WRITE    :     boolean          := true;                                -- Implement hardware writing of bytes, reads are always 32bit and aligned.
     constant EVO_USE_HW_WORD_WRITE    :     boolean          := true;                                -- Implement hardware writing of 16bit words,  reads are always 32bit and aligned.
-    constant EVO_USE_WB_BUS           :     boolean          := true;                                -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
     constant EVO_IMPL_RAM             :     boolean          := true;                                -- Implement application RAM, seperate to the BRAM using BRAM. The main BRAM would then be just for initial boot up.
 
     -- Debug options.
@@ -84,6 +58,34 @@ package zpu_pkg is
     constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
     constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
     constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter.
+
+    -- Constants common to all ZPU models source code.
+    constant Generate_Trace           :     boolean          := false;                               -- generate trace output or not.
+    constant wordPower                :     integer          := 5;                                   -- The number of bits in a word, defined as 2^wordPower).
+    constant DontCareValue            :     std_logic        := 'X';                                 -- during simulation, set this to '0' to get matching trace.txt 
+    constant byteBits                 :     integer          := wordPower-3;                         -- # of bits in a word that addresses bytes
+    constant wordSize                 :     integer          := 2**wordPower;
+    constant wordBytes                :     integer          := wordSize/8;
+    constant minAddrBit               :     integer          := byteBits;
+    constant WB_ACTIVE                :     integer          := bool_to_integer(EVO_USE_WB_BUS);     -- Set to 1 if the wishbone interface is active to divide the address space in two, lower = direct access, upper = wishbone.
+    constant maxAddrBit               :     integer          := 24 + WB_ACTIVE;                      -- Maximum address limit in bits.
+    constant maxAddrSize              :     integer          := (2**maxAddrBit);                     -- Maximum address space size in bytes.
+    constant maxIOBit                 :     integer          := maxAddrBit - WB_ACTIVE - 4;          -- Upper bit (to define range) of IO space in top section of address space.
+    constant ioBit                    :     integer          := maxAddrBit - 1;                      -- Non-EVO: MSB is used to differentiate IO and memory.
+
+    constant ADDR_32BIT_SIZE          :     integer          := maxAddrBit - minAddrBit;             -- Bits in the address bus relevant for 32bit access.
+    constant WB_SELECT_BIT            :     integer          := maxAddrBit - 1;                      -- Bit which divides the wishbone interface from normal memory space.
+
+    -- Ranges used throughout the SOC/ZPU source.
+    subtype ADDR_BIT_RANGE            is natural range maxAddrBit-1    downto 0;                     -- Full address range - 1 byte aligned
+    subtype ADDR_16BIT_RANGE          is natural range maxAddrBit-1    downto 1;                     -- Full address range - 2 bytes (16bit) aligned 
+    subtype ADDR_32BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit;            -- Full address range - 4 bytes (32bit) aligned
+    subtype ADDR_64BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit+1;          -- Full address range - 8 bytes (64bit) aligned
+--  subtype ADDR_MEM_32BIT_RANGE      is natural range maxAddrBit-1    downto minAddrBit;            -- Non-EVO: Memory range.
+    subtype ADDR_IOBIT_RANGE          is natural range ioBit           downto minAddrBit;            -- Non-EVO: IO range.
+    subtype WORD_32BIT_RANGE          is natural range wordSize-1      downto 0;                     -- Number of bits in a word (normally 32 for this CPU).
+    subtype WORD_4BYTE_RANGE          is natural range wordBytes-1     downto 0;                     -- Bits needed to represent wordSize in bytes (normally 4 for 32bits).
+    subtype BYTE_RANGE                is natural range 7               downto 0;                     -- Number of bits in a byte.
 
     ------------------------------------------------------------ 
     -- components
@@ -98,7 +100,7 @@ package zpu_pkg is
             IMPL_CALL                 : boolean := true;        -- Include call
             IMPL_SHIFT                : boolean := true;        -- Include lshiftright, ashiftright and ashiftleft
             IMPL_XOR                  : boolean := true;        -- include xor instruction
-            CACHE                     : boolean := false;
+            CACHE                     : boolean := true;
             CLK_FREQ                  : integer := 100000000;   -- Frequency of the input clock.
             STACK_ADDR                : integer := 0            -- Initial stack address on CPU start.
         );
@@ -226,9 +228,9 @@ package zpu_pkg is
             IMPL_LOADB                : boolean := true;        -- Load single byte from memory.
             IMPL_LOADH                : boolean := true;        -- Load half word (16bit) from memory.
             IMPL_LSHIFTRIGHT          : boolean := true;        -- Logical shift right.
-            IMPL_MOD                  : boolean := false;       -- 32bit modulo (remainder after division).
+            IMPL_MOD                  : boolean := true;        -- 32bit modulo (remainder after division).
             IMPL_MULT                 : boolean := true;        -- 32bit signed multiplication.
-            IMPL_NEG                  : boolean := false;       -- Negate value in TOS.
+            IMPL_NEG                  : boolean := true;        -- Negate value in TOS.
             IMPL_NEQ                  : boolean := true;        -- Not equal test.
             IMPL_POPPCREL             : boolean := true;        -- Pop a value into the Program Counter from a location relative to the Stack Pointer.
             IMPL_PUSHSPADD            : boolean := true;        -- Add a value to the Stack pointer and push it onto the stack.
@@ -450,3 +452,18 @@ package zpu_pkg is
     constant ZPU_DBG_T_INIT : zpu_dbg_t := ("00", '0', '0', '0', '0', (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'), (others => '0'));
     constant ZPU_DBG_T_DONTCARE : zpu_dbg_t := ((others => DontCareValue), DontCareValue, DontCareValue, DontCareValue, DontCareValue, (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, DontCareValue, (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue), (others => DontCareValue));
 end zpu_pkg;
+
+package body zpu_pkg is
+
+    -- Helper to convert Boolean to integer.
+    --
+    function bool_to_integer(level : boolean) return integer is
+    begin
+        if level then
+            return(1);
+        else
+            return(0);
+        end if;
+    end function;
+
+end package body zpu_pkg;

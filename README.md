@@ -1,14 +1,14 @@
 Please consult my [GitHub](https://pdsmart.github.io) website for more upto date information.
 <br>
 <br>
+
 The ZPU is a 32bit Stack based microprocessor and was designed by Øyvind Harboe from [Zylin AS](https://opensource.zylin.com/) and original documentation can be found on the [Zylin/OpenCore website or Wikipedia](https://en.wikipedia.org/wiki/ZPU_\(microprocessor\)). It is a microprocessor intended for FPGA embedded applications with minimal logic element and BRAM usage with the sacrifice of speed of execution. 
 
 Zylin produced two designs which it made open source, namely the Small and Medium ZPU versions. Additional designs were produced by external developers such as the Flex and ZPUino variations, each offering enhancements to the original design such as Wishbone interface, performance etc.
 
-This document describes another design which I like to deem as the ZPU Evo(lution) model whose focus is on performance, connectivity and instruction expansion. This came about as I needed a CPU for an emulator of a vintage computer i am writing which would act as the IO processor to provide Menu, Peripheral and SD services.
+This document describes another design which I like to deem as the ZPU Evo(lution) model whose focus is on *performance*, *connectivity* and *instruction expansion*. This came about as I needed a CPU for an emulator of a vintage computer i am writing which would act as the IO processor to provide Menu, Peripheral and SD services.
 
-An example of the performance of the ZPU Evo can be seen using CoreMark which returns a value of 19.1 @ 100MHz on Altera fabric using BRAM and for Dhrystone 11.2DMIPS. Connectivity can be seen via implementation of both System and Wishbone buses, allowing for connection of many opensource IP devices. Instruction expansion can be seen by the inclusion of a close coupled L1 cache where multiple instruction bytes are sourced and made available to the CPU which in turn can be used for optimization (ie. upto 5 IM instructions executed in 1 cycle) or for extended multi-byte instructions (ie. implementation of a LoaD Increment Repeat instruction). There is room for a lot more improvements such as stack cache, SDRAM to L2 burst mode, parallel instruction execution (ie. and + neqbranch) which are on my list.
-
+An example of the *performance* of the ZPU Evo can be seen using CoreMark which returns a value of 19.1 @ 100MHz on Altera fabric using BRAM and for Dhrystone 11.2DMIPS. Comparisons can be made with the original ZPU designs in the gallery below paying attention to the CoreMark score which seems to be the defacto standard now. *Connectivity* can be seen via implementation of both System and Wishbone buses, allowing for connection of many opensource IP devices. *Instruction expansion* can be seen by the inclusion of a close coupled L1 cache where multiple instruction bytes are sourced and made available to the CPU which in turn can be used for optimization (ie. upto 5 IM instructions executed in 1 cycle) or for extended multi-byte instructions (ie. implementation of a LoaD Increment Repeat instruction). There is room for a lot more improvements such as stack cache, SDRAM to L2 burst mode, parallel instruction execution (ie. and + neqbranch) which are on my list.
 
 
 # The CPU
@@ -121,7 +121,7 @@ Embedded within the CPU RTL are statements which issue snapshot information to t
 
 |                                                              |
 | ------------------------------------------------------------ |
-| 000477 01ffec 00001ae4 00000000 70.17 04770484 046c047c 08f0046c 0b848015 17700500 05000500 05001188 11ef2004  <br><br><u>Break Point - Illegal instruction</u><br>000478 01ffe8 00001ae4 00001ae4 00.05 04780484 046c0478 08f0046c 0b888094 05000500 05000500 118811ef 20041188  <br><br><u>L1 Cache Dump</u><br>000478 (480)-> 11 e2 2a 51 11 a0 11 8f <-(483) (004)->11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 <-(46f)<br>      (004)-> 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b <-(473)<br>       05 00 05 00 05 00 05 00 (46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477)<br>(46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477) 05 00 05 00 05 00 05 00 <br>(470)->11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 <-(477) -> 05 00 05 00 05 00 05 00 (47c)->11 88 11 ef 20 04 11 88 <-(47f)<br>(474)->1c 38 11 80 17 71 17 70 05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f <br>       05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 <br>       11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 <br><u>L2 Cache Dump</u><br>000000 88 08 8c 08 ed 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <br>000020 88 08 8c 08 90 08 0b 0b 0b 88 80 08 2d 90 0c 8c 0c 88 0c 04 00 00 00 00 00 00 00 00 00 00 00 00 <br>000040 71 fd 06 08 72 83 06 09 81 05 82 05 83 2b 2a 83 ff ff 06 52 04 00 00 00 00 00 00 00 00 00 00 00 |
+| 000477 01ffec 00001ae4 00000000 70.17 04770484 046c047c 08f0046c 0b848015 17700500 05000500 05001188 11ef2004  <br/><br/><u>Break Point - Illegal instruction</u><br/>000478 01ffe8 00001ae4 00001ae4 00.05 04780484 046c0478 08f0046c 0b888094 05000500 05000500 118811ef 20041188  <br/><br/><u>L1 Cache Dump</u><br/>000478 (480)-> 11 e2 2a 51 11 a0 11 8f <-(483) (004)->11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 <-(46f)<br/>      (004)-> 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b <-(473)<br/>       05 00 05 00 05 00 05 00 (46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477)<br/>(46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477) 05 00 05 00 05 00 05 00 <br/>(470)->11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 <-(477) -> 05 00 05 00 05 00 05 00 (47c)->11 88 11 ef 20 04 11 88 <-(47f)<br/>(474)->1c 38 11 80 17 71 17 70 05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f <br/>       05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 <br/>       11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 <br/><u>L2 Cache Dump</u><br/>000000 88 08 8c 08 ed 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000020 88 08 8c 08 90 08 0b 0b 0b 88 80 08 2d 90 0c 8c 0c 88 0c 04 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000040 71 fd 06 08 72 83 06 09 81 05 82 05 83 2b 2a 83 ff ff 06 52 04 00 00 00 00 00 00 00 00 00 00 00 |
 
 All critical information such as current instruction being executed (or not if stalled), Signals/Flags, L1/L2 Cache contents and Memory contents can be output.
 
@@ -199,7 +199,7 @@ The I/O Control Program (IOCP) is basically a bootloader, it can operate standal
 
 ZPUTA started life as a basic test application to verify ZPU Evo and SoC operations. As it evolved and different FPGA's were included in the ZPU Evo scope, it became clear that it had to be more advanced due to limited resources. 
 
-ZPUTA has two primary methods of exection, a) as an application booted by IOCP, b) standalone booted as the ZPU Evo startup firmware. The mode is chosen in the configuration and functionality is identical.
+ZPUTA has two primary methods of execution, a) as an application booted by IOCP, b) standalone booted as the ZPU Evo startup firmware. The mode is chosen in the configuration and functionality is identical.
 
 In order to cater for limited FPGA BRAM resources, all functionality of ZPUTA can be enabled/disabled within the loaded image. If an SD Card is present then some/all functionality can be shifted from the loaded image into applets (1 applet per function, ie. memory clear) and stored on the SD card - this mode is like DOS where typing a command retrieves the applet from SD card and executes it.
 
@@ -262,11 +262,11 @@ The functionality currently provided by ZPUTA can be summarised as follows.
 |                               | hfe      |                                     | Enable UART FIFO                                |
 | Performance Testing Commands  | dhry     |                                     | Dhrystone Test v2.1                             |
 |                               | coremark |                                     | CoreMark Test v1.0                              |
-| Program Execution Commands    | call     | \<addr>                             | Call function \@ \<addr>                        |
-|                               | jmp      | \<addr>                             | Execute code \@ \<addr>                         |
+| Program Execution Commands    | call     | \<addr>                             | Call function @ \<addr>                         |
+|                               | jmp      | \<addr>                             | Execute code @ \<addr>                          |
 | Miscellaneous Commands        | restart  |                                     | Restart application                             |
 |                               | reset    |                                     | Reset system                                    |
-|                               | help     | \[\<cmd %>|\<group %>]              | Show this screen                                |
+|                               | help     | \[\<cmd %>\|\<group %>]             | Show this screen                                |
 |                               | info     |                                     | Config info                                     |
 |                               | time     | \[\<y> \<m> \<d> \<h> \<M> \<s>]    | Set/Show current time                           |
 |                               | test     |                                     | Test Screen                                     |
@@ -276,6 +276,8 @@ All of the above commands can be disabled, built-in or created as an SD based ap
 ### zOS
 
 zOS is under development but is basically an optimised version of ZPUTA stripping out unnecessary logic and targetting it as the primary operating system for ZPU Evo use in my FPGA applications such as the SharpMZ emulator.
+
+zOS will be uploaded to the repository when I feel it is in a good alpha state.
 
 
 ### Memory Maps
@@ -325,7 +327,7 @@ Jenkins can be used to automate the build but for simple get up and go compilati
     # eject the SD card and install it into the SD card reader on your FPGA dev board. 
 ```
 
-### FPGA Bit Stream SOF build
+### RTL Bit Stream build
 
 1. Install [Intel Quartus Prime 17.1](http://fpgasoftware.intel.com/17.1/?edition=lite) or later.
 2. Open Quartus Prime and load project (File -> Open Project) and select \<zpu evo dir>/build/QMV_zpu.qpf
@@ -339,7 +341,423 @@ Jenkins can be used to automate the build but for simple get up and go compilati
     make QMV_EVO
 ```
 
-### Connecting te Development board
+### Configure for ZPU Small Build
+
+The ZPU Small CPU can be built by changing the configuration as follows:
+
+````
+cd <repository>
+````
+````
+Edit: zpu_soc_pkg.vhd
+
+1. Change to the desired CPU as follows:
+    constant ZPU_SMALL                :     integer    := 1;                                                -- Use the SMALL CPU.
+    constant ZPU_MEDIUM               :     integer    := 0;                                                -- Use the MEDIUM CPU.
+    constant ZPU_FLEX                 :     integer    := 0;                                                -- Use the FLEX CPU.
+    constant ZPU_EVO                  :     integer    := 0;                                                -- Use the EVOLUTION CPU.
+    constant ZPU_EVO_MINIMAL          :     integer    := 0;                                                -- Use the Minimalist EVOLUTION CPU.
+
+2. Disable WishBone devices as the ZPU Small doesnt support the wishbone interface:
+    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_SDRAM        :     boolean    := false;                                            -- Implement SDRAM over wishbone interface.
+
+3. Disable any other devices you dont need, such as PS2 by setting the flag to false.
+
+4. If your using a frequency other than 100MHz as your main clock, enter it in the table
+   below against your board. If you are using a different board, add a constant with
+   suitable name and use this in your TopLevel (ie. as per E115_zpu_Toplevel.vhd).
+   NB. If using your own board it is still imperative that you setup a PLL correctly to
+       generate the desired frequency, this constant is used purely for timing based
+       calculations such as UART baud rate:
+
+    -- Frequencies for the various boards.
+    --
+    constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
+    constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
+    constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
+````
+
+````
+Edit: cpu/zpu_pkg.vhd
+
+1. Disable wishbone interface as follows:
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+
+2. If you want to enable debug output on UART 1 then set the DEBUG flag to true along with
+   the correct baud rate and sufficiently large FIFO Cache:
+    constant DEBUG_CPU                :     boolean          := true;                                -- Enable CPU debugging output.
+    constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
+    constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
+    constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter
+````
+
+Using Quartus Prime following the 'iRTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+
+### Configure for ZPU Medium Build
+
+The ZPU Medium CPU can be built by changing the configuration as follows:
+
+````
+cd <repository>
+````
+````
+Edit: zpu_soc_pkg.vhd
+
+1. Change to the desired CPU as follows:
+    constant ZPU_SMALL                :     integer    := 0;                                                -- Use the SMALL CPU.
+    constant ZPU_MEDIUM               :     integer    := 1;                                                -- Use the MEDIUM CPU.
+    constant ZPU_FLEX                 :     integer    := 0;                                                -- Use the FLEX CPU.
+    constant ZPU_EVO                  :     integer    := 0;                                                -- Use the EVOLUTION CPU.
+    constant ZPU_EVO_MINIMAL          :     integer    := 0;                                                -- Use the Minimalist EVOLUTION CPU.
+
+2. Disable WishBone devices as the ZPU Medium doesnt support the wishbone interface:
+    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_SDRAM        :     boolean    := false;                                            -- Implement SDRAM over wishbone interface.
+
+3. Disable any other devices you dont need, such as PS2 by setting the flag to false.
+
+4. If your using a frequency other than 100MHz as your main clock, enter it in the table
+   below against your board. If you are using a different board, add a constant with
+   suitable name and use this in your TopLevel (ie. as per E115_zpu_Toplevel.vhd).
+   NB. If using your own board it is still imperative that you setup a PLL correctly to
+       generate the desired frequency, this constant is used purely for timing based
+       calculations such as UART baud rate:
+
+    -- Frequencies for the various boards.
+    --
+    constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
+    constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
+    constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
+````
+
+````
+Edit: cpu/zpu_pkg.vhd
+
+1. Disable wishbone interface as follows:
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+
+2. If you want to enable debug output on UART 1 then set the DEBUG flag to true along
+   with the correct baud rate and sufficiently large FIFO Cache:
+    constant DEBUG_CPU                :     boolean          := true;                                -- Enable CPU debugging output.
+    constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
+    constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
+    constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter
+````
+
+Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+
+### Configure for ZPU Flex Build
+
+The ZPU Flex CPU can be built by changing the configuration as follows:
+
+````
+cd <repository>
+````
+````
+Edit: zpu_soc_pkg.vhd
+
+1. Change to the desired CPU as follows:
+    constant ZPU_SMALL                :     integer    := 0;                                                -- Use the SMALL CPU.
+    constant ZPU_MEDIUM               :     integer    := 0;                                                -- Use the MEDIUM CPU.
+    constant ZPU_FLEX                 :     integer    := 1;                                                -- Use the FLEX CPU.
+    constant ZPU_EVO                  :     integer    := 0;                                                -- Use the EVOLUTION CPU.
+    constant ZPU_EVO_MINIMAL          :     integer    := 0;                                                -- Use the Minimalist EVOLUTION CPU.
+
+2. Disable WishBone devices as the ZPU Flex doesnt support the wishbone interface:
+    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_SDRAM        :     boolean    := false;                                            -- Implement SDRAM over wishbone interface.
+
+3. Disable any other devices you dont need, such as PS2 by setting the flag to false.
+
+4. If your using a frequency other than 100MHz as your main clock, enter it in the table
+   below against your board. If you are using a different board, add a constant with
+   suitable name and use this in your TopLevel (ie. as per E115_zpu_Toplevel.vhd).
+   NB. If using your own board it is still imperative that you setup a PLL correctly to
+       generate the desired frequency, this constant is used purely for timing based
+       calculations such as UART baud rate:
+
+    -- Frequencies for the various boards.
+    --
+    constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
+    constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
+    constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
+````
+
+````
+Edit: cpu/zpu_pkg.vhd
+
+1. Disable wishbone interface as follows:
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+
+2. If you want to enable debug output on UART 1 then set the DEBUG flag to true along with
+   the correct baud rate and sufficiently large FIFO Cache:
+    constant DEBUG_CPU                :     boolean          := true;                                -- Enable CPU debugging output.
+    constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
+    constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
+    constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter
+````
+
+Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+
+### Configure for ZPU Evo Build
+
+The ZPU Evo has 2 pre-defined versions, the same CPU using different settings. These are the EVO and 'EVO MINIMAL'. The latter implements most of its instructions in micro-code like the ZPU Small.
+Assuming we are building the EVO without the WishBone interface, change the configuration as follows:
+
+````
+cd <repository>
+````
+````
+Edit: zpu_soc_pkg.vhd
+
+1. Change to the desired CPU as follows:
+    constant ZPU_SMALL                :     integer    := 0;                                                -- Use the SMALL CPU.
+    constant ZPU_MEDIUM               :     integer    := 0;                                                -- Use the MEDIUM CPU.
+    constant ZPU_FLEX                 :     integer    := 0;                                                -- Use the FLEX CPU.
+    constant ZPU_EVO                  :     integer    := 1;                                                -- Use the EVOLUTION CPU.
+    constant ZPU_EVO_MINIMAL          :     integer    := 0;                                                -- Use the Minimalist EVOLUTION CPU.
+
+2. Disable WishBone devices as we arent using the wishbone interface:
+    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_SDRAM        :     boolean    := false;                                            -- Implement SDRAM over wishbone interface.
+
+3. Disable any other devices you dont need, such as PS2 by setting the flag to false.
+
+4. If your using a frequency other than 100MHz as your main clock, enter it in the table
+   below against your board. If you are using a different board, add a constant with
+   suitable name and use this in your TopLevel (ie. as per E115_zpu_Toplevel.vhd).
+   NB. If using your own board it is still imperative that you setup a PLL correctly to
+       generate the desired frequency, this constant is used purely for timing based
+       calculations such as UART baud rate:
+
+    -- Frequencies for the various boards.
+    --
+    constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
+    constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
+    constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
+````
+
+````
+Edit: cpu/zpu_pkg.vhd
+
+1. Disable wishbone interface as follows:
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+
+2. If you want to enable debug output on UART 1 then set the DEBUG flag to true along with
+   the correct baud rate and sufficiently large FIFO Cache:
+    constant DEBUG_CPU                :     boolean          := true;                                -- Enable CPU debugging output.
+    constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
+    constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
+    constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter
+````
+
+Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+
+### Notes on setting up a new development board 
+
+If you are using your own FPGA board (ie. not one in the list I've tested and created Quartus configuration files for), please ensure you create these necessary files:
+````
+build/<name of your board>.qpf
+build/<name of your board>.qsf
+build/<name of your board>_Toplevel.vhd
+````
+
+It would be best if you copied an existing configuration and tailored it, ie. if your board uses the Cyclone IV then copy the E115_zpu* files and change as necessary. ie:
+````
+cp build/E115_zpu.qpf build/NEW_zpu.qpf
+cp build/E115_zpu.qsf build/NEW_zpu.qsf
+cp build/E115_zpu_Toplevel.vhd build/NEW_zpu_Toplevel.chd
+````
+
+Assuming you copied an existing definition as per above, in the build/NEW_zpu.qpf file, change the PROJECT name according to your board name, ie:
+````
+PROJECT_REVISION = "NEW_zpu"
+````
+
+In the build/NEW_zpu.qsf file, change the pin assignments to those available on your board, ie.
+
+
+````
+#============================================================
+# UART
+#============================================================
+set_location_assignment PIN_A7 -to UART_RX_0
+set_location_assignment PIN_B7 -to UART_TX_0
+set_location_assignment PIN_C6 -to UART_RX_1
+set_location_assignment PIN_D7 -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_0
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_TX_1
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to UART_RX_1
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_0
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to UART_TX_1
+
+#============================================================
+# SD CARD
+#============================================================
+set_location_assignment PIN_C8 -to SDCARD_MISO[0]
+set_location_assignment PIN_C7 -to SDCARD_MOSI[0]
+set_location_assignment PIN_B8 -to SDCARD_CLK[0]
+set_location_assignment PIN_A8 -to SDCARD_CS[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_MISO[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_MOSI[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_CLK[0]
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to SDCARD_CS[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_MOSI[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_CLK[0]
+set_instance_assignment -name CURRENT_STRENGTH_NEW "MAXIMUM CURRENT" -to SDCARD_CS[0]
+
+#============================================================
+# CLOCK
+#============================================================
+set_location_assignment PIN_AB11 -to CLOCK_25
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLOCK_25
+#set_location_assignment PIN_AB11 -to clk_25M
+````
+
+In the above snippet, if you have PIN_Y7 available for UART 0 RX, then change as follows:
+````
+#set_location_assignment PIN_A7 -to UART_RX_0
+set_location_assignment PIN_Y7 -to UART_RX_0
+````
+
+Do this for the UART, SD CARD and CLOCK as a minimum.
+
+You will also have to check and change the PLL assignment, either using one of the predefined configs or creating your own.
+````
+set_global_assignment -name QIP_FILE Clock_25to100.qip
+````
+
+ie. If you have a 12MHz primary clock on your board, the use the defined 12->100MHz PLL by changing the QSF file line:
+````
+#set_global_assignment -name QIP_FILE Clock_25to100.qip
+set_global_assignment -name QIP_FILE Clock_12to100.qip
+````
+
+
+In the build/NEW_zpu_Toplevel.vhd:
+
+
+````
+1. Ensure the PLL is set to the correct one configured in the QSF file and the correct
+   clock name is used throughout the file, ie:
+
+   #mypll : entity work.Clock_25to100
+   #port map
+   #(
+   #    inclk0            => CLOCK_25,
+   #    c0                => sysclk,
+   #    c1                => memclk,
+   #    locked            => pll_locked
+   #);
+    mypll : entity work.Clock_12to100
+    port map
+    (
+        inclk0            => CLOCK_12,
+        c0                => sysclk,
+        c1                => memclk,
+        locked            => pll_locked
+    );
+
+2. Update the reset logic to use any switch or key on the board that you wish to be a
+   reset:
+
+    reset<=(not SW(0) xor KEY(0)) and pll_locked;
+
+3. Ensure the correct clock frequency constant is setup in the generic of
+   myVirtualToplevel:
+
+   #myVirtualToplevel : entity work.zpu_soc
+   #generic map
+   #(
+   #    SYSCLK_FREQUENCY => SYSCLK_E115_FREQ
+   #)
+
+    myVirtualToplevel : entity work.zpu_soc
+    generic map
+    (
+        SYSCLK_FREQUENCY => SYSCLK_<NEW BOARD>_FREQ
+    )
+
+4. Ensure in the port map of myVirtualToplevel that unused components are set to open
+   for outputs and '1' or '0' for the inactive state for inputs, ie:
+
+    port map
+    (    
+        SYSCLK            => sysclk,
+        MEMCLK            => memclk,
+        RESET_IN          => reset,
+    
+        -- RS232
+        UART_RX_0         => UART_RX_0,
+        UART_TX_0         => UART_TX_0,
+        UART_RX_1         => UART_RX_1,
+        UART_TX_1         => UART_TX_1,
+    
+        -- SPI signals
+        SPI_MISO          => '1',                              -- Allow the SPI interface not to be plumbed in.
+        SPI_MOSI          => open,    
+        SPI_CLK           => open,    
+        SPI_CS            => open,    
+    
+        -- SD Card (SPI) signals
+        SDCARD_MISO       => SDCARD_MISO,
+        SDCARD_MOSI       => SDCARD_MOSI,
+        SDCARD_CLK        => SDCARD_CLK,
+        SDCARD_CS         => SDCARD_CS,
+            
+        -- PS/2 signals
+        PS2K_CLK_IN       => '1', 
+        PS2K_DAT_IN       => '1', 
+        PS2K_CLK_OUT      => open, 
+        PS2K_DAT_OUT      => open,    
+        PS2M_CLK_IN       => '1',    
+        PS2M_DAT_IN       => '1',    
+        PS2M_CLK_OUT      => open,    
+        PS2M_DAT_OUT      => open,    
+    
+        -- I²C signals
+        I2C_SCL_IO        => open,
+        I2C_SDA_IO        => open, 
+    
+        -- IOCTL Bus --
+        IOCTL_DOWNLOAD    => open,                             -- Downloading to FPGA.
+        IOCTL_UPLOAD      => open,                             -- Uploading from FPGA.
+        IOCTL_CLK         => open,                             -- I/O Clock.
+        IOCTL_WR          => open,                             -- Write Enable to FPGA.
+        IOCTL_RD          => open,                             -- Read Enable from FPGA.
+        IOCTL_SENSE       => '0',                              -- Sense to see if HPS accessing ioctl bus.
+        IOCTL_SELECT      => open,                             -- Enable IOP control over ioctl bus.
+        IOCTL_ADDR        => open,                             -- Address in FPGA to write into.
+        IOCTL_DOUT        => open,                             -- Data to be written into FPGA.
+        IOCTL_DIN         => (others => '0'),                  -- Data to be read into HPS.
+    
+        -- SDRAM signals which do not exist on the E115
+        SDRAM_CLK         => open, --SDRAM_CLK,                -- sdram is accessed at 128MHz
+        SDRAM_CKE         => open, --SDRAM_CKE,                -- clock enable.
+        SDRAM_DQ          => open, --SDRAM_DQ,                 -- 16 bit bidirectional data bus
+        SDRAM_ADDR        => open, --SDRAM_ADDR,               -- 13 bit multiplexed address bus
+        SDRAM_DQM         => open, --SDRAM_DQM,                -- two byte masks
+        SDRAM_BA          => open, --SDRAM_BA,                 -- two banks
+        SDRAM_CS_n        => open, --SDRAM_CS,                 -- a single chip select
+        SDRAM_WE_n        => open, --SDRAM_WE,                 -- write enable
+        SDRAM_RAS_n       => open, --SDRAM_RAS,                -- row address select
+        SDRAM_CAS_n       => open, --SDRAM_CAS,                -- columns address select
+        SDRAM_READY       => open                              -- sd ready.
+    );
+````
+
+
+### Connecting the Development board
 
 1. In order to run the ZPU Evo iand it's software in basic form on the QMTECH board you need 2 USB to Serial (ie. [USB to Serial](https://www.amazon.co.uk/Laqiya-FT232RL-Converter-Adapter-Breakout/dp/B07H6XMC2X)) adapters and you wire them up according to the pinout as is defined in the \<zpu evo dir>/build/QMV_zpu.qsf file. Ensure the adapters are set to 3.3V. See Images section for colour coded wiring.
 ```shell
@@ -410,19 +828,95 @@ The GIT Repository is organised as per the build environment shown in the tables
 
 | Folder  | Src File | Description                                                  |
 | ------- | -------- | ------------------------------------------------------------ |
-| apps    |          | The ZPUTA application can either have a feature embedded or as a separate standalone disk based applet in addition to extended applets. The purpose is to allow control of the ZPUTA application size according to available BRAM and SD card availability.<br>All applets for ZPUTA are stored in this folder. |
-| build   |          | Build tree output suitable for direct copy to an SD card.<br The initial bootloader and/or application as selected are compiled directly into a VHDL file for preloading in BRAM in the devices/sysbus/BRAM folder. |
+| apps    |          | The ZPUTA application can either have a feature embedded or as a separate standalone disk based applet in addition to extended applets. The purpose is to allow control of the ZPUTA application size according to available BRAM and SD card availability.<br/>All applets for ZPUTA are stored in this folder. |
+| build   |          | Build tree output suitable for direct copy to an SD card.<br/> The initial bootloader and/or application as selected are compiled directly into a VHDL file for preloading in BRAM in the devices/sysbus/BRAM folder. |
 | common  |          | Common C modules such as Elm Chan's excellent Fat FileSystem. |
 | include |          | C Include header files.                                      |
 | iocp    |          | A small bootloader/monitor application for initialization of the ZPU. Depending upon configuration this program can either boot an application from SD card or via the Serial Line and also provide basic tools such as memory examination. |
 | startup |          | Assembler and Linker files for generating ZPU applications. These files are critical for defining how GCC creates and links binary images as well as providing the micro-code for ZPU instructions not implemented in hardware. |
 | utils   |          | Some small tools for converting binary images into VHDL initialization data. |
 | zputa   |          | The ZPU Test Application. This is an application for testing the ZPU and the SoC components. It can either be built as a single image for pre-loading into a BRAM via VHDL or as a standalone application loaded by the IOCP bootloader from an SD card. The services it provides can either be embedded or available on the SD card as applets depending on memory restrictions. |
-|         | build.sh | Unix shell script to build IOCP, ZPUTA and Apps for a given design.<br>NAME<br>    build.sh -  Shell script to build a ZPU program or OS.<br><br>SYNOPSIS<br>    build.sh [-dOBAh]<br><br>DESCRIPTION<br><br>OPTIONS<br>    -I < iocp ver > = 0 - Full, 1 - Medium, 2 - Minimum, 3 - Tiny (bootstrap only)<br>    -O < os >       = zputa, zos<br>    -o < os ver >   = 0 - Standalone, 1 - As app with IOCP Bootloader,<br>                    2 - As app with tiny IOCP Bootloader, 3 - As app in RAM<br>    -B < addr >     = Base address of < os >, default 0x01000<br>    -A < addr >     = App address of < os >, default 0x0C000<br>    -d            = Debug mode.<br>    -h            = This help screen.<br><br>EXAMPLES<br>    build.sh -I 3 -O zputa -o 2 -B 0x00000 -A 0x50000<br><br>EXIT STATUS<br>     0    The command ran successfully<br>     >0    An error ocurred. |
-
-
+|         | build.sh | Unix shell script to build IOCP, ZPUTA and Apps for a given design.<br/><br>NAME<br> &nbsp;&nbsp;&nbsp;&nbsp;build.sh&nbsp;-&nbsp;&nbsp;Shell&nbsp;script&nbsp;to&nbsp;build&nbsp;a&nbsp;ZPU&nbsp;program&nbsp;or&nbsp;OS.<br> <br> SYNOPSIS<br> &nbsp;&nbsp;&nbsp;&nbsp;build.sh&nbsp;[-dIOoMBsxAh]<br> <br> DESCRIPTION<br> <br> OPTIONS<br> &nbsp;&nbsp;&nbsp;&nbsp;-I&nbsp;<iocp&nbsp;ver>&nbsp;=&nbsp;0&nbsp;-&nbsp;Full,&nbsp;1&nbsp;-&nbsp;Medium,&nbsp;2&nbsp;-&nbsp;Minimum,&nbsp;3&nbsp;-&nbsp;Tiny&nbsp;(bootstrap&nbsp;only)<br> &nbsp;&nbsp;&nbsp;&nbsp;-O&nbsp;<os>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;zputa,&nbsp;zos<br> &nbsp;&nbsp;&nbsp;&nbsp;-o&nbsp;<os&nbsp;ver>&nbsp;&nbsp;&nbsp;=&nbsp;0&nbsp;-&nbsp;Standalone,&nbsp;1&nbsp;-&nbsp;As&nbsp;app&nbsp;with&nbsp;IOCP&nbsp;Bootloader,<br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2&nbsp;-&nbsp;As&nbsp;app&nbsp;with&nbsp;tiny&nbsp;IOCP&nbsp;Bootloader,&nbsp;3&nbsp;-&nbsp;As&nbsp;app&nbsp;in&nbsp;RAM&nbsp;<br> &nbsp;&nbsp;&nbsp;&nbsp;-M&nbsp;<size>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Max&nbsp;size&nbsp;of&nbsp;the&nbsp;boot&nbsp;ROM/BRAM&nbsp;(needed&nbsp;for&nbsp;setting&nbsp;Stack).<br> &nbsp;&nbsp;&nbsp;&nbsp;-B&nbsp;<addr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Base&nbsp;address&nbsp;of&nbsp;<os>,&nbsp;default&nbsp;-o&nbsp;==&nbsp;0&nbsp;:&nbsp;0x00000&nbsp;else&nbsp;0x01000&nbsp;<br> &nbsp;&nbsp;&nbsp;&nbsp;-A&nbsp;<addr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;App&nbsp;address&nbsp;of&nbsp;<os>,&nbsp;default&nbsp;0x0C000<br> &nbsp;&nbsp;&nbsp;&nbsp;-s&nbsp;<size>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Maximum&nbsp;size&nbsp;of&nbsp;an&nbsp;app,&nbsp;defaults&nbsp;to&nbsp;(BRAM&nbsp;SIZE&nbsp;-&nbsp;App&nbsp;Start&nbsp;Address&nbsp;-&nbsp;Stack&nbsp;Size)&nbsp;<br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if&nbsp;the&nbsp;App&nbsp;Start&nbsp;is&nbsp;located&nbsp;within&nbsp;BRAM&nbsp;otherwise&nbsp;defaults&nbsp;to&nbsp;0x10000.<br> &nbsp;&nbsp;&nbsp;&nbsp;-d&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Debug&nbsp;mode.<br> &nbsp;&nbsp;&nbsp;&nbsp;-x&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Shell&nbsp;trace&nbsp;mode.<br> &nbsp;&nbsp;&nbsp;&nbsp;-h&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;This&nbsp;help&nbsp;screen.<br> <br> EXAMPLES<br> &nbsp;&nbsp;&nbsp;&nbsp;build.sh&nbsp;-O&nbsp;zputa&nbsp;-B&nbsp;0x00000&nbsp;-A&nbsp;0x50000<br> <br> EXIT&nbsp;STATUS<br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;The&nbsp;command&nbsp;ran&nbsp;successfully<br> <br> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;>0&nbsp;&nbsp;&nbsp;&nbsp;An&nbsp;error&nbsp;ocurred. |
 
 <br>
+
+## Quartus Prime in Docker 
+
+Installing Quartus Prime can be tedious and time consuming, especially as the poorly documented linux installation can lead to a wrong mix or missing packages which results in a non-functioning installation. To ease the burden I have pieced together a Docker Image containing Ubuntu, the necessary packages and Quartus Prime 17.1.1.
+
+1. Clone the repository:
+
+    ````bash
+    cd ~
+    git clone https://github.com/pdsmart/zpu.git
+    cd zpu/docker/QuartusPrime
+    ````
+
+    Current configuration will build a Lite version of Quartus Prime. If you want to install the Standard version, before building the docker image:
+    
+    ````
+    Edit:        zpu/docker/QuartusPrime/Dockerfile.17.1.1
+    Uncomment:   '#ARG QUARTUS=QuartusSetup-17.1.0.590-linux.run' 
+    Comment out: 'ARG QUARTUS=QuartusLiteSetup-17.1.0.590-linux.run'.
+    ````
+   
+    If you have a license file: 
+
+    ````
+    Copy: <your license file> to zpu/docker/QuartusPrime/files/license.dat
+    Edit:  zpu/docker/QuartusPrime/run.sh
+    Change: MAC_ADDR="02:50:dd:72:03:01" so that is has the MAC Address of your license file.
+    ````
+
+   Build the docker image:
+
+    ````bash
+    docker build -f Dockerfile.17.1.1 -t quartus-ii-17.1.1 .
+    ````
+
+
+2. Setup your X DISPLAY variable to point to your xserver:
+
+    ````bash
+    export DISPLAY=<x server ip or hostname>:<screen number>
+    # ie. export DISPLAY=192.168.1.1:0
+    ````
+
+    On your X server machine, issue the command:
+
+    ````bash
+    xhost +
+    # or xhost <ip of docker host> to maintain security on a non private network.
+    ````
+
+3. Setup your project directory accessible to Quartus.
+
+    ````bash
+    Edit:        zpu/docker/QuartusPrime/run.sh
+    Change:      PROJECT_DIR_HOST=<location on your host you want to access from Quartus Prime>
+    Change:      PROJECT_DIR_IMAGE=<location in Quartus Prime running container to where the above host directory is mapped>
+    # ie. PROJECT_DIR_HOST=/srv/quartus
+          PROJECT_DIR_IMAGE=/srv/quartus
+    ````
+
+3. Run the image using the provided bash script 'run.sh'. This script 
+
+    ````bash
+    ./run.sh
+    ````
+
+    This will start Quartus Prime and also an interactive bash shell.<br>On first start it currently asks for your license file, click 'Run the Quartus Prime software' and then OK. It will ask you this question everytime you start a new container albeit Im looking for a work around.<br>
+    The host devices are mapped into the running docker container so that if you connect a USB Blaster it will be seen within the Programmer tool. As part of the installation I install the udev rules for USB-Blaster and USB-Blaster II as well as the Arrow USB-Blaster driver for use with the CYC1000 dev board.
+
+4. To stop quartus prime:
+
+    ````
+    # Either exit the main Quartus Prime GUI window via File->Exit
+    # or
+    docker stop quartus
+    ````
+<br>
+
 # Images
 
 ### Images of QMTECH Cyclone V wiring
@@ -432,7 +926,7 @@ The GIT Repository is organised as per the build environment shown in the tables
 ![UART 2 Wiring](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9839.jpg)
 ![QMTECH Cyclone V Board](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9840.jpg)
 ![Wiring on QMTECH Cyclone V Board](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9841.jpg)
-Above are the wiring connections for the QMTECH Cyclone V board as used in the Build section, colour co-ordinated for reference.
+<br>Above are the wiring connections for the QMTECH Cyclone V board as used in the Build section, colour co-ordinated for reference.
 <br>
 
 ### Images of ZPUTA on a ZPU EVO CPU

@@ -46,7 +46,7 @@ create_clock -name {clk_12} -period 83.333 -waveform { 0.000 0.500 } [get_ports 
 #**************************************************************
 
 create_generated_clock -name {SYSCLK} -source [get_ports {CLOCK_12M}] -duty_cycle 50.000 -multiply_by 25 -divide_by 3 -master_clock {clk_12} [get_nets {mypll|altpll_component|_clk0}] 
-create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_12M}] -duty_cycle 50.000 -multiply_by 50 -divide_by 3 -master_clock {clk_12} [get_nets {mypll|altpll_component|_clk1}] 
+#create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_12M}] -duty_cycle 50.000 -multiply_by 50 -divide_by 3 -master_clock {clk_12} [get_nets {mypll|altpll_component|_clk1}] 
 
 #**************************************************************
 # Set Clock Latency
@@ -108,8 +108,8 @@ set_false_path -from [get_keepers {USER_BTN*}]
 # Set Multicycle Path
 #**************************************************************
 
-set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] -setup -start 1
-set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] -hold -start 0
+#set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] -setup -start 1
+#set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|pc[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|mxFifo[*]}] -hold -start 0
 #set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|cacheFetchIdx[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|TOS.word[*]}] -setup -start 2
 #set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|cacheFetchIdx[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|TOS.word[*]}] -hold -start 0
 #set_multicycle_path -from [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|cacheL1[*]}] -to [get_keepers {zpu_soc:myVirtualToplevel|zpu_core_evo:\ZPUEVO:ZPU0|TOS.word[*]}] -setup -start 1

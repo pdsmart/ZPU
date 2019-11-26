@@ -1,0 +1,132 @@
+#########################################################################################################
+##
+## Name:            Dockerfile.17.1.1
+## Created:         August 2019
+## Author(s):       Philip Smart
+## Description:     A Docker build script to create an Ubuntu 16.04 OS with Quartus Prime 17.1.1
+##
+## Credits:         
+## Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
+##
+## History:         August 2019   - Initial module written.
+##
+#########################################################################################################
+## This source file is free software: you can redistribute it and#or modify
+## it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This source file is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#########################################################################################################
+
+# Ubuntu 16.04 as the base.
+FROM ubuntu:xenial
+MAINTAINER Philip Smart <philip.smart@net2net.org>
+
+# Set build time environment variables.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Set constants for the build, more simpler to adjust these than the script if you want to change Quartus version.
+# Uncomment one of the QUARTUS= arguments below depending on wether your using the LITE or STANDARD version of Quartus.
+ARG TARGET_DOWNLOAD_DIR=/tmp/
+ARG INSTALLATION_DIR=/opt/altera
+ARG ALTERA_DOWNLOAD_SITE=http://download.altera.com/akdlm/software/acdsinst
+ARG QUARTUS_VERSION_INSTALLER=/17.1std/590/ib_installers/
+ARG QUARTUS_VERSION_UPDATE=/17.1std.1/593/update/
+#ARG QUARTUS=QuartusSetup-17.1.0.590-linux.run
+ARG QUARTUS=QuartusLiteSetup-17.1.0.590-linux.run
+ARG QUARTUS_UPDATE=QuartusSetup-17.1.1.593-linux.run
+ARG QUARTUS_PROGRAMMER=QuartusProgrammerSetup-17.1.0.590-linux.run
+ARG QUARTUS_HELP=QuartusHelpSetup-17.1.0.590-linux.run
+ARG QUARTUS_DEVICE_FILES="arria_lite-17.1.0.590.qdz cyclone10lp-17.1.0.590.qdz cyclone-17.1.0.590.qdz cyclonev-17.1.0.590.qdz max10-17.1.0.590.qdz max-17.1.0.590.qdz"
+
+# Base Ubuntu install, add necessary packages for Quartus, command line editting and web-browser.
+RUN dpkg --add-architecture i386
+RUN apt-get update 
+RUN apt-get install --no-install-recommends -y \
+                ca-certificates \
+                lib32ncurses5-dev \
+                libc6:i386 \
+                libcrypto++9v5 \
+                libfontconfig1 \
+                libglib2.0-0 \
+                libncurses5:i386 \
+                libsm6 \
+                libssl-dev \
+                libstdc++6:i386 \
+                libxext6:i386 \
+                libxft2:i386 \
+                libxrender1 \
+                libzmq3-dev \
+                locales \
+                make \
+                openjdk-8-jdk \
+                pkg-config \
+                unixodbc-dev \
+                wget \
+                xauth \
+                xvfb \
+				net-tools \
+                x11-apps \
+                vim \
+                firefox
+
+# Setup environment defaults.
+RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && locale-gen
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+ENV EXEC_DIR ${INSTALLATION_DIR}
+
+# Production cycle, fetch files from Altera as needed.
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS}
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_UPDATE}/${QUARTUS_UPDATE}
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_PROGRAMMER}
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_HELP}
+RUN for DEVICE_FILE in ${QUARTUS_DEVICE_FILES}; \
+		do \
+		    echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}"; \
+		    wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}; \
+		done
+
+# Development cycle, quartus files cached locally.
+#COPY ./files/*.qdz ${TARGET_DOWNLOAD_DIR}
+#COPY ./files/*.run ${TARGET_DOWNLOAD_DIR}
+
+# Install Quartus.
+RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS}
+RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}
+RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_PROGRAMMER}
+RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_HELP}
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS}            --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}     --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_PROGRAMMER} --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_HELP}       --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
+
+# Copy the license file, this would be a dummy for the Lite version or a genuine one for the Standard version coded to the host
+# MAC Address.
+COPY ./files/license.dat                ${INSTALLATION_DIR}/
+
+# Copy quartus config files to enable the license.
+COPY ./files/quartus2.*                 /root/.altera.quartus/
+COPY ./files/quartus_web_rules_file.txt /root/.altera.quartus/
+
+# Copy the Arrow USB Blaster and setup the udev rules to detect and mount USB-Blaster I and II devices.
+COPY ./files/libjtag_hw_arrow.so        ${INSTALLATION_DIR}/quartus/linux64/
+COPY ./files/70-usb.rules               /etc/udev/rules.d/
+
+# Setup necessary environment variables.
+RUN echo "export PATH=\$PATH:${INSTALLATION_DIR}/quartus/bin:${INSTALLATION_DIR}/qprogrammer/bin" >> /root/.bashrc
+RUN echo "export LM_LICENSE_FILE=${INSTALLATION_DIR}/license.dat" >> /root/.bashrc
+
+# Clean up, removing unnecessary installation files.
+RUN rm -rf ${TARGET_DOWNLOAD_DIR}/* ${INSTALLATION_DIR}/uninstall ${INSTALLATION_DIR}/logs/*
+
+# Start Quartus
+CMD ${EXEC_DIR}/quartus/bin/quartus
