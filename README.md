@@ -637,7 +637,7 @@ You will also have to check and change the PLL assignment, either using one of t
 set_global_assignment -name QIP_FILE Clock_25to100.qip
 ````
 
-ie. If you have a 12MHz primary clock on your board, the use the defined 12->100MHz PLL by changing the QSF file line:
+ie. If you have a 12MHz primary clock on your board, then use the defined 12->100MHz PLL by changing the QSF file line:
 ````
 #set_global_assignment -name QIP_FILE Clock_25to100.qip
 set_global_assignment -name QIP_FILE Clock_12to100.qip
