@@ -575,7 +575,7 @@ It would be best if you copied an existing configuration and tailored it, ie. if
 ````
 cp build/E115_zpu.qpf build/NEW_zpu.qpf
 cp build/E115_zpu.qsf build/NEW_zpu.qsf
-cp build/E115_zpu_Toplevel.vhd build/NEW_zpu_Toplevel.chd
+cp build/E115_zpu_Toplevel.vhd build/NEW_zpu_Toplevel.vhd
 ````
 
 Assuming you copied an existing definition as per above, in the build/NEW_zpu.qpf file, change the PROJECT name according to your board name, ie:
