@@ -248,6 +248,51 @@ QMV_EVO_MINIMAL:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
+CYC1000_SMALL:
+	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_SMALL                :     integer    := [01]/ZPU_SMALL                :     integer    := 1/g' \
+	  > $(ROOT)/zpu_soc_pkg.vhd
+	@$(ECHO) "Compiling $@..."
+	@$(QUARTUS_SH) $(SH_FLAGS) CYC1000_zpu.qpf 2> /dev/null | $(TEE) $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(MV) CYC1000_zpu.sof $@.sof
+	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(ECHO) "$@.sof and $@.rbf generated..."
+
+CYC1000_MEDIUM:
+	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_MEDIUM               :     integer    := [01]/ZPU_MEDIUM               :     integer    := 1/g' \
+	  > $(ROOT)/zpu_soc_pkg.vhd
+	@$(ECHO) "Compiling $@..."
+	@$(QUARTUS_SH) $(SH_FLAGS) CYC1000_zpu.qpf 2> /dev/null | $(TEE) $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(MV) CYC1000_zpu.sof $@.sof
+	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(ECHO) "$@.sof and $@.rbf generated..."
+
+CYC1000_FLEX:
+	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_FLEX                 :     integer    := [01]/ZPU_FLEX                 :     integer    := 1/g' \
+	  > $(ROOT)/zpu_soc_pkg.vhd
+	@$(ECHO) "Compiling $@..."
+	@$(QUARTUS_SH) $(SH_FLAGS) CYC1000_zpu.qpf 2> /dev/null | $(TEE) $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(MV) CYC1000_zpu.sof $@.sof
+	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(ECHO) "$@.sof and $@.rbf generated..."
+
+CYC1000_EVO:
+	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_EVO                  :     integer    := [01]/ZPU_EVO                  :     integer    := 1/g' \
+	  > $(ROOT)/zpu_soc_pkg.vhd
+	@$(ECHO) "Compiling $@..."
+	@$(QUARTUS_SH) $(SH_FLAGS) CYC1000_zpu.qpf 2> /dev/null | $(TEE) $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(MV) CYC1000_zpu.sof $@.sof
+	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(ECHO) "$@.sof and $@.rbf generated..."
+
+CYC1000_EVO_MINIMAL:
+	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_EVO_MINIMAL          :     integer    := [01]/ZPU_EVO_MINIMAL          :     integer    := 1/g' \
+	  > $(ROOT)/zpu_soc_pkg.vhd
+	@$(ECHO) "Compiling $@..."
+	@$(QUARTUS_SH) $(SH_FLAGS) CYC1000_zpu.qpf 2> /dev/null | $(TEE) $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(MV) CYC1000_zpu.sof $@.sof
+	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
+	@$(ECHO) "$@.sof and $@.rbf generated..."
+
 clean:
 	@$(ECHO) "Removing all temporary files..."
 	@$(RM) -fr c5_pin_model_dump.txt ./db ./simulation DE0_nano_zpu.asm.rpt DE0_nano_zpu.done DE0_nano_zpu.fit.rpt DE0_nano_zpu.fit.smsg DE0_nano_zpu.fit.summary DE0_nano_zpu.flow.rpt DE0_nano_zpu.jdi DE0_nano_zpu.map.rpt DE0_nano_zpu.map.smsg DE0_nano_zpu.map.summary DE0_nano_zpu.pin DE0_nano_zpu.rbf DE0_nano_zpu.sld DE0_nano_zpu.sof DE0_nano_zpu.sta.rpt DE0_nano_zpu.sta.summary ./incremental_db qmegawiz_errors_log.txt DE0*.log DE0_nano*.rbf DE0_nano*.sof DE0_nano*.sta.smsg 
