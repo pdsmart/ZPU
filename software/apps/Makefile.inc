@@ -238,11 +238,11 @@ $(BUILD_DIR)/%.o: %.s
 $(BUILD_DIR)/%.o: $(STARTUP_DIR)/%.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
-$(BUILD_DIR):
-	mkdir $(BUILD_DIR)
-
 $(BUILD_DIR)/%.o: $(DHRY_DIR)/%.c Makefile
 	$(CC) $(CFLAGS) $(OFLAGS) -o $@ -c $<
 
 $(BUILD_DIR)/%.o: $(CORE_DIR)/%.c Makefile
 	$(CC) $(CFLAGS) $(OFLAGS) $(FLAGS_STR) -o $@ -c $<
+
+$(BUILD_DIR):
+	mkdir $(BUILD_DIR)
