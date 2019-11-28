@@ -113,7 +113,7 @@ DE10_nano_EVO_MINIMAL:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
-DE0_SMALL:
+DE0_nano_SMALL:
 	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_SMALL                :     integer    := [01]/ZPU_SMALL                :     integer    := 1/g' \
 	  > $(ROOT)/zpu_soc_pkg.vhd
 	@$(ECHO) "Compiling $@..."
@@ -122,7 +122,7 @@ DE0_SMALL:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
-DE0_MEDIUM:
+DE0_nano_MEDIUM:
 	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_MEDIUM               :     integer    := [01]/ZPU_MEDIUM               :     integer    := 1/g' \
 	  > $(ROOT)/zpu_soc_pkg.vhd
 	@$(ECHO) "Compiling $@..."
@@ -131,7 +131,7 @@ DE0_MEDIUM:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
-DE0_FLEX:
+DE0_nano_FLEX:
 	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_FLEX                 :     integer    := [01]/ZPU_FLEX                 :     integer    := 1/g' \
 	  > $(ROOT)/zpu_soc_pkg.vhd
 	@$(ECHO) "Compiling $@..."
@@ -140,7 +140,7 @@ DE0_FLEX:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
-DE0_EVO:
+DE0_nano_EVO:
 	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_EVO                  :     integer    := [01]/ZPU_EVO                  :     integer    := 1/g' \
 	  > $(ROOT)/zpu_soc_pkg.vhd
 	@$(ECHO) "Compiling $@..."
@@ -149,7 +149,7 @@ DE0_EVO:
 	@$(QUARTUS_CPF) $(CPF_FLAGS) $@.sof $@.rbf 2> /dev/null | $(TEE) -a $@.log | $(GREP) -i $(MSG_FILTER)
 	@$(ECHO) "$@.sof and $@.rbf generated..."
 
-DE0_EVO_MINIMAL:
+DE0_nano_EVO_MINIMAL:
 	@cat $(ROOT)/zpu_soc_pkg.tmpl.vhd | sed 's/ZPU_EVO_MINIMAL          :     integer    := [01]/ZPU_EVO_MINIMAL          :     integer    := 1/g' \
 	  > $(ROOT)/zpu_soc_pkg.vhd
 	@$(ECHO) "Compiling $@..."
