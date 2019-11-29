@@ -38,10 +38,10 @@ package zpu_soc_pkg is
     -- Choose which CPU to instantiate depending on requirements. Warning, keep the below 5 lines exactly the same
     -- or ensure you update the Makefile as they are set by the Makefile to generate zpu_soc_pkg.vhd
     --
-    constant ZPU_SMALL                :     integer    := 0;                                                -- Use the SMALL CPU.
+    constant ZPU_SMALL                :     integer    := 1;                                                -- Use the SMALL CPU.
     constant ZPU_MEDIUM               :     integer    := 0;                                                -- Use the MEDIUM CPU.
     constant ZPU_FLEX                 :     integer    := 0;                                                -- Use the FLEX CPU.
-    constant ZPU_EVO                  :     integer    := 1;                                                -- Use the EVOLUTION CPU.
+    constant ZPU_EVO                  :     integer    := 0;                                                -- Use the EVOLUTION CPU.
     constant ZPU_EVO_MINIMAL          :     integer    := 0;                                                -- Use the Minimalist EVOLUTION CPU.
 
     -- Frequencies for the various boards.
@@ -63,7 +63,7 @@ package zpu_soc_pkg is
     constant MAX_EVO_L1CACHE_BITS     :     integer    := 5;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_L2CACHE_BITS     :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
     constant MAX_EVO_MXCACHE_BITS     :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
-    constant MAX_EVO_MIN_L1CACHE_BITS :     integer    := 5;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
+    constant MAX_EVO_MIN_L1CACHE_BITS :     integer    := 4;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_MIN_L2CACHE_BITS :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
     constant MAX_EVO_MIN_MXCACHE_BITS :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
 
@@ -74,11 +74,14 @@ package zpu_soc_pkg is
     constant MAX_UART_DIVISOR_BITS    :     integer    := 16;                                               -- Maximum number of bits for the UART clock rate generator divisor.
     constant INTR_MAX                 :     integer    := 16;                                               -- Maximum number of interrupt inputs.
     constant SYSTEM_FREQUENCY         :     integer    := 100000000;                                        -- Default system clock frequency if not overriden by top level.
+--    constant SYSCLK_FREQUENCY         :     integer    := 1000;                                             -- System clock in MHz x 10
+--    constant SYSCLK_HZ                :     integer    := SYSCLK_FREQUENCY*100000;                          -- System clock in Hertz
+--    constant UART_RESET_COUNT         :     integer    := ((SYSCLK_FREQUENCY*100000)/300)*8;                -- Count of system clock ticks for a UART break to be recognised as a system reset.
 
     -- SoC specific options.
     --
     constant SOC_IMPL_WB              :     boolean    := EVO_USE_WB_BUS;                                   -- Implement the Wishbone bus and all enabled devices.
-    constant SOC_IMPL_WB_I2C          :     boolean    := false;                                            -- Implement I2C over wishbone interface.
+    constant SOC_IMPL_WB_I2C          :     boolean    := true;                                             -- Implement I2C over wishbone interface.
     constant SOC_IMPL_WB_SDRAM        :     boolean    := true;                                             -- Implement SDRAM over wishbone interface.
     constant SOC_IMPL_TIMER1          :     boolean    := true;                                             -- Implement Timer 1, an array of prescaled downcounter with enable.
     constant SOC_TIMER1_COUNTERS      :     integer    := 0;                                                -- Number of downcounters in Timer 1. Value is a 2^ array of counters, so 0 = 1 counter.
@@ -153,7 +156,7 @@ package zpu_soc_pkg is
     ------------------------------------------------------------
     component dualport_ram is
         port (
-            clk                       : in    std_logic;
+            clk : in std_logic;
             memAWriteEnable           : in    std_logic;
             memAAddr                  : in    std_logic_vector(ADDR_32BIT_RANGE);
             memAWrite                 : in    std_logic_vector(WORD_32BIT_RANGE);
@@ -198,27 +201,27 @@ package zpu_soc_pkg is
           INIT_SPI_FREQ_G             : real              := 0.4;         -- Slow SPI clock freq. during initialization (MHz).
           SPI_FREQ_G                  : real              := 25.0;        -- Operational SPI freq. to the SD card (MHz).
           BLOCK_SIZE_G                : natural           := 512;         -- Number of bytes in an SD card block or sector.
-          CARD_TYPE_G                 : CardType_t        := SD_CARD_E    -- Type of SD card connected to this controller.
+          CARD_TYPE_G                 : CardType_t      := SD_CARD_E    -- Type of SD card connected to this controller.
           );
         port (
           -- Host-side interface signals.
-          clk_i                       : in    std_logic;                  -- Master clock.
-          reset_i                     : in    std_logic   := NO;          -- active-high, synchronous  reset.
-          rd_i                        : in    std_logic   := NO;          -- active-high read block request.
-          wr_i                        : in    std_logic   := NO;          -- active-high write block request.
-          continue_i                  : in    std_logic   := NO;          -- If true, inc address and continue R/W.
+          clk_i                       : in    std_logic;                -- Master clock.
+          reset_i                     : in    std_logic   := NO;        -- active-high, synchronous  reset.
+          rd_i                        : in    std_logic   := NO;        -- active-high read block request.
+          wr_i                        : in    std_logic   := NO;        -- active-high write block request.
+          continue_i                  : in    std_logic   := NO;        -- If true, inc address and continue R/W.
           addr_i                      : in    std_logic_vector(31 downto 0) := x"00000000";  -- Block address.
           data_i                      : in    std_logic_vector(7 downto 0)  := x"00";        -- Data to write to block.
           data_o                      : out   std_logic_vector(7 downto 0)  := x"00";        -- Data read from block.
-          busy_o                      : out   std_logic;                  -- High when controller is busy performing some operation.
-          hndShk_i                    : in    std_logic;                  -- High when host has data to give or has taken data.
-          hndShk_o                    : out   std_logic;                  -- High when controller has taken data or has data to give.
+          busy_o                      : out   std_logic;                -- High when controller is busy performing some operation.
+          hndShk_i                    : in    std_logic;                -- High when host has data to give or has taken data.
+          hndShk_o                    : out   std_logic;                -- High when controller has taken data or has data to give.
           error_o                     : out   std_logic_vector(15 downto 0) := (others => NO);
           -- I/O signals to the external SD card.
-          cs_bo                       : out   std_logic   := HI;          -- Active-low chip-select.
-          sclk_o                      : out   std_logic   := LO;          -- Serial clock to SD card.
-          mosi_o                      : out   std_logic   := HI;          -- Serial data output to SD card.
-          miso_i                      : in    std_logic   := ZERO         -- Serial data input from SD card.
+          cs_bo                       : out   std_logic   := HI;        -- Active-low chip-select.
+          sclk_o                      : out   std_logic   := LO;        -- Serial clock to SD card.
+          mosi_o                      : out   std_logic   := HI;        -- Serial data output to SD card.
+          miso_i                      : in    std_logic   := ZERO       -- Serial data input from SD card.
         );
     end component;
 
