@@ -31,23 +31,17 @@
 #**************************************************************
 set_time_format -unit ns -decimal_places 3
 
-
-
 #**************************************************************
 # Create Clock
 #**************************************************************
 create_clock -name {clk_50} -period 20.000 -waveform { 0.000 0.500 } [get_ports {CLOCK_50}]
 
-
 #**************************************************************
 # Create Generated Clock
 #**************************************************************
 
-#create_generated_clock -name {SYSCLK} -source [get_ports {CLOCK_50}] -duty_cycle 50.000 -multiply_by 2 -divide_by 1 -master_clock {clk_50} [get_nets {mypll|altpll_component|_clk0}] 
-#create_generated_clock -name {MEMCLK} -source [get_ports {CLOCK_50}] -duty_cycle 50.000 -multiply_by 4 -divide_by 1 -master_clock {clk_50} [get_nets {mypll|altpll_component|_clk1}] 
-create_generated_clock -name {mypll|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} -source [get_pins {mypll|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|refclkin}] -duty_cycle 50/1 -multiply_by 12 -divide_by 2 -master_clock {clk_50} [get_pins {mypll|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]}] 
-create_generated_clock -name {mypll|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk} -source [get_pins {mypll|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50/1 -multiply_by 1 -divide_by 4 -master_clock {mypll|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} [get_pins {mypll|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}] 
-#create_generated_clock -name {mypll|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk} -source [get_pins {mypll|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50/1 -multiply_by 1 -divide_by 4 -master_clock {mypll|altpll_component|auto_generated|generic_pll1~FRACTIONAL_PLL|vcoph[0]} [get_pins {mypll|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}] 
+create_generated_clock -name {SYSCLK} -source [get_pins {mypll|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50.000 -multiply_by 2 -divide_by 1 -master_clock {clk_50} [get_pins {mypll|altpll_component|auto_generated|generic_pll1~PLL_OUTPUT_COUNTER|divclk}]
+create_generated_clock -name {MEMCLK} -source [get_pins {mypll|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|vco0ph[0]}] -duty_cycle 50.000 -multiply_by 2 -divide_by 2 -phase 0000 -master_clock {clk_50} [get_pins {mypll|altpll_component|auto_generated|generic_pll2~PLL_OUTPUT_COUNTER|divclk}]
 
 #**************************************************************
 # Set Clock Latency

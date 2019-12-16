@@ -4105,24 +4105,25 @@ architecture arch of SinglePortBootBRAM is
 begin
 
     RAM0_DATA <= memAWrite(7 downto 0);
-    RAM0_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "00") or (memAWriteHalfWord = '1' and memAAddr(1) = '0'))
-                 else '0';
     RAM1_DATA <= memAWrite(15 downto 8)  when (memAWriteByte = '0' and memAWriteHalfWord = '0') or memAWriteHalfWord = '1'
                  else
                  memAWrite(7 downto 0);
-    RAM1_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "01") or (memAWriteHalfWord = '1' and memAAddr(1) = '0'))
-                 else '0';
     RAM2_DATA <= memAWrite(23 downto 16) when (memAWriteByte = '0' and memAWriteHalfWord = '0')
                  else
                  memAWrite(7 downto 0);
-    RAM2_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "10") or (memAWriteHalfWord = '1' and memAAddr(1) = '1'))
-                 else '0';
     RAM3_DATA <= memAWrite(31 downto 24) when (memAWriteByte = '0' and memAWriteHalfWord = '0')
                  else
                  memAWrite(15 downto 8)  when memAWriteHalfWord = '1'
                  else
                  memAWrite(7 downto 0);
-    RAM3_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "11") or (memAWriteHalfWord = '1' and memAAddr(1) = '1'))
+
+    RAM0_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "11") or (memAWriteHalfWord = '1' and memAAddr(1) = '1'))
+                 else '0';
+    RAM1_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "10") or (memAWriteHalfWord = '1' and memAAddr(1) = '1'))
+                 else '0';
+    RAM2_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "01") or (memAWriteHalfWord = '1' and memAAddr(1) = '0'))
+                 else '0';
+    RAM3_WREN <= '1' when memAWriteEnable = '1' and ((memAWriteByte = '0' and memAWriteHalfWord = '0') or (memAWriteByte = '1' and memAAddr(1 downto 0) = "00") or (memAWriteHalfWord = '1' and memAAddr(1) = '0'))
                  else '0';
 
     -- RAM Byte 0 - Port A - bits 7 to 0

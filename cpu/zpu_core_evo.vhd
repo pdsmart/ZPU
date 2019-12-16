@@ -1,8 +1,9 @@
 -- ZPU Evolution
 --
--- Copyright 2004-2008 oharboe - Øyvind Harboe - oyvind.harboe@zylin.com
--- Copyright 2008 alvieboy - Álvaro Lopes - alvieboy@alvie.com
--- Copyright 2018-2019 Philip Smart
+-- Copyright 2004-2008 (ZPU Design, Small, Medium)  oharboe - Øyvind Harboe - oyvind.harboe@zylin.com
+-- Copyright 2008      (zpuino) alvieboy - Álvaro Lopes - alvieboy@alvie.com
+-- Copyright 2013      (zpuflex) Alastair M. Robinson
+-- Copyright 2018-2019 (ZPU Evo) Philip Smart
 -- 
 -- The FreeBSD license
 -- 
@@ -37,17 +38,20 @@
 -- Evo History:
 --  181230 v0.1 Initial version created by merging items of the Small, Medium and Flex versions.
 --  190328 v0.5 Working with Instruction, Emulation or No Cache with or without seperate instruction
---         bus. Runs numerous tests and output same as the Medium CPU. One small issue is running
---         without an instruction bus and instruction/emulation cache enabled, the DMIPS value is lower
---         that just with instruction bus or emulation bus, seems some clash which reuults in waits states
---         slowing the CPU down.
+--              bus. Runs numerous tests and output same as the Medium CPU. One small issue is running
+--              without an instruction bus and instruction/emulation cache enabled, the DMIPS value is lower
+--              that just with instruction bus or emulation bus, seems some clash which reuults in waits states
+--              slowing the CPU down.
 --  191021 v1.0 First release. All variations tested but more work needed on the SDRAM controller to
---         make use of burst mode in order to populate the L2 cache in fewer cycles.
---         Additional instructions need to be added back in after test and verification, albeit some
---         which are sepcific to the Sharp Emulator should be skipped.
---         Additional effort needs spending on the Wishbone Error signal to retry the bus transaction,
---         currently it just aborts it which is not ideal.
+--              make use of burst mode in order to populate the L2 cache in fewer cycles.
+--              Additional instructions need to be added back in after test and verification, albeit some
+--              which are sepcific to the Sharp Emulator should be skipped.
+--              Additional effort needs spending on the Wishbone Error signal to retry the bus transaction,
+--              currently it just aborts it which is not ideal.
 --  191126 v1.1 Bug fixes. When switching off WishBone the CPU wouldnt run.
+--  191215 v1.2 Bug fixes. Removed L2 Cache megacore and replaced with inferred equivalent, fixed hardware
+--              byte/h-word write which was always defaulting to read-update-write, fixed L2 timing with
+--              external SDRAM, minor tweaks and currently looking at better constraints.
 --         
 
 library ieee;
@@ -482,7 +486,9 @@ architecture behave of zpu_core_evo is
     signal cacheL2Mux2Addr                 : unsigned(L2CACHE_32BIT_RANGE);  -- Multiplexed address into L2 cache between the L1 fetch and debug fetch.
     signal cacheL2Word                     : std_logic_vector(WORD_32BIT_RANGE);
     signal cacheL2Write                    : std_logic;
-    signal cacheL2WriteAddr                : unsigned(L2CACHE_32BIT_RANGE);
+    signal cacheL2WriteByte                : std_logic;                      -- Update a single byte in the L2 cache.
+    signal cacheL2WriteHword               : std_logic;                      -- Update a 16bit half-word in the L2 cache.
+    signal cacheL2WriteAddr                : unsigned(L2CACHE_BIT_RANGE);
     signal cacheL2WriteData                : std_logic_vector(WORD_32BIT_RANGE);
     signal cacheL2IncAddr                  : std_logic;                      -- A flag to indicate when the L2 cache write address should be incremented, generally after a write pulse.
     signal cacheL2MxAddrInCache            : std_logic;                      -- A flag to indicate when an MXP address exists in the L2 cache.
@@ -532,31 +538,50 @@ begin
     -- Level 2 cache is instantiated rather than inferred. In Altera, numerous attempts failed at describing a cache with 1 write and 2 reads for inferrence
     -- hence resorting to instantiating a defined IP component. 
     -- NB TODO: This needs to be split into a byte addressable IP so that L2 Cache Write Thru can work at byte/half-word level to increase througput.
-    CACHEL2 : dpram
-        generic map (
-            init_file                      => "",
-            widthad_a                      => MAX_L2CACHE_BITS-2,
-            width_a                        => wordSize,
-            widthad_b                      => MAX_L2CACHE_BITS-2,
-            width_b                        => wordSize,
-            outdata_reg_a                  => "UNREGISTERED",
-            outdata_reg_b                  => "UNREGISTERED"
-        )
-        port map (
-            clock_a                        => CLK, 
-            clocken_a                      => '1', 
-            address_a                      => std_logic_vector(cacheL2WriteAddr),
-            data_a                         => cacheL2WriteData,
-            wren_a                         => cacheL2Write,
-            q_a                            => open,
-    
-            clock_b                        => CLK,
-            clocken_b                      => '1',
-            address_b                      => std_logic_vector(cacheL2Mux2Addr),
-            data_b                         => (others => '0'),
-            wren_b                         => '0',
-            q_b                            => cacheL2Word
-        );
+    --CACHEL2 : dpram
+    --    generic map (
+    --        init_file                      => "",
+    --        widthad_a                      => MAX_L2CACHE_BITS-2,
+    --        width_a                        => wordSize,
+    --        widthad_b                      => MAX_L2CACHE_BITS-2,
+    --        width_b                        => wordSize,
+    --        outdata_reg_a                  => "UNREGISTERED",
+    --        outdata_reg_b                  => "UNREGISTERED"
+    --    )
+    --    port map (
+    --        clock_a                        => CLK, 
+    --        clocken_a                      => '1', 
+    --        address_a                      => std_logic_vector(cacheL2WriteAddr),
+    --        data_a                         => cacheL2WriteData,
+    --        wren_a                         => cacheL2Write,
+    --        q_a                            => open,
+    --
+    --        clock_b                        => CLK,
+    --        clocken_b                      => '1',
+    --        address_b                      => std_logic_vector(cacheL2Mux2Addr),
+    --        data_b                         => (others => '0'),
+    --        wren_b                         => '0',
+    --        q_b                            => cacheL2Word
+    --    );
+
+    CACHEL2 : work.evo_L2cache
+    generic map (
+        addrbits                           => MAX_L2CACHE_BITS
+    )
+    port map (
+        clk                                => CLK,
+        memAAddr                           => std_logic_vector(cacheL2WriteAddr),
+        memAWriteEnable                    => cacheL2Write,
+        memAWriteByte                      => cacheL2WriteByte,
+        memAWriteHalfWord                  => cacheL2WriteHword,
+        memAWrite                          => cacheL2WriteData,
+        memARead                           => open,
+
+        memBAddr                           => std_logic_vector(cacheL2Mux2Addr),
+        memBWrite                          => (others => '0'),
+        memBWriteEnable                    => '0',
+        memBRead                           => cacheL2Word
+    );
     
     -- Instruction cache memory. cache instructions from the resync program counter forwards, when we get to a relative or direct
     -- jump, if the destination is in cache, read from cache else resync. This speeds up operations where a resync (ie. branch, call etc) would
@@ -650,12 +675,18 @@ begin
             -- Memory signals are one clock width wide, reset them to inactive on each clock to ensure this.^^
             MEM_READ_ENABLE                                  <= '0';
             MEM_WRITE_ENABLE                                 <= '0';
-            MEM_WRITE_BYTE                                   <= '0';
-            MEM_WRITE_HWORD                                  <= '0';
+
+            -- Width signals are one clock width wide unless extended by busy signal.
+            if MEM_BUSY = '0' then
+                MEM_WRITE_BYTE                               <= '0';
+                MEM_WRITE_HWORD                              <= '0';
+            end if;
 
             -- Complete any active cache memory writes.
             if cacheL2Write = '1' and mxHoldCycles = 0 then
                 cacheL2Write                                 <= '0';
+                cacheL2WriteByte                             <= '0';
+                cacheL2WriteHword                            <= '0';
 
                 -- Once the cache write is complete, we update the address if needed, which will be setup in time for the next word to be read in from external memory.
                 if cacheL2IncAddr = '1' then
@@ -736,7 +767,8 @@ begin
                                 MEM_ADDR(minAddrBit-1 downto 0)     <= (others => '0');
                                 MEM_READ_ENABLE                     <= '1';
                             end if;
-                            cacheL2WriteAddr                        <= cacheL2FetchIdx(L2CACHE_32BIT_RANGE);
+                            cacheL2WriteAddr                        <= cacheL2FetchIdx(L2CACHE_BIT_RANGE);
+                            mxHoldCycles                            <= 1;
                             mxState                                 <= MemXact_OpcodeFetch;
     
                         -- If there is an item on the queue and the memory system isnt busy from a previous operation, process
@@ -831,13 +863,13 @@ begin
 
                                     -- If the data write is to a cached location, update cache at same time.
                                     if cacheL2MxAddrInCache = '1' then
-                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_32BIT_RANGE));
+                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_BIT_RANGE));
                                         cacheL2WriteData            <= mxFifo(to_integer(mxFifoReadIdx)).data;
 
                                         -- Initiate a cache memory write.
                                         cacheL2Write                <= '1';
                                     end if;
-                                    mxState                         <= MemXact_Write;
+                                    mxState                         <= MemXact_Idle;
                                     mxHoldCycles                    <= 0;
     
                                 -- Read value at address, then write data to the value's address.
@@ -853,20 +885,16 @@ begin
                                 -- To write a byte, if hardware supports it, write out to the byte aligned address with data in bits 7-0 otherwise
                                 -- we first read the 32bit word, update it and write it back.
                                 when MX_CMD_WRITEBYTETOADDR =>
-                                    -- If Hardware byte write not implemented or it is a write to the Startup ROM or if it is to the 32bit cache for a write thru we have to resort
+                                    -- If Hardware byte write not implemented or it is a write to the Startup ROM we have to resort
                                     -- to a read-modify-write operation.
                                     if IMPL_HW_BYTE_WRITE = false
-                                      or
-                                       (mxFifo(to_integer(mxFifoReadIdx)).addr(ADDR_32BIT_RANGE) >= X"0000" and mxFifo(to_integer(mxFifoReadIdx)).addr(ADDR_32BIT_RANGE) < X"800")
-                                      or
-                                       cacheL2MxAddrInCache = '1'
                                     then
                                         if IMPL_USE_WB_BUS = true and mxFifo(to_integer(mxFifoReadIdx)).addr(WB_SELECT_BIT) = '1' then
                                             wbXactActive            <= '1';
                                         else
                                             MEM_READ_ENABLE         <= '1';
                                         end if;
-                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_32BIT_RANGE));
+                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_32BIT_RANGE)) & "00";
                                         mxState                     <= MemXact_WriteByteToAddr;
                                     else
                                         if IMPL_USE_WB_BUS = true and mxFifo(to_integer(mxFifoReadIdx)).addr(WB_SELECT_BIT) = '1' then
@@ -899,25 +927,31 @@ begin
                                         mxFifoReadIdx               <= mxFifoReadIdx + 1;
                                         mxState                     <= MemXact_Idle;
                                         mxHoldCycles                <= 0;
+
+                                        -- If the data write is to a cached location, update cache at same time.
+                                        if cacheL2MxAddrInCache = '1' then
+                                            cacheL2WriteAddr        <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_BIT_RANGE));
+                                            cacheL2WriteData        <= mxFifo(to_integer(mxFifoReadIdx)).data;
+
+                                            -- Initiate a cache memory write.
+                                            cacheL2WriteByte        <= '1';
+                                            cacheL2Write            <= '1';
+                                        end if;
                                     end if;
     
                                 -- To write a word, if hardware supports it, write out to the word aligned address with data in bits 15-0 otherwise
                                 -- we first read the 32bit word, update it and write it back.
                                 when MX_CMD_WRITEHWORDTOADDR =>
-                                    -- If Hardware half-word write not implemented or it is a write to the Startup ROM or if it is to the 32bit cache for a write thru we have to resort
+                                    -- If Hardware half-word write not implemented or it is a write to the Startup ROM we have to resort
                                     -- to a read-modify-write operation.
                                     if IMPL_HW_WORD_WRITE = false
-                                      or
-                                       (mxFifo(to_integer(mxFifoReadIdx)).addr(ADDR_32BIT_RANGE) >= X"0000" and mxFifo(to_integer(mxFifoReadIdx)).addr(ADDR_32BIT_RANGE) < X"800")
-                                      or
-                                       cacheL2MxAddrInCache = '1'
                                     then
                                         if IMPL_USE_WB_BUS = true and mxFifo(to_integer(mxFifoReadIdx)).addr(WB_SELECT_BIT) = '1' then
                                             wbXactActive            <= '1';
                                         else
                                             MEM_READ_ENABLE         <= '1';
                                         end if;
-                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_32BIT_RANGE));
+                                        cacheL2WriteAddr            <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_32BIT_RANGE)) & "00";
                                         mxState                     <= MemXact_WriteHWordToAddr;
                                     else
                                         if IMPL_USE_WB_BUS = true and mxFifo(to_integer(mxFifoReadIdx)).addr(WB_SELECT_BIT) = '1' then
@@ -942,6 +976,16 @@ begin
                                         end if;
                                         mxFifoReadIdx               <= mxFifoReadIdx + 1;
                                         mxState                     <= MemXact_Idle;
+
+                                        -- If the data write is to a cached location, update cache at same time.
+                                        if cacheL2MxAddrInCache = '1' then
+                                            cacheL2WriteAddr        <= unsigned(mxFifo(to_integer(mxFifoReadIdx)).addr(L2CACHE_BIT_RANGE));
+                                            cacheL2WriteData        <= mxFifo(to_integer(mxFifoReadIdx)).data;
+
+                                            -- Initiate a cache memory write.
+                                            cacheL2WriteHword       <= '1';
+                                            cacheL2Write            <= '1';
+                                        end if;
                                         mxHoldCycles                <= 0;
                                     end if;
     
@@ -981,6 +1025,9 @@ begin
                             mxTOS.word                              <= unsigned(MEM_DATA_IN);
                         end if;
                         mxTOS.valid                                 <= '1';
+                        if cacheL2Active = '1' then
+                            mxHoldCycles                            <= 1;
+                        end if;
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_NOS =>
@@ -990,6 +1037,9 @@ begin
                             mxNOS.word                              <= unsigned(MEM_DATA_IN);
                         end if;
                         mxNOS.valid                                 <= '1';
+                        if cacheL2Active = '1' then
+                            mxHoldCycles                            <= 1;
+                        end if;
                         mxState                                     <= MemXact_Idle;
     
                     when MemXact_TOSNOS =>
@@ -1020,6 +1070,9 @@ begin
                             mxNOS.valid                             <= '1';
                             mxFifoReadIdx                           <= mxFifoReadIdx + 1;
                             mxState                                 <= MemXact_Idle;
+                        end if;
+                        if cacheL2Active = '1' then
+                            mxHoldCycles                            <= 1;
                         end if;
 
                     when MemXact_TOSNOS_3 =>
@@ -1071,13 +1124,13 @@ begin
                             WB_STB_O                                <= '1';
                             WB_SEL_O                                <= "1111";
                             wbXactActive                            <= '1';
-                            cacheL2WriteAddr                        <= unsigned(WB_DAT_I(L2CACHE_32BIT_RANGE));
+                            cacheL2WriteAddr                        <= unsigned(WB_DAT_I(L2CACHE_BIT_RANGE));
                         else
                             MEM_ADDR(ADDR_32BIT_RANGE)              <= MEM_DATA_IN(ADDR_32BIT_RANGE);
                             MEM_ADDR(minAddrBit-1 downto 0)         <= (others => '0');
                             MEM_DATA_OUT                            <= mxFifo(to_integer(mxFifoReadIdx)).data;
                             MEM_WRITE_ENABLE                        <= '1';
-                            cacheL2WriteAddr                        <= unsigned(MEM_DATA_IN(L2CACHE_32BIT_RANGE));
+                            cacheL2WriteAddr                        <= unsigned(MEM_DATA_IN(L2CACHE_BIT_RANGE));
                         end if;
 
                         -- If the data write is to a cached location, update cache at same time.
@@ -1466,6 +1519,7 @@ begin
             pcLast                                       <= to_unsigned(RESET_ADDR_CPU, pc'LENGTH);
             idimFlag                                     <= '0';
             inInterrupt                                  <= '0';
+            interruptSuspendedAddr                       <= (others => '0');
             mxFifoWriteIdx                               <= (others => '0');
             TOS                                          <= ((others => '0'), '0');
             NOS                                          <= ((others => '0'), '0');
@@ -1525,8 +1579,8 @@ begin
 
             -- In debug mode, the memory dump start and stop address are controlled by 2 vectors, preload them with defaults if uninitialised.
             if DEBUG_CPU = true and debugPC_EndAddr = 0 then
-                debugPC_StartAddr                                                       <= to_unsigned(to_integer(X"1000000"), debugPC_StartAddr'LENGTH);
-                debugPC_EndAddr                                                         <= to_unsigned(to_integer(X"1001000"), debugPC_EndAddr'LENGTH);
+                debugPC_StartAddr                                                       <= to_unsigned(16#1000000#, debugPC_StartAddr'LENGTH);
+                debugPC_EndAddr                                                         <= to_unsigned(16#1001000#, debugPC_EndAddr'LENGTH);
             end if;
 
             -- If the Memory Transaction processor has updated the stack parameters, update our working copy.
@@ -2598,8 +2652,8 @@ begin
                                         -- 1:0 = 00 means an instruction which operates with a default, byte, half-word or word parameter. ie. Extend,<insn>,[<byte>,<byte>,<byte>,<byte>]
     
                                         -- Memory fill instruction. Fill memory starting at address in NOS with zero, 8 bit, 16 or 32 bit repeating value for TOS bytes.
-                                        if cacheL1(to_integer(pc)+1)(OPCODE_INSN_RANGE) = Opcode_Ex_Fill then
-                                        end if;
+                                        --if cacheL1(to_integer(pc)+1)(OPCODE_INSN_RANGE) = Opcode_Ex_Fill then
+                                        --end if;
     
                                         -- Debug code, if enabled, writes out the current instruction.
                                         if DEBUG_CPU = true and DEBUG_LEVEL >= 5 then

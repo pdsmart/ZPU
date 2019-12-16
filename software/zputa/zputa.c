@@ -166,6 +166,59 @@ int16_t decodeCommand(char **ptr)
     return CMD_BADKEY;
 }
 
+// Method to read lines from an open and valid autoexec.bat file or from the command line.
+//
+static FIL     fAutoExec;
+static uint8_t autoExecState = 0;
+uint8_t getCommandLine(char *buf, uint32_t bufSize)
+{
+    // Locals.
+    char              *ptr;
+    uint8_t           result = 0;
+    FRESULT           fr;
+
+    // Clear the buffer.
+    memset(buf, 0x00, bufSize);
+
+    // First invocation, try and open an autoexec.bat file.
+    //
+    if(autoExecState == 0)
+    {
+        // If we cant open an autoexec.bat file then disable further automated processing.
+        //
+        if(f_open(&fAutoExec, "autoexec.bat", FA_OPEN_EXISTING | FA_READ))
+        {
+            autoExecState = 2;
+        } else
+        {
+            autoExecState = 1;
+        }
+    }
+    if(autoExecState == 1)
+    {
+        if((ptr = f_gets(buf, bufSize, &fAutoExec)) != NULL)
+        {
+            xputs(ptr);
+        }
+        else
+        {
+            f_close(&fAutoExec);
+            autoExecState = 2;
+        }
+    } 
+
+    // If no autoexec processed, use the command line.
+    //
+    if(autoExecState == 2)
+    {
+        // Standard line input from command line (UART).
+        ptr = buf;
+        xgets(ptr, bufSize);
+    }
+
+    return(result);
+}
+
 // Interactive command processor. Allow user to input a command and execute accordingly.
 //
 int cmdProcessor(void)
@@ -226,8 +279,7 @@ int cmdProcessor(void)
         // Prompt to indicate input required.
         xputs("* ");
         ptr = line;
-        memset(line, 0x00, sizeof(line));
-        xgets(ptr, sizeof(line));
+        getCommandLine(line, sizeof(line));
 
         // main functions
         switch(decodeCommand(&ptr))
@@ -702,7 +754,7 @@ int cmdProcessor(void)
                 {
                     p3 = 0x00000000;
                 }
-                xputs("Clearing...");
+                xputs("Clearing....");
                 for(memAddr=p1; memAddr < p2; memAddr+=4)
                 {
                     *(uint32_t *)(memAddr) = p3;
@@ -850,13 +902,26 @@ int cmdProcessor(void)
                     if (*ptr < ' ') { up1 += 4; continue; }
                     if (uxatoi(&ptr, &up2))
                     {
-                        xprintf("%08X %08X-", up1, up2);
                         *(uint32_t *)(up1) = up2;
                         up1 += 4;
                     } else {
                         xputs("???\n");
                     }
                 }
+                break;
+          #endif
+
+          #if defined(BUILTIN_MEM_PERF) && BUILTIN_MEM_PERF == 1
+            // Test memory performance, [<start addr> [<end addr>] [<bit width>]]
+            case CMD_MEM_PERF:
+                xputs("Test Memory performane not-builtin\n");
+                break;
+          #endif
+
+          #if defined(BUILTIN_MEM_TEST) && BUILTIN_MEM_TEST == 1
+            // Test memory, [<start addr> [<end addr>] [<iter>] [<test bitmap>]]
+            case CMD_MEM_TEST:
+                xputs("Test Memory not-builtin\n");
                 break;
           #endif
 
@@ -1036,6 +1101,9 @@ int cmdProcessor(void)
 
 int main(int argc, char **argv)
 {
+    // Locals.
+    uint32_t      memAddr;
+
     // Initialisation.
     //
     G.fileInUse = 0;
@@ -1076,6 +1144,12 @@ int main(int argc, char **argv)
 
     // Intro screen
     printVersion(true);
+
+    // Initialise SDRAM.
+//    for(memAddr=0x10000; memAddr < 0x410000; memAddr+=4)
+//    {
+//        *(uint32_t *)(memAddr) = 0x00000000;
+//    }
 
     // Command processor. If it exits, then reset the CPU.
     cmdProcessor();

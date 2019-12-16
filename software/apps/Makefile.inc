@@ -124,7 +124,7 @@ ZPUOPTS        += -mmult \
 endif
 
 #CFLAGS       += -I. -I$(INCLUDE_DIR) -I$(COMMON_DIR)/.  -c -Os $(ZPUOPTS) -DPRINTF_HEX_ONLY -DDISABLE_PRINTF # -DDISABLE_UART_TX -DDISABLE_UART_RX
-CFLAGS        += -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -Os -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
+CFLAGS        += -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -O3 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
 #CFLAGS       += -I. -I$(COMMON_DIR) -I$(INCLUDE_DIR) -c -O1 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU
 # Enable debug output.
 OFLAGS        += -DDEBUG

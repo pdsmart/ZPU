@@ -79,7 +79,8 @@ extern "C" {
 #define CMD_MEM_EDIT_BYTES         65
 #define CMD_MEM_EDIT_HWORD         66
 #define CMD_MEM_EDIT_WORD          67
-#define CMD_MEM_TEST               68
+#define CMD_MEM_PERF               68
+#define CMD_MEM_TEST               69
 #define CMD_HW_INTR_DISABLE        80              // HW Commands Range 80 .. 99
 #define CMD_HW_INTR_ENABLE         81
 #define CMD_HW_SHOW_REGISTER       82
@@ -307,6 +308,9 @@ static t_cmdstruct cmdTable[] = {
     #if (defined(BUILTIN_MEM_DUMP) && BUILTIN_MEM_DUMP == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
     { "mdump",      BUILTIN_MEM_DUMP,         CMD_MEM_DUMP,         CMD_GROUP_MEM },
     #endif
+    #if (defined(BUILTIN_MEM_PERF) && BUILTIN_MEM_PERF == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
+    { "mperf",      BUILTIN_MEM_PERF,         CMD_MEM_PERF,         CMD_GROUP_MEM },
+    #endif
     #if (defined(BUILTIN_MEM_TEST) && BUILTIN_MEM_TEST == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
     { "mtest",      BUILTIN_MEM_TEST,         CMD_MEM_TEST,         CMD_GROUP_MEM },
     #endif
@@ -360,89 +364,90 @@ static t_cmdstruct cmdTable[] = {
 static t_helpstruct helpTable[] = {
   #if defined(USE_SDCARD)
     // Disk level commands.
-    { CMD_DISK_DUMP,        "[<pd#> <sect>]",                   "Dump a sector" },
-    { CMD_DISK_INIT,        "<pd#> [<card type>]",              "Initialize disk" },
-    { CMD_DISK_STATUS,      "<pd#>",                            "Show disk status" },
-    { CMD_DISK_IOCTL_SYNC,  "<pd#>",                            "ioctl(CTRL_SYNC)" },
+    { CMD_DISK_DUMP,        "[<pd#> <sect>]",                     "Dump a sector" },
+    { CMD_DISK_INIT,        "<pd#> [<card type>]",                "Initialize disk" },
+    { CMD_DISK_STATUS,      "<pd#>",                              "Show disk status" },
+    { CMD_DISK_IOCTL_SYNC,  "<pd#>",                              "ioctl(CTRL_SYNC)" },
     // Disk buffer level commands.
-    { CMD_BUFFER_DUMP,      "<ofs>",                            "Dump buffer" }, 
-    { CMD_BUFFER_EDIT,      "<ofs> [<data>] ...",               "Edit buffer" },
-    { CMD_BUFFER_READ,      "<pd#> <sect> [<num>]",             "Read into buffer" },
-    { CMD_BUFFER_WRITE,     "<pd#> <sect> [<num>]",             "Write buffer to disk" },
-    { CMD_BUFFER_FILL,      "<val>",                            "Fill buffer" },
-    { CMD_BUFFER_LEN,       "<len>",                            "Set read/write length for fr/fw command" },
+    { CMD_BUFFER_DUMP,      "<ofs>",                              "Dump buffer" }, 
+    { CMD_BUFFER_EDIT,      "<ofs> [<data>] ...",                 "Edit buffer" },
+    { CMD_BUFFER_READ,      "<pd#> <sect> [<num>]",               "Read into buffer" },
+    { CMD_BUFFER_WRITE,     "<pd#> <sect> [<num>]",               "Write buffer to disk" },
+    { CMD_BUFFER_FILL,      "<val>",                              "Fill buffer" },
+    { CMD_BUFFER_LEN,       "<len>",                              "Set read/write length for fr/fw command" },
     // Filesystem level commands.
     //   File contents manipulation commands.
-    { CMD_FS_INIT,          "<ld#> [<mount>]",                  "Force init the volume" },
-    { CMD_FS_OPEN,          "<mode> <file>",                    "Open a file" },
-    { CMD_FS_CLOSE,         "",                                 "Close the file" },
-    { CMD_FS_SEEK,          "<ofs>",                            "Move fp in normal seek" },
-    { CMD_FS_READ,          "<len>",                            "Read part of file into buffer" },
-    { CMD_FS_INSPECT,       "<len>",                            "Read part of file and examine" },
-    { CMD_FS_WRITE,         "<len> <val>",                      "Write part of buffer into file" },
-    { CMD_FS_TRUNC,         "",                                 "Truncate the file at current fp" },
-    { CMD_FS_ALLOCBLOCK,    "<fsz> <opt>",                      "Allocate ctg blks to file" },
+    { CMD_FS_INIT,          "<ld#> [<mount>]",                    "Force init the volume" },
+    { CMD_FS_OPEN,          "<mode> <file>",                      "Open a file" },
+    { CMD_FS_CLOSE,         "",                                   "Close the file" },
+    { CMD_FS_SEEK,          "<ofs>",                              "Move fp in normal seek" },
+    { CMD_FS_READ,          "<len>",                              "Read part of file into buffer" },
+    { CMD_FS_INSPECT,       "<len>",                              "Read part of file and examine" },
+    { CMD_FS_WRITE,         "<len> <val>",                        "Write part of buffer into file" },
+    { CMD_FS_TRUNC,         "",                                   "Truncate the file at current fp" },
+    { CMD_FS_ALLOCBLOCK,    "<fsz> <opt>",                        "Allocate ctg blks to file" },
     //   File commands.
-    { CMD_FS_CHANGEATTRIB,  "<atrr> <mask> <name>",             "Change object attribute" },
-    { CMD_FS_CHANGETIME,    "<y> <m> <d> <h> <M> <s> <fn>",     "Change object timestamp" },
-    { CMD_FS_RENAME,        "<org name> <new name>",            "Rename an object" },
-    { CMD_FS_DELETE,        "<obj name>",                       "Delete an object" },
-    { CMD_FS_CREATEDIR,     "<dir name>",                       "Create a directory" },
-    { CMD_FS_STATUS,        "[<path>]",                         "Show volume status" },
-    { CMD_FS_DIRLIST,       "[<path>]",                         "Show a directory" }, 
-    { CMD_FS_CAT,           "<name>",                           "Output file contents" },
-    { CMD_FS_COPY,          "<src file> <dst file>",            "Copy a file" },
-    { CMD_FS_CONCAT,        "<src fn1> < src fn2> <dst fn>",    "Concatenate 2 files" },
-    { CMD_FS_XTRACT,        "<src> <dst> <start pos> <len>",    "Extract a portion of file" },
-    { CMD_FS_LOAD,          "<name> [<addr>]",                  "Load a file into memory" },
-    { CMD_FS_EXEC,          "<name> <ldAddr> <xAddr> <mode>",   "Load and execute file" },
-    { CMD_FS_SAVE,          "<name> <addr> <len>",              "Save memory range to a file" },
-    { CMD_FS_DUMP,          "<name> [<width>]",                 "Dump a file contents as hex" },
+    { CMD_FS_CHANGEATTRIB,  "<atrr> <mask> <name>",               "Change object attribute" },
+    { CMD_FS_CHANGETIME,    "<y> <m> <d> <h> <M> <s> <fn>",       "Change object timestamp" },
+    { CMD_FS_RENAME,        "<org name> <new name>",              "Rename an object" },
+    { CMD_FS_DELETE,        "<obj name>",                         "Delete an object" },
+    { CMD_FS_CREATEDIR,     "<dir name>",                         "Create a directory" },
+    { CMD_FS_STATUS,        "[<path>]",                           "Show volume status" },
+    { CMD_FS_DIRLIST,       "[<path>]",                           "Show a directory" }, 
+    { CMD_FS_CAT,           "<name>",                             "Output file contents" },
+    { CMD_FS_COPY,          "<src file> <dst file>",              "Copy a file" },
+    { CMD_FS_CONCAT,        "<src fn1> <src fn2> <dst fn>",       "Concatenate 2 files" },
+    { CMD_FS_XTRACT,        "<src> <dst> <start pos> <len>",      "Extract a portion of file" },
+    { CMD_FS_LOAD,          "<name> [<addr>]",                    "Load a file into memory" },
+    { CMD_FS_EXEC,          "<name> <ldAddr> <xAddr> <mode>",     "Load and execute file" },
+    { CMD_FS_SAVE,          "<name> <addr> <len>",                "Save memory range to a file" },
+    { CMD_FS_DUMP,          "<name> [<width>]",                   "Dump a file contents as hex" },
    #if FF_FS_RPATH
-    { CMD_FS_CHANGEDIR,     "<path>",                           "Change current directory" },
+    { CMD_FS_CHANGEDIR,     "<path>",                             "Change current directory" },
     #if FF_VOLUMES >= 2
-    { CMD_FS_CHANGEDRIVE,   "<path>",                           "Change current drive" },
+    { CMD_FS_CHANGEDRIVE,   "<path>",                             "Change current drive" },
     #endif
     #if FF_FS_RPATH >= 2
-    { CMD_FS_SHOWDIR,       "",                                 "Show current directory" },
+    { CMD_FS_SHOWDIR,       "",                                   "Show current directory" },
     #endif
    #endif
    #if FF_USE_LABEL
-    { CMD_FS_SETLABEL,      "<label>",                          "Set volume label" },
+    { CMD_FS_SETLABEL,      "<label>",                            "Set volume label" },
    #endif
    #if FF_USE_MKFS
-    { CMD_FS_CREATEFS,      "<ld#> <type> <au>",                "Create FAT volume" },
+    { CMD_FS_CREATEFS,      "<ld#> <type> <au>",                  "Create FAT volume" },
    #endif
   #endif
     // Memory commands.
-    { CMD_MEM_CLEAR,        "<start> <end> [<word>]",           "Clear memory" },
-    { CMD_MEM_COPY,         "<start> <end> <dst addr>",         "Copy memory" },
-    { CMD_MEM_DIFF,         "<start> <end> <cmp addr>",         "Compare memory" },
-    { CMD_MEM_DUMP,         "[<start> [<end>] [<size>]]",       "Dump memory" },
-    { CMD_MEM_EDIT_BYTES,   "<addr> <byte> [...]",              "Edit memory (Bytes)" },
-    { CMD_MEM_EDIT_HWORD,   "<addr> <h-word> [...]",            "Edit memory (H-Word)" },
-    { CMD_MEM_EDIT_WORD,    "<addr> <word> [...]",              "Edit memory (Word)" },
-    { CMD_MEM_TEST,         "[<start> [<end>] [iter]",          "Test memory" },
+    { CMD_MEM_CLEAR,        "<start> <end> [<word>]",             "Clear memory" },
+    { CMD_MEM_COPY,         "<start> <end> <dst addr>",           "Copy memory" },
+    { CMD_MEM_DIFF,         "<start> <end> <cmp addr>",           "Compare memory" },
+    { CMD_MEM_DUMP,         "[<start> [<end>] [<size>]]",         "Dump memory" },
+    { CMD_MEM_EDIT_BYTES,   "<addr> <byte> [...]",                "Edit memory (Bytes)" },
+    { CMD_MEM_EDIT_HWORD,   "<addr> <h-word> [...]",              "Edit memory (H-Word)" },
+    { CMD_MEM_EDIT_WORD,    "<addr> <word> [...]",                "Edit memory (Word)" },
+    { CMD_MEM_PERF,         "<start> <end> [<width>] [<xfersz>]", "Test performance" },
+    { CMD_MEM_TEST,         "[<start> [<end>] [iter] [tests]]",   "Test memory" },
     // Hardware commands.
-    { CMD_HW_INTR_DISABLE,  "",                                 "Disable Interrupts" },
-    { CMD_HW_INTR_ENABLE,   "",                                 "Enable Interrupts" },
-    { CMD_HW_SHOW_REGISTER, "",                                 "Display Register Information" },
-    { CMD_HW_TEST_TIMERS,   "",                                 "Test uS Timer" },
-    { CMD_HW_FIFO_DISABLE,  "",                                 "Disable UART FIFO" },
-    { CMD_HW_FIFO_ENABLE,   "",                                 "Enable UART FIFO" },
+    { CMD_HW_INTR_DISABLE,  "",                                   "Disable Interrupts" },
+    { CMD_HW_INTR_ENABLE,   "",                                   "Enable Interrupts" },
+    { CMD_HW_SHOW_REGISTER, "",                                   "Display Register Information" },
+    { CMD_HW_TEST_TIMERS,   "",                                   "Test uS Timer" },
+    { CMD_HW_FIFO_DISABLE,  "",                                   "Disable UART FIFO" },
+    { CMD_HW_FIFO_ENABLE,   "",                                   "Enable UART FIFO" },
     // Test suite commands.
-    { CMD_TEST_DHRYSTONE,   "",                                 "Dhrystone Test v2.1" },
-    { CMD_TEST_COREMARK,    "",                                 "CoreMark Test v1.0" },
+    { CMD_TEST_DHRYSTONE,   "",                                   "Dhrystone Test v2.1" },
+    { CMD_TEST_COREMARK,    "",                                   "CoreMark Test v1.0" },
     // Execution commands.
-    { CMD_CALL,             "<addr>",                           "Call function @ <addr>" },
-    { CMD_EXECUTE,          "<addr>",                           "Execute code @ <addr>" },
+    { CMD_CALL,             "<addr>",                             "Call function @ <addr>" },
+    { CMD_EXECUTE,          "<addr>",                             "Execute code @ <addr>" },
     // Miscellaneous commands.
-    { CMD_MISC_RESTART_APP, "",                                 "Restart application" },
-    { CMD_MISC_REBOOT,      "",                                 "Reset system" },
-    { CMD_MISC_HELP,        "[<cmd %>|<group %>]",              "Show this screen" },
-    { CMD_MISC_INFO,        "",                                 "Config info" },
-    { CMD_MISC_SETTIME,     "[<y> <m> <d> <h> <M> <s>]",        "Set/Show current time" },
-    { CMD_MISC_TEST,        "",                                 "Test Screen" },
+    { CMD_MISC_RESTART_APP, "",                                   "Restart application" },
+    { CMD_MISC_REBOOT,      "",                                   "Reset system" },
+    { CMD_MISC_HELP,        "[<cmd %>|<group %>]",                "Show this screen" },
+    { CMD_MISC_INFO,        "",                                   "Config info" },
+    { CMD_MISC_SETTIME,     "[<y> <m> <d> <h> <M> <s>]",          "Set/Show current time" },
+    { CMD_MISC_TEST,        "",                                   "Test Screen" },
 };
 #endif
 #define NGRPKEYS (sizeof(groupTable)/sizeof(t_groupstruct))

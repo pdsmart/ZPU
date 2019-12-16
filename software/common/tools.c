@@ -587,8 +587,9 @@ FRESULT fileCat(char *src)
     {
         while ((fr0 = f_read(&File[0], fsBuff, 80, &readSize)) == FR_OK)
         {
+            if (fr0 || readSize == 0) break;   /* error or eof */
             xputs(fsBuff);
-            if (readSize != 80) break;
+            if (f_eof(&File[0])) break;
         }
         xputs("\n");
     }

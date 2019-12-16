@@ -168,7 +168,8 @@ $(MAIN_PRJ_IN_BOOT): $(BUILD_DIR) $(MAIN_PRJ_IN_BOOT).bin $(MAIN_PRJ_IN_BOOT).sr
 #
 $(MAIN_PRJ_TINY_BOOT): $(BUILD_DIR) $(MAIN_PRJ_TINY_BOOT).bin $(MAIN_PRJ_TINY_BOOT).rpt $(MAIN_PRJ_TINY_BOOT).lss $(MAIN_PRJ_TINY_BOOT).dmp
 #
-$(MAIN_PRJ_RAM): $(BUILD_DIR) $(MAIN_PRJ_RAM).bin $(MAIN_PRJ_RAM).srec $(MAIN_PRJ_RAM).rpt $(MAIN_PRJ_RAM).lss $(MAIN_PRJ_RAM).dmp $(MAIN_PRJ_RAM)_APPRAM.vhd $(MAIN_PRJ_RAM)_COMBINEDAPPRAM.vhd
+#$(MAIN_PRJ_RAM): $(BUILD_DIR) $(MAIN_PRJ_RAM).bin $(MAIN_PRJ_RAM).srec $(MAIN_PRJ_RAM).rpt $(MAIN_PRJ_RAM).lss $(MAIN_PRJ_RAM).dmp $(MAIN_PRJ_RAM)_APPRAM.vhd $(MAIN_PRJ_RAM)_COMBINEDAPPRAM.vhd
+$(MAIN_PRJ_RAM): $(BUILD_DIR) $(MAIN_PRJ_RAM).bin $(MAIN_PRJ_RAM).srec $(MAIN_PRJ_RAM).rpt $(MAIN_PRJ_RAM).lss $(MAIN_PRJ_RAM).dmp $(MAIN_PRJ_RAM)_COMBINEDAPPRAM.vhd
 
 clean:
 	rm -f $(BUILD_DIR)/*.o *.hex *.lss *.elf *.map *.lst *.srec $(MAIN_PRJ_TO_BOOT) $(MAIN_PRJ_IN_BOOT).rom $(MAIN_PRJ_TINY_BOOT).rom $(MAIN_PRJ_RAM) *~ */*.o *.bin *.srec *.dmp *.vhd *.rpt
@@ -271,7 +272,7 @@ $(ROMGEN): $(SWDIR)/utils/zpugen.c
 	@echo "IOCP_ZPUTA_DualPortBootBRAM.vhd and IOCP_ZPUTA_SinglePortBootBRAM updated."
 	@echo ""
 
-# Put the app code into a seperate BRAM instantiation file, used when a 2nd block of App BRAM is created seperate to the boot BRAM.
+# Put the app code into a seperate BRAM instantiation file, used when a 2nd block of App BRAM is created seperate to the boot BRAM and requires to be preloaded.
 %_APPRAM.vhd: %.bin $(ROMGEN)
 	@sed 's/byteaddr_sp_32bit_bram/SinglePortBRAM/' >/tmp/zpu_work.tmp <$(RTL_DIR)/byteaddr_sp_32bit_bram_tmpl.vhd
 	@$(ROMGEN) BA $*.bin /tmp/zpu_work.tmp 0 > ZPUTA_SinglePortBRAM.vhd

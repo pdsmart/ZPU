@@ -48,8 +48,7 @@ package zpu_pkg is
     constant EVO_USE_INSN_BUS         :     boolean          := true;                                -- Use a seperate instruction bus to connect to the BRAM memory. All other operations go over the normal bus.
     constant EVO_USE_HW_BYTE_WRITE    :     boolean          := true;                                -- Implement hardware writing of bytes, reads are always 32bit and aligned.
     constant EVO_USE_HW_WORD_WRITE    :     boolean          := true;                                -- Implement hardware writing of 16bit words,  reads are always 32bit and aligned.
-    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
-    constant EVO_IMPL_RAM             :     boolean          := true;                                -- Implement application RAM, seperate to the BRAM using BRAM. The main BRAM would then be just for initial boot up.
+    constant EVO_USE_WB_BUS           :     boolean          := true;                                -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
 
     -- Debug options.
     --
@@ -363,7 +362,7 @@ package zpu_pkg is
     constant OpCode_Ulessthan           : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(38, 6));
     constant OpCode_Ulessthanorequal    : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(39, 6));
     --
-    constant OpCode_Swap                : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(40, 6));
+    constant OpCode_NA5                 : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(40, 6));
     constant OpCode_Mult                : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(41, 6));
     --
     constant OpCode_Lshiftright         : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(42, 6));
@@ -393,11 +392,13 @@ package zpu_pkg is
     constant OpCode_FiMult32            : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(60, 6));
     --
     constant OpCode_Pushspadd           : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(61, 6));
-    constant OpCode_Mult16x16           : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(62, 6));
+    constant OpCode_NA6                 : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(62, 6));
     constant OpCode_Callpcrel           : std_logic_vector(5 downto 0) := std_logic_vector(to_unsigned(63, 6));
     --
     -- Extension instructions. 
-    constant Opcode_Ex_Fill             : std_logic_vector(7 downto 2) := "000001";
+    constant Opcode_Ex_ESR              : std_logic_vector(7 downto 0) := "00000000";
+    constant Opcode_Ex_LDIR             : std_logic_vector(7 downto 3) := "00001";
+    constant Opcode_Ex_Fill             : std_logic_vector(7 downto 3) := "00010";
     --
     constant OpCode_Size                : integer                      := 8;
     --

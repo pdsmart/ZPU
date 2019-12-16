@@ -464,6 +464,7 @@ set_global_assignment -name VHDL_FILE ../cpu/zpu_pkg.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_small.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_medium.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo_L2.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_uart_debug.vhd
 set_global_assignment -name VHDL_FILE ../zpu_soc_pkg.vhd
 set_global_assignment -name VHDL_FILE ../zpu_soc.vhd
@@ -480,11 +481,13 @@ set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBootBRAM.
 set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBRAM.vhd
 set_global_assignment -name VHDL_FILE ../devices/sysbus/ioctl/ioctl.vhd
 #set_global_assignment -name VHDL_FILE ../devices/sysbus/TCPU/tcpu.vhd
+set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/sdram.qip
+#set_global_assignment -name VHDL_FILE ../devices/sysbus/SDRAM/sdram.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_top.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_byte_ctrl.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_bit_ctrl.vhd
-#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/sdram.qip
-set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/sdram.vhd
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/wbsdram.qip
+set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/wbsdram.vhd
 set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
 
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008

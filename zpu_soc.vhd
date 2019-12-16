@@ -97,7 +97,7 @@ entity zpu_soc is
         SDRAM_CLK                 : out   std_logic;                                  -- sdram is accessed at 100MHz
         SDRAM_CKE                 : out   std_logic;                                  -- clock enable.
         SDRAM_DQ                  : inout std_logic_vector(15 downto 0);              -- 16 bit bidirectional data bus
-        SDRAM_ADDR                : out   std_logic_vector(12 downto 0);              -- 13 bit multiplexed address bus
+        SDRAM_ADDR                : out   std_logic_vector(11 downto 0);              -- 12 bit multiplexed address bus
         SDRAM_DQM                 : out   std_logic_vector(1 downto 0);               -- two byte masks
         SDRAM_BA                  : out   std_logic_vector(1 downto 0);               -- two banks
         SDRAM_CS_n                : out   std_logic;                                  -- a single chip select
@@ -177,7 +177,7 @@ architecture rtl of zpu_soc is
     signal SPI_TICK               :       unsigned(8 downto 0);
     signal SPICLK_IN              :       std_logic;
     signal SPI_FAST               :       std_logic;
-    
+
     -- SPI signals
     signal HOST_TO_SPI            :       std_logic_vector(7 downto 0);
     signal SPI_TO_HOST            :       std_logic_vector(31 downto 0);
@@ -223,7 +223,7 @@ architecture rtl of zpu_soc is
     signal UART1_RX_INTR          :       std_logic;
     signal UART1_TX               :       std_logic;
     signal UART2_TX               :       std_logic;
-    
+
     -- PS2 signals
     signal PS2_INT                :       std_logic;
     
@@ -251,12 +251,17 @@ architecture rtl of zpu_soc is
     signal WB_I2C_CS              :       std_logic;
     signal WB_I2C_IRQ             :       std_logic;
 
+    
+    -- Wishbone control signals.
     signal WB_SDRAM_ACK           :       std_logic;
     signal WB_SDRAM_STB           :       std_logic;
     signal WB_DATA_READ_SDRAM     :       std_logic_vector(WORD_32BIT_RANGE);
+    signal WB_SDRAM_SELECT        :       std_logic;
+    signal WB_SDRAM_WREN          :       std_logic;
     
     -- ZPU signals
     signal MEM_BUSY               :       std_logic;
+    signal IO_WAIT_SD             :       std_logic;
     signal IO_WAIT_SPI            :       std_logic;
     signal IO_WAIT_PS2            :       std_logic;
     signal IO_WAIT_INTR           :       std_logic;
@@ -318,10 +323,15 @@ architecture rtl of zpu_soc is
     -- ZPU ROM/BRAM/RAM
     signal BRAM_SELECT            :       std_logic;
     signal RAM_SELECT             :       std_logic;
+    signal SDRAM_SELECT           :       std_logic;
     signal BRAM_WREN              :       std_logic;
     signal RAM_WREN               :       std_logic;
+    signal SDRAM_WREN             :       std_logic;
+    signal SDRAM_RDEN             :       std_logic;
+    signal SDRAM_MEM_BUSY         :       std_logic;
     signal BRAM_DATA_READ         :       std_logic_vector(WORD_32BIT_RANGE);
     signal RAM_DATA_READ          :       std_logic_vector(WORD_32BIT_RANGE);
+    signal SDRAM_DATA_READ        :       std_logic_vector(WORD_32BIT_RANGE);
     
     -- IOCTL
     signal IOCTL_RDINT            :       std_logic;
@@ -473,33 +483,33 @@ begin
                 -- Optional hardware features to be implemented.
                 IMPL_HW_BYTE_WRITE   => EVO_USE_HW_BYTE_WRITE,  -- Enable use of hardware direct byte write rather than read 33bits-modify 8 bits-write 32bits.
                 IMPL_HW_WORD_WRITE   => EVO_USE_HW_WORD_WRITE,  -- Enable use of hardware direct byte write rather than read 32bits-modify 16 bits-write 32bits.
-                IMPL_OPTIMIZE_IM     => true,                   -- If the instruction cache is enabled, optimise Im instructions to gain speed.
+                IMPL_OPTIMIZE_IM     => IMPL_EVO_OPTIMIZE_IM,   -- If the instruction cache is enabled, optimise Im instructions to gain speed.
                 IMPL_USE_INSN_BUS    => SOC_IMPL_INSN_BRAM,     -- Use a seperate bus to read instruction memory, normally implemented in BRAM.
                 IMPL_USE_WB_BUS      => EVO_USE_WB_BUS,         -- Use the wishbone interface in addition to direct access bus.    
                 -- Optional instructions to be implemented in hardware:
-                IMPL_ASHIFTLEFT      => true,                   -- Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT).
-                IMPL_ASHIFTRIGHT     => true,                   -- Arithmetic Shift Right.
-                IMPL_CALL            => true,                   -- Call to direct address.
-                IMPL_CALLPCREL       => true,                   -- Call to indirect address (add offset to program counter).
-                IMPL_DIV             => true,                   -- 32bit signed division.
-                IMPL_EQ              => true,                   -- Equality test.
-                IMPL_EXTENDED_INSN   => true,                   -- Extended multibyte instruction set.
-                IMPL_FIADD32         => false,                  -- Fixed point Q17.15 addition.
-                IMPL_FIDIV32         => false,                  -- Fixed point Q17.15 division.
-                IMPL_FIMULT32        => false,                  -- Fixed point Q17.15 multiplication.
-                IMPL_LOADB           => true,                   -- Load single byte from memory.
-                IMPL_LOADH           => true,                   -- Load half word (16bit) from memory.
-                IMPL_LSHIFTRIGHT     => true,                   -- Logical shift right.
-                IMPL_MOD             => true,                   -- 32bit modulo (remainder after division).
-                IMPL_MULT            => true,                   -- 32bit signed multiplication.
-                IMPL_NEG             => true,                   -- Negate value in TOS.
-                IMPL_NEQ             => true,                   -- Not equal test.
-                IMPL_POPPCREL        => true,                   -- Pop a value into the Program Counter from a location relative to the Stack Pointer.
-                IMPL_PUSHSPADD       => true,                   -- Add a value to the Stack pointer and push it onto the stack.
-                IMPL_STOREB          => true,                   -- Store/Write a single byte to memory/IO.
-                IMPL_STOREH          => true,                   -- Store/Write a half word (16bit) to memory/IO.
-                IMPL_SUB             => true,                   -- 32bit signed subtract.
-                IMPL_XOR             => true,                   -- Exclusive or of value in TOS.
+                IMPL_ASHIFTLEFT      => IMPL_EVO_ASHIFTLEFT,    -- Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT).
+                IMPL_ASHIFTRIGHT     => IMPL_EVO_ASHIFTRIGHT,   -- Arithmetic Shift Right.
+                IMPL_CALL            => IMPL_EVO_CALL,          -- Call to direct address.
+                IMPL_CALLPCREL       => IMPL_EVO_CALLPCREL,     -- Call to indirect address (add offset to program counter).
+                IMPL_DIV             => IMPL_EVO_DIV,           -- 32bit signed division.
+                IMPL_EQ              => IMPL_EVO_EQ,            -- Equality test.
+                IMPL_EXTENDED_INSN   => IMPL_EVO_EXTENDED_INSN, -- Extended multibyte instruction set.
+                IMPL_FIADD32         => IMPL_EVO_FIADD32,       -- Fixed point Q17.15 addition.
+                IMPL_FIDIV32         => IMPL_EVO_FIDIV32,       -- Fixed point Q17.15 division.
+                IMPL_FIMULT32        => IMPL_EVO_FIMULT32,      -- Fixed point Q17.15 multiplication.
+                IMPL_LOADB           => IMPL_EVO_LOADB,         -- Load single byte from memory.
+                IMPL_LOADH           => IMPL_EVO_LOADH,         -- Load half word (16bit) from memory.
+                IMPL_LSHIFTRIGHT     => IMPL_EVO_LSHIFTRIGHT,   -- Logical shift right.
+                IMPL_MOD             => IMPL_EVO_MOD,           -- 32bit modulo (remainder after division).
+                IMPL_MULT            => IMPL_EVO_MULT,          -- 32bit signed multiplication.
+                IMPL_NEG             => IMPL_EVO_NEG,           -- Negate value in TOS.
+                IMPL_NEQ             => IMPL_EVO_NEQ,           -- Not equal test.
+                IMPL_POPPCREL        => IMPL_EVO_POPPCREL,      -- Pop a value into the Program Counter from a location relative to the Stack Pointer.
+                IMPL_PUSHSPADD       => IMPL_EVO_PUSHSPADD,     -- Add a value to the Stack pointer and push it onto the stack.
+                IMPL_STOREB          => IMPL_EVO_STOREB,        -- Store/Write a single byte to memory/IO.
+                IMPL_STOREH          => IMPL_EVO_STOREH,        -- Store/Write a half word (16bit) to memory/IO.
+                IMPL_SUB             => IMPL_EVO_SUB,           -- 32bit signed subtract.
+                IMPL_XOR             => IMPL_EVO_XOR,           -- Exclusive or of value in TOS.
                 -- Size/Control parameters for the optional hardware.
                 MAX_INSNRAM_SIZE     => (2**(SOC_MAX_ADDR_INSN_BRAM_BIT)), -- Maximum size of the optional instruction BRAM on the INSN Bus.
                 MAX_L1CACHE_BITS     => MAX_EVO_L1CACHE_BITS,   -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
@@ -557,33 +567,33 @@ begin
                 -- Optional hardware features to be implemented.
                 IMPL_HW_BYTE_WRITE   => EVO_USE_HW_BYTE_WRITE,  -- Enable use of hardware direct byte write rather than read 33bits-modify 8 bits-write 32bits.
                 IMPL_HW_WORD_WRITE   => EVO_USE_HW_WORD_WRITE,  -- Enable use of hardware direct byte write rather than read 32bits-modify 16 bits-write 32bits.
-                IMPL_OPTIMIZE_IM     => true,                   -- If the instruction cache is enabled, optimise Im instructions to gain speed.
+                IMPL_OPTIMIZE_IM     => IMPL_EVOM_OPTIMIZE_IM,   -- If the instruction cache is enabled, optimise Im instructions to gain speed.
                 IMPL_USE_INSN_BUS    => SOC_IMPL_INSN_BRAM,     -- Use a seperate bus to read instruction memory, normally implemented in BRAM.
                 IMPL_USE_WB_BUS      => EVO_USE_WB_BUS,         -- Use the wishbone interface in addition to direct access bus.    
                 -- Optional instructions to be implemented in hardware:
-                IMPL_ASHIFTLEFT      => false,                  -- Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT).
-                IMPL_ASHIFTRIGHT     => false,                  -- Arithmetic Shift Right.
-                IMPL_CALL            => false,                  -- Call to direct address.
-                IMPL_CALLPCREL       => false,                  -- Call to indirect address (add offset to program counter).
-                IMPL_DIV             => false,                  -- 32bit signed division.
-                IMPL_EQ              => false,                  -- Equality test.
-                IMPL_EXTENDED_INSN   => false,                  -- Extended multibyte instruction set.
-                IMPL_FIADD32         => false,                  -- Fixed point Q17.15 addition.
-                IMPL_FIDIV32         => false,                  -- Fixed point Q17.15 division.
-                IMPL_FIMULT32        => false,                  -- Fixed point Q17.15 multiplication.
-                IMPL_LOADB           => false,                  -- Load single byte from memory.
-                IMPL_LOADH           => false,                  -- Load half word (16bit) from memory.
-                IMPL_LSHIFTRIGHT     => false,                  -- Logical shift right.
-                IMPL_MOD             => false,                  -- 32bit modulo (remainder after division).
-                IMPL_MULT            => false,                  -- 32bit signed multiplication.
-                IMPL_NEG             => false,                  -- Negate value in TOS.
-                IMPL_NEQ             => false,                  -- Not equal test.
-                IMPL_POPPCREL        => false,                  -- Pop a value into the Program Counter from a location relative to the Stack Pointer.
-                IMPL_PUSHSPADD       => false,                  -- Add a value to the Stack pointer and push it onto the stack.
-                IMPL_STOREB          => false,                  -- Store/Write a single byte to memory/IO.
-                IMPL_STOREH          => false,                  -- Store/Write a half word (16bit) to memory/IO.
-                IMPL_SUB             => false,                  -- 32bit signed subtract.
-                IMPL_XOR             => false,                  -- Exclusive or of value in TOS.
+                IMPL_ASHIFTLEFT      => IMPL_EVOM_ASHIFTLEFT,   -- Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT).
+                IMPL_ASHIFTRIGHT     => IMPL_EVOM_ASHIFTRIGHT,  -- Arithmetic Shift Right.
+                IMPL_CALL            => IMPL_EVOM_CALL,         -- Call to direct address.
+                IMPL_CALLPCREL       => IMPL_EVOM_CALLPCREL,    -- Call to indirect address (add offset to program counter).
+                IMPL_DIV             => IMPL_EVOM_DIV,          -- 32bit signed division.
+                IMPL_EQ              => IMPL_EVOM_EQ,           -- Equality test.
+                IMPL_EXTENDED_INSN   => IMPL_EVOM_EXTENDED_INSN, -- Extended multibyte instruction set.
+                IMPL_FIADD32         => IMPL_EVOM_FIADD32,      -- Fixed point Q17.15 addition.
+                IMPL_FIDIV32         => IMPL_EVOM_FIDIV32,      -- Fixed point Q17.15 division.
+                IMPL_FIMULT32        => IMPL_EVOM_FIMULT32,     -- Fixed point Q17.15 multiplication.
+                IMPL_LOADB           => IMPL_EVOM_LOADB,        -- Load single byte from memory.
+                IMPL_LOADH           => IMPL_EVOM_LOADH,        -- Load half word (16bit) from memory.
+                IMPL_LSHIFTRIGHT     => IMPL_EVOM_LSHIFTRIGHT,  -- Logical shift right.
+                IMPL_MOD             => IMPL_EVOM_MOD,          -- 32bit modulo (remainder after division).
+                IMPL_MULT            => IMPL_EVOM_MULT,         -- 32bit signed multiplication.
+                IMPL_NEG             => IMPL_EVOM_NEG,          -- Negate value in TOS.
+                IMPL_NEQ             => IMPL_EVOM_NEQ,          -- Not equal test.
+                IMPL_POPPCREL        => IMPL_EVOM_POPPCREL,     -- Pop a value into the Program Counter from a location relative to the Stack Pointer.
+                IMPL_PUSHSPADD       => IMPL_EVOM_PUSHSPADD,    -- Add a value to the Stack pointer and push it onto the stack.
+                IMPL_STOREB          => IMPL_EVOM_STOREB,       -- Store/Write a single byte to memory/IO.
+                IMPL_STOREH          => IMPL_EVOM_STOREH,       -- Store/Write a half word (16bit) to memory/IO.
+                IMPL_SUB             => IMPL_EVOM_SUB,          -- 32bit signed subtract.
+                IMPL_XOR             => IMPL_EVOM_XOR,          -- Exclusive or of value in TOS.
                 -- Size/Control parameters for the optional hardware.
                 MAX_INSNRAM_SIZE     => (2**(SOC_MAX_ADDR_INSN_BRAM_BIT)), -- Maximum size of the optional instruction BRAM on the INSN Bus.
                 MAX_L1CACHE_BITS     => MAX_EVO_MIN_L1CACHE_BITS, -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
@@ -728,9 +738,9 @@ begin
             );
     end generate;
 
-    -- Evo RAM, a block of RAM created as BRAM existing seperate to the main system BRAM, generally used for applications.
+    -- Evo RAM, a seperate block of RAM created in BRAM in addition to the main system BRAM, generally used for applications and termed RAM in this module.
     ZPURAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_RAM = true generate
-        ZPUBRAM : entity work.SinglePortBRAM
+        ZPURAM : entity work.SinglePortBRAM
             generic map (
                 addrbits             => SOC_MAX_ADDR_RAM_BIT
             )
@@ -754,8 +764,148 @@ begin
                                         '0';
     end generate;
 
+    -- SDRAM over System bus.
+    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
+
+        ZPUSDRAM : entity work.SDRAM
+            port map (
+                -- SDRAM Interface
+                SDRAM_CLK        => MEMCLK,           -- sdram is accessed at 100MHz
+                SDRAM_RST        => not RESET_n,      -- reset the sdram controller.
+                SDRAM_CKE        => SDRAM_CKE,        -- clock enable.
+                SDRAM_DQ         => SDRAM_DQ,         -- 16 bit bidirectional data bus
+                SDRAM_ADDR       => SDRAM_ADDR,       -- 12 bit multiplexed address bus
+                SDRAM_DQM        => SDRAM_DQM,        -- two byte masks
+                SDRAM_BA         => SDRAM_BA,         -- two banks
+                SDRAM_CS_n       => SDRAM_CS_n,       -- a single chip select
+                SDRAM_WE_n       => SDRAM_WE_n,       -- write enable
+                SDRAM_RAS_n      => SDRAM_RAS_n,      -- row address select
+                SDRAM_CAS_n      => SDRAM_CAS_n,      -- columns address select
+                SDRAM_READY      => SDRAM_READY,      -- sd ready.
+
+                -- CPU Interface
+                CLK              => SYSCLK,           -- System master clock
+                RESET            => not RESET_n,      -- high active sync reset
+                ADDR             => MEM_ADDR(ADDR_BIT_SDRAM_RANGE),
+                DATA_IN          => MEM_DATA_WRITE,   -- write data
+                DATA_OUT         => SDRAM_DATA_READ,  -- read data
+                WRITE_BYTE       => MEM_WRITE_BYTE_ENABLE,  -- Write a single byte.
+                WRITE_HWORD      => MEM_WRITE_HWORD_ENABLE, -- Write a 16 bit word.
+                CS               => '1', --SDRAM_SELECT,     -- Chip Select.
+                WREN             => SDRAM_WREN,       -- Write enable.
+                RDEN             => SDRAM_RDEN,  -- Read enable.
+                BUSY             => SDRAM_MEM_BUSY                   
+            );
+
+--        ZPUSDRAM : entity work.SinglePortBRAM
+--            generic map (
+--                addrbits             => 4
+--            )
+--            port map (
+--                clk                  => SYSCLK,
+--                memAAddr             => MEM_ADDR(3 downto 0),
+--                memAWriteEnable      => SDRAM_WREN,
+--                memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
+--                memAWriteHalfWord    => MEM_WRITE_HWORD_ENABLE,
+--                memAWrite            => MEM_DATA_WRITE,
+--                memARead             => SDRAM_DATA_READ
+--            );
+            
+--  clock: entity work.oddrff
+--    port map (
+--      D0 => '0',
+--      D1 => '1',
+--      O => SDRAM_CLK,
+--      CLK => SYSCLK
+--    );
+
+        -- SDRAM clock based on system clock.
+        SDRAM_CLK                <= MEMCLK;
+
+        -- RAM Range SOC_ADDR_SDRAM_START) -> SOC_ADDR_SDRAM_END
+        SDRAM_SELECT             <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
+                                    else '0';
+
+        -- Enable write to RAM when selected and CPU in write state.
+        SDRAM_WREN               <= '1' when SDRAM_SELECT = '1' and MEM_WRITE_ENABLE = '1'
+                                     else '0';
+        SDRAM_RDEN               <= '1' when SDRAM_SELECT = '1' and MEM_READ_ENABLE = '1'
+                                     else '0';
+
+--        ZPUSDRAM : entity work.sdram_controller
+--          generic map (
+--            HIGH_BIT => 21,
+--            MHZ => 100,
+--            REFRESH_CYCLES => 4096,
+--            ADDRESS_BITS => 12
+--          )
+--          PORT MAP (
+--              clock_100 => SYSCLK,
+--              clock_100_delayed_3ns => MEMCLK,
+--              rst => not RESET_n,
+--        
+--           -- Signals to/from the SDRAM chip
+--           DRAM_ADDR   => SDRAM_ADDR, 
+--           DRAM_BA     => SDRAM_BA, 
+--           DRAM_CAS_N  => SDRAM_CAS_n, 
+--           DRAM_CKE    => SDRAM_CKE, 
+--           DRAM_CLK    => SDRAM_CLK, 
+--           DRAM_CS_N   => SDRAM_CS_n, 
+--           DRAM_DQ     => SDRAM_DQ, 
+--           DRAM_DQM    => SDRAM_DQM, 
+--           DRAM_RAS_N  => SDRAM_RAS_n, 
+--           DRAM_WE_N   => SDRAM_WE_n,
+--        
+--           pending     => SDRAM_MEM_BUSY,
+--        
+--           --- Inputs from rest of the system
+--           address     => MEM_ADDR(ADDR_BIT_SDRAM_32BIT_RANGE), 
+--           req_read    => SRD, 
+--           req_write   => SWR, 
+--           data_out    => SDRAM_DATA_READ, 
+--           data_out_valid => open, --SDRAM_MEM_BUSY,
+--           data_in     => dataWord, 
+--           data_mask   => dataMask
+--           );            
+--
+--        -- RAM Range SOC_ADDR_SDRAM_START) -> SOC_ADDR_SDRAM_END
+--        SDRAM_SELECT             <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
+--                                    else '0';
+--            SRD <= '1' when SDRAM_SELECT = '1' and MEM_READ_ENABLE = '1' else '0';
+--            SWR <= '1' when SDRAM_SELECT = '1' and MEM_WRITE_ENABLE = '1' else '0';
+--
+--            dataMask <="0001" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "00"
+--                       else
+--                       "0010" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "01"
+--                       else
+--                       "0100" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "10"
+--                       else
+--                       "1000" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "11"
+--                       else
+--                       "0011" when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '0'
+--                       else
+--                       "1100" when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '1'
+--                   else
+--                       "1111";
+--             dataWord <= X"000000" & MEM_DATA_WRITE(7 downto 0)       when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "00"
+--                         else
+--                         X"0000" & MEM_DATA_WRITE(7 downto 0) & X"00" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "01"
+--                         else
+--                         X"00" & MEM_DATA_WRITE(7 downto 0) & X"0000" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "10"
+--                         else
+--                         MEM_DATA_WRITE(7 downto 0) & X"000000"       when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "11"
+--                         else
+--                         X"0000" & MEM_DATA_WRITE(15 downto 0)        when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '0'
+--                         else
+--                         MEM_DATA_WRITE(15 downto 0) & X"0000"        when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '1'
+--                     else MEM_DATA_WRITE;
+    end generate;
+
+
     -- Force the CPU to wait when slower memory/IO is accessed and it cant deliver an immediate result.
     MEM_BUSY                  <= '1'                  when (UART0_CS = '1' or UART1_CS = '1' or TIMER0_CS = '1') and MEM_READ_ENABLE = '1'
+                                 else
+                                 '1'                  when SOC_IMPL_SDRAM = true   and (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1)  and (BOARD_QMV = true or BOARD_CYC1000 = true) and SDRAM_MEM_BUSY = '1'
                                  else
                            --    '1'                  when BRAM_SELECT = '1'       and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
                            --    else
@@ -771,7 +921,7 @@ begin
                                  else
                                  '1'                  when SOC_IMPL_TIMER1 = true  and TIMER1_CS = '1' and MEM_READ_ENABLE = '1' and IO_WAIT_TIMER1 = '1'
                                  else
-                                 '1'                  when SOC_IMPL_IOCTL = true   and IOCTL_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_IOCTL = '1'
+                                 '1'                  when SOC_IMPL_IOCTL = true   and (BOARD_CYC1000 = true or BOARD_DE10 = true) and IOCTL_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_IOCTL = '1'
                                  else
                                  '1'                  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1' and MEM_READ_ENABLE = '1'
                                  else
@@ -781,6 +931,8 @@ begin
     MEM_DATA_READ             <= BRAM_DATA_READ       when BRAM_SELECT = '1'
                                  else
                                  RAM_DATA_READ        when SOC_IMPL_RAM = true     and RAM_SELECT = '1'
+                                 else
+                                 SDRAM_DATA_READ      when SOC_IMPL_SDRAM = true   and (BOARD_QMV = true or BOARD_CYC1000 = true) and SDRAM_SELECT = '1'
                                  else
                                  IO_DATA_READ_SD      when SOC_IMPL_SD = true      and SD_CS = '1'
                                  else
@@ -792,7 +944,7 @@ begin
                                  else
                                  IO_DATA_READ_SOCCFG  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1'
                                  else
-                                 IO_DATA_READ_IOCTL   when SOC_IMPL_IOCTL = true   and IOCTL_CS = '1'
+                                 IO_DATA_READ_IOCTL   when SOC_IMPL_IOCTL = true   and (BOARD_CYC1000 = true or BOARD_DE10 = true) and IOCTL_CS = '1'
                                  else
                                  IO_DATA_READ         when IO_SELECT = '1'
                                  else
@@ -864,7 +1016,7 @@ begin
                                  -- IO Range for EVO CPU
     IO_SELECT                 <= '1'                  when (ZPU_SMALL = 1 or ZPU_MEDIUM = 1 or ZPU_FLEX = 1) and MEM_ADDR(ioBit) = '1'                         -- IO Range for Small, Medium and Flex CPU
                                  else
-                          --       '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
+                          --     '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
                                  '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and ((SOC_IMPL_WB = true and MEM_ADDR(WB_SELECT_BIT) = '0') or SOC_IMPL_WB = false) and MEM_ADDR(IO_DECODE_RANGE) = std_logic_vector(to_unsigned(255, maxAddrBit-WB_ACTIVE - maxIOBit)) and MEM_ADDR(maxIOBit -1 downto 12) = std_logic_vector(to_unsigned(0, maxIOBit-12))
                                  else '0';
     IO_TIMER_SELECT           <= '1'                  when IO_SELECT = '1'         and MEM_ADDR(11 downto 8) = X"C"                                            -- Timer Range 0x<msb=0>FFFFCxx
@@ -1018,6 +1170,8 @@ begin
 
         PS2_CS     <= '1' when IO_SELECT = '1'    and MEM_ADDR(11 downto 4) = "11010000"  -- PS2 Range 0xFFFFFExx, 0xE00-E0F
                       else '0';
+    else generate
+        PS2_INT                                                     <= '0';
     end generate;
 
     -- SPI host
@@ -1208,12 +1362,16 @@ begin
                 SD_DATA_VALID                                       <= '0';
                 SD_RESET_TIMER                                      <= 0;
                 SD_STATE                                            <= SD_STATE_RESET;
+                IO_WAIT_SD                                          <= '0';
 
             -----------------------
             -- RISING CLOCK EDGE --
             -----------------------                
             elsif rising_edge(SYSCLK) then
 
+                -- Reset wait state, only 1 cycle long under normal circumstances.
+                IO_WAIT_SD                                          <= '0';
+    
                 -- CPU Write?
                 if MEM_WRITE_ENABLE = '1' and SD_CS = '1' then
 
@@ -1253,9 +1411,11 @@ begin
                         -- Read back stored address.
                         when "00"  =>
                             IO_DATA_READ_SD                         <= SD_ADDR(tChannel);
+                            IO_WAIT_SD                              <= '0';
 
                         -- Read Data, only valid if the SD_DATA_VALID bit is set.
                         when "01"  =>
+                            IO_WAIT_SD                              <= '0';
                             IO_DATA_READ_SD(31 downto 16)           <= SD_ERROR(tChannel);
                             IO_DATA_READ_SD(7 downto 0)             <= SD_DATA_READ(tChannel);
                             SD_DATA_VALID                           <= '0';
@@ -1274,6 +1434,7 @@ begin
                             IO_DATA_READ_SD(14)                     <= SD_WR(tChannel);
                             IO_DATA_READ_SD(15)                     <= SD_RESET(tChannel);
                             IO_DATA_READ_SD(31 downto 16)           <= SD_ERROR(tChannel);
+                            IO_WAIT_SD                              <= '0';
                             SD_OVERRUN                              <= '0'; 
 
                         when others =>
@@ -1491,7 +1652,7 @@ begin
         );
 
     -- IO Control Bus controller.
-    IOCTL: if SOC_IMPL_IOCTL = true generate
+    IOCTL: if SOC_IMPL_IOCTL = true and (BOARD_DE10 = true or BOARD_CYC1000 = true) generate
         IOCTL0 : entity work.IOCTL
             port map (
                 CLK                  => SYSCLK,                          -- memory master clock
@@ -1566,8 +1727,44 @@ begin
             end if; -- rising-edge(SYSCLK)
         end process;
 
+        process(SYSCLK, RESET_n)
+        begin
+            ------------------------
+            -- HIGH LEVEL         --
+            ------------------------
+
+            ------------------------
+            -- ASYNCHRONOUS RESET --
+            ------------------------
+            if RESET_n='0' then
+                IO_WAIT_IOCTL                                       <= '0';
+
+            -----------------------
+            -- RISING CLOCK EDGE --
+            -----------------------                
+            elsif rising_edge(SYSCLK) then
+
+                IO_WAIT_IOCTL                                       <= '0';
+
+                -- CPU Write?
+                if MEM_WRITE_ENABLE = '1' and IO_SELECT = '1' then
+
+                -- IO Read?
+                elsif MEM_READ_ENABLE = '1' and IO_SELECT = '1' then
+
+                    if IOCTL_CS = '1' then
+                        IO_DATA_READ_IOCTL                          <= IOCTL_DATA_OUT;
+                    end if;
+
+                end if;
+            end if; -- rising-edge(SYSCLK)
+        end process;
+
         IOCTL_CS  <= '1' when IO_SELECT = '1' and MEM_ADDR(11 downto 4) = "10000000"           -- Ioctl Range 0xFFFFF8xx 0x800-80F
                      else '0';
+    else generate
+        IOCTL_RDINT                                                 <= '0';
+        IOCTL_WRINT                                                 <= '0';
     end generate;
 
     IMPLSOCCFG: if SOC_IMPL_SOCCFG = true generate
@@ -1611,7 +1808,7 @@ begin
                         IO_DATA_READ_SOCCFG(14 downto 0)            <= to_std_logic(SOC_IMPL_BRAM) & 
                                                                        to_std_logic(SOC_IMPL_RAM) & 
                                                                        to_std_logic(SOC_IMPL_INSN_BRAM) &
-                                                                       to_std_logic(SOC_IMPL_DRAM) & 
+                                                                       to_std_logic(SOC_IMPL_SDRAM) & 
                                                                        to_std_logic(SOC_IMPL_IOCTL) &
                                                                        to_std_logic(SOC_IMPL_PS2) & 
                                                                        to_std_logic(SOC_IMPL_SPI) & 
@@ -1655,41 +1852,6 @@ begin
 
         SOCCFG_CS             <= '1' when IO_SELECT = '1' and MEM_ADDR(11 downto 6) = "111100"        -- SoC COnfig Range 0xF00-F40, step 4 for 32 bit registers.
                                  else '0';
-    end generate;
-
-    IMPLIOCTL: if SOC_IMPL_IOCTL = true generate
-        process(SYSCLK, RESET_n)
-        begin
-            ------------------------
-            -- HIGH LEVEL         --
-            ------------------------
-
-            ------------------------
-            -- ASYNCHRONOUS RESET --
-            ------------------------
-            if RESET_n='0' then
-                IO_WAIT_IOCTL                                       <= '0';
-
-            -----------------------
-            -- RISING CLOCK EDGE --
-            -----------------------                
-            elsif rising_edge(SYSCLK) then
-
-                IO_WAIT_IOCTL                                       <= '0';
-
-                -- CPU Write?
-                if MEM_WRITE_ENABLE = '1' and IO_SELECT = '1' then
-
-                -- IO Read?
-                elsif MEM_READ_ENABLE = '1' and IO_SELECT = '1' then
-
-                    if IOCTL_CS = '1' then
-                        IO_DATA_READ_IOCTL                          <= IOCTL_DATA_OUT;
-                    end if;
-
-                end if;
-            end if; -- rising-edge(SYSCLK)
-        end process;
     end generate;
     ------------------------------------------------------------------------------------
     -- END Direct I/O devices
@@ -1739,38 +1901,49 @@ begin
         -- Halt / Error
         WB_I2C_HALT              <= '0';                            -- no throttle -> full speed
         WB_I2C_ERR               <= '0';                            -- nothing can go wrong - never ever!
+    else generate
+        I2C_SCL_IO               <= 'Z';
+        I2C_SDA_IO               <= 'Z';
+        SCL_PAD_IN               <= 'X';
+        SDA_PAD_IN               <= 'X';
+        WB_I2C_HALT              <= '0';
+        WB_I2C_ERR               <= '0';
     end generate;
 
     -- SDRAM over WishBone bus.
-    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and EVO_USE_WB_BUS = true and SOC_IMPL_WB_SDRAM = true generate
+    ZPUWBSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
 
-        ZPUSDRAM : entity work.SDRAM
+        ZPUWBSDRAM : entity work.WBSDRAM
             port map (
                 -- SDRAM Interface
-                SD_CLK           => SYSCLK,           -- sdram is accessed at 100MHz
-                SD_RST           => not RESET_n,      -- reset the sdram controller.
-                SD_CKE           => SDRAM_CKE,        -- clock enable.
-                SD_DQ            => SDRAM_DQ,         -- 16 bit bidirectional data bus
-                SD_ADDR          => SDRAM_ADDR,       -- 13 bit multiplexed address bus
-                SD_DQM           => SDRAM_DQM,        -- two byte masks
-                SD_BA            => SDRAM_BA,         -- two banks
-                SD_CS_n          => SDRAM_CS_n,       -- a single chip select
-                SD_WE_n          => SDRAM_WE_n,       -- write enable
-                SD_RAS_n         => SDRAM_RAS_n,      -- row address select
-                SD_CAS_n         => SDRAM_CAS_n,      -- columns address select
-                SD_READY         => SDRAM_READY,      -- sd ready.
+                SDRAM_CLK        => MEMCLK,           -- sdram is accessed at 100MHz
+                SDRAM_RST        => not RESET_n,      -- reset the sdram controller.
+                SDRAM_CKE        => SDRAM_CKE,        -- clock enable.
+                SDRAM_DQ         => SDRAM_DQ,         -- 16 bit bidirectional data bus
+                SDRAM_ADDR       => SDRAM_ADDR,       -- 12 bit multiplexed address bus
+                SDRAM_DQM        => SDRAM_DQM,        -- two byte masks
+                SDRAM_BA         => SDRAM_BA,         -- two banks
+                SDRAM_CS_n       => SDRAM_CS_n,       -- a single chip select
+                SDRAM_WE_n       => SDRAM_WE_n,       -- write enable
+                SDRAM_RAS_n      => SDRAM_RAS_n,      -- row address select
+                SDRAM_CAS_n      => SDRAM_CAS_n,      -- columns address select
+                SDRAM_READY      => SDRAM_READY,      -- sd ready.
 
                 -- WishBone interface.
                 WB_CLK           => WB_CLK_I,         -- 100MHz chipset clock to which sdram state machine is synchonized    
-                WB_DAT_I         => WB_DAT_O,         -- data input from chipset/cpu
-                WB_DAT_O         => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
+                WB_RST_I         => not RESET_n,      -- Reset baased on CPU reset active high.
+                WB_DATA_I        => WB_DAT_O,         -- data input from chipset/cpu
+                WB_DATA_O        => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
                 WB_ACK_O         => WB_SDRAM_ACK, 
-                WB_ADR_I         => WB_ADR_O(23 downto 0), -- lower 2 bits are ignored.
+                WB_ADR_I         => WB_ADR_O(ADDR_BIT_WB_SDRAM_RANGE), -- lower 2 bits are ignored.
                 WB_SEL_I         => WB_SEL_O, 
                 WB_CTI_I         => WB_CTI_O,         -- cycle type. 
                 WB_STB_I         => WB_SDRAM_STB, 
                 WB_CYC_I         => WB_CYC_O,         -- cpu/chipset requests cycle
-                WB_WE_I          => RAM_WREN          -- cpu/chipset requests write   
+                WB_WE_I          => WB_SDRAM_WREN,    -- cpu/chipset requests write   
+                WB_TGC_I         => "0000000",        -- cycle tag
+                WB_HALT_O        => open,
+                WB_ERR_O         => open
             );
 --
 --        ZPUSRAM: entity work.SRAM
@@ -1796,21 +1969,20 @@ begin
 --            );
 
         -- RAM Range SOC_ADDR_RAM_START) -> SOC_ADDR_RAM_END
-      --  RAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, WB_ADR_O'LENGTH)))
-        RAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END - 8192, WB_ADR_O'LENGTH)))
+        WB_SDRAM_SELECT          <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (WB_ADR_O >= std_logic_vector(to_unsigned(SOC_ADDR_WB_SDRAM_START, WB_ADR_O'LENGTH)) and WB_ADR_O < std_logic_vector(to_unsigned(SOC_ADDR_WB_SDRAM_END, WB_ADR_O'LENGTH)))
                                     else '0';
 
         -- Enable write to RAM when selected and CPU in write state.
-        RAM_WREN                 <= '1' when RAM_SELECT = '1' and WB_WE_O = '1'
+        WB_SDRAM_WREN            <= '1' when WB_SDRAM_SELECT = '1' and WB_WE_O = '1'
                                     else
                                     '0';
 
         -- Wishbone strobe based on the RAM Select signal which limits the address range.
-        WB_SDRAM_STB             <= '1' when RAM_SELECT = '1' and WB_STB_O = '1'
+        WB_SDRAM_STB             <= '1' when WB_SDRAM_SELECT = '1' and WB_STB_O = '1'
                                     else '0';
 
         -- SDRAM clock based on system clock.
-        SDRAM_CLK                <= SYSCLK;
+        SDRAM_CLK                <= MEMCLK;
     end generate;
 
     ------------------------------------------------------------------------------------
@@ -1832,7 +2004,7 @@ begin
         ------------------------
         if RESET_IN='0' then
             RESET_COUNTER                                           <= X"FFFF";
-            RESET_COUNTER_RX                                        <= to_unsigned(((SYSCLK_FREQUENCY*100000)/300)*8, 16);
+            RESET_COUNTER_RX                                        <= to_unsigned(((SYSCLK_FREQUENCY)/300), 16);
             RESET_n                                                 <= '0';
 
         -----------------------
@@ -1846,12 +2018,12 @@ begin
             if UART_RX_0 = '0' or UART_RX_1 = '0' then
                 RESET_COUNTER_RX                                    <= RESET_COUNTER_RX - 1;
             else
-                RESET_COUNTER_RX                                    <= to_unsigned(((SYSCLK_FREQUENCY*100000)/300)*8, 16);
+                RESET_COUNTER_RX                                    <= to_unsigned(((SYSCLK_FREQUENCY)/300), 16);
             end if;
 
             if RESET_COUNTER_RX = X"0000" then
                 RESET_COUNTER                                       <= X"FFFF";
-                RESET_COUNTER_RX                                    <= to_unsigned(((SYSCLK_FREQUENCY*100000)/300)*8, 16);
+                RESET_COUNTER_RX                                    <= to_unsigned(((SYSCLK_FREQUENCY)/300), 16);
                 RESET_n                                             <= '0';
             end if;
 

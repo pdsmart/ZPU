@@ -38,7 +38,7 @@ entity QMV_zpu is
         SDRAM_CLK       : out   std_logic;                                  -- sdram is accessed at 128MHz
         SDRAM_CKE       : out   std_logic;                                  -- clock enable.
         SDRAM_DQ        : inout std_logic_vector(15 downto 0);              -- 16 bit bidirectional data bus
-        SDRAM_ADDR      : out   std_logic_vector(12 downto 0);              -- 13 bit multiplexed address bus
+        SDRAM_ADDR      : out   std_logic_vector(11 downto 0);              -- 13 bit multiplexed address bus
         SDRAM_DQM       : out   std_logic_vector(1 downto 0);               -- two byte masks
         SDRAM_BA        : out   std_logic_vector(1 downto 0);               -- two banks
         SDRAM_CS        : out   std_logic;                                  -- a single chip select

@@ -25,10 +25,9 @@
 
 # Project-Wide Assignments
 # ========================
-set_global_assignment -name ORIGINAL_QUARTUS_VERSION 5.0
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "23:35:58  SEPTEMBER 01, 2005"
 set_global_assignment -name LAST_QUARTUS_VERSION "17.1.1 Standard Edition"
-#set_global_assignment -name VERILOG_FILE ledwater.v
 set_global_assignment -name CDF_FILE E115.cdf
 
 # Pin & Location Assignments
@@ -38,14 +37,10 @@ set_global_assignment -name CDF_FILE E115.cdf
 # ================================
 set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name TOP_LEVEL_ENTITY E115_zpu
-set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (VHDL)"
-set_global_assignment -name EDA_OUTPUT_DATA_FORMAT VHDL -section_id eda_simulation
 
 # Fitter Assignments
 # ==================
 set_global_assignment -name DEVICE EP4CE115F23I7
-set_global_assignment -name OPTIMIZE_HOLD_TIMING OFF
-set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
 set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 256
 
 # Assembler Assignments
@@ -53,12 +48,9 @@ set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 256
 
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 7
 set_global_assignment -name AUTO_RESTART_CONFIGURATION OFF
-set_global_assignment -name MIN_CORE_JUNCTION_TEMP "-40"
-set_global_assignment -name MAX_CORE_JUNCTION_TEMP 100
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 484
 set_global_assignment -name LL_ROOT_REGION ON -section_id "Root Region"
 set_global_assignment -name LL_MEMBER_STATE LOCKED -section_id "Root Region"
-set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "3.3-V LVTTL"
 set_global_assignment -name USE_CONFIGURATION_DEVICE ON
 set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
 set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED"
@@ -72,6 +64,19 @@ set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
 set_global_assignment -name ALLOW_ANY_RAM_SIZE_FOR_RECOGNITION ON
 set_global_assignment -name SYNTH_MESSAGE_LEVEL HIGH
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
+set_global_assignment -name OPTIMIZATION_TECHNIQUE SPEED
+set_global_assignment -name SYNTH_TIMING_DRIVEN_SYNTHESIS ON
+set_global_assignment -name OPTIMIZE_HOLD_TIMING "ALL PATHS"
+set_global_assignment -name OPTIMIZE_MULTI_CORNER_TIMING ON
+set_global_assignment -name FITTER_EFFORT "STANDARD FIT"
+
+set_global_assignment -name ENABLE_SIGNALTAP ON
+set_global_assignment -name USE_SIGNALTAP_FILE stp1.stp
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+
+
 
 
 #============================================================
@@ -248,6 +253,7 @@ set_global_assignment -name VHDL_FILE ../cpu/zpu_pkg.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_small.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_medium.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo.vhd
+set_global_assignment -name VHDL_FILE ../cpu/zpu_core_evo_L2.vhd
 set_global_assignment -name VHDL_FILE ../cpu/zpu_uart_debug.vhd
 set_global_assignment -name VHDL_FILE ../zpu_soc_pkg.vhd
 set_global_assignment -name VHDL_FILE ../zpu_soc.vhd
@@ -264,11 +270,14 @@ set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBootBRAM.
 set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBRAM.vhd
 set_global_assignment -name VHDL_FILE ../devices/sysbus/ioctl/ioctl.vhd
 #set_global_assignment -name VHDL_FILE ../devices/sysbus/TCPU/tcpu.vhd
+set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/sdram.qip
+#set_global_assignment -name VHDL_FILE ../devices/sysbus/SDRAM/sdram.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_top.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_byte_ctrl.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_bit_ctrl.vhd
-#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/sdram.qip
-set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/sdram.vhd
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/wbsdram.qip
+set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/wbsdram.vhd
+set_global_assignment -name VHDL_FILE ../devices/WishBone/SRAM/sram.vhd
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"
@@ -278,7 +287,12 @@ set_global_assignment -name PHYSICAL_SYNTHESIS_REGISTER_DUPLICATION ON
 set_global_assignment -name REMOVE_DUPLICATE_REGISTERS OFF
 set_global_assignment -name PRE_MAPPING_RESYNTHESIS ON
 set_global_assignment -name HDL_MESSAGE_LEVEL LEVEL3
+set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (VHDL)"
+set_global_assignment -name EDA_OUTPUT_DATA_FORMAT VHDL -section_id eda_simulation
 
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2008
 set_global_assignment -name VHDL_SHOW_LMF_MAPPING_MESSAGES OFF
+
+
+
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

@@ -86,7 +86,8 @@ uint32_t app(uint32_t param1, uint32_t param2)
         {
             value = 0x00000000;
         }
-        if (!xatoi(&ptr,  &bitWidth) || (bitWidth != 8 && bitWidth != 16 && bitWidth != 32))
+        xatoi(&ptr,  &bitWidth);
+	if(bitWidth != 8 && bitWidth != 16 && bitWidth != 32)
         {
             bitWidth = 32;
         }
@@ -103,7 +104,7 @@ uint32_t app(uint32_t param1, uint32_t param2)
                 case 2:
                     *(uint16_t *)(memAddr) = value;
                     break;
-                case 3:
+                case 4:
                 default:
                     *(uint32_t *)(memAddr) = value;
                     break;

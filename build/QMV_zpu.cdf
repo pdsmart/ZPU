@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(5CEFA2F23) Path("/srv/dvlp/Projects/dev/github/zpu/build/output_files/") File("QMV_zpu.sof") MfrSpec(OpMask(1));
+		Device PartName(5CEFA2F23) Path("/srv/dvlp/Projects/dev/github/zpu/build/") File("QMV_zpu.sof") MfrSpec(OpMask(1));
 
 ChainEnd;
 
