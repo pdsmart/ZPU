@@ -11,10 +11,10 @@ begin
         end if;
     
         if (memAWriteEnable = '1') then
-            ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memAWrite;
+            ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE)))) := memAWrite;
             memARead <= memAWrite;
         else
-            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;
@@ -23,10 +23,10 @@ process (clk)
 begin
     if (clk'event and clk = '1') then
         if (memBWriteEnable = '1') then
-            ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memBWrite;
+            ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE)))) := memBWrite;
             memBRead <= memBWrite;
         else
-            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;

@@ -41,7 +41,8 @@ entity uart is
     generic (
         RX_FIFO_BIT_DEPTH     : integer := 10;
         TX_FIFO_BIT_DEPTH     : integer := 8;
-        COUNTER_BITS          : natural := 16
+        COUNTER_BITS          : natural := 16;
+        BAUDCLK_FREQUENCY     : integer := SYSTEM_FREQUENCY                     -- Baud rate clock frequency, used so a program can determine the clocking frequency and set divisor accordingly.
     );
     port (
         -- CPU Interface
@@ -456,9 +457,9 @@ begin
                 DATA_OUT(   RX_FIFO_BIT_DEPTH-1 downto  0) <= std_logic_vector(RX_FIFO_WR_ADDR - RX_FIFO_RD_ADDR);
                 DATA_OUT(16+TX_FIFO_BIT_DEPTH-1 downto 16) <= std_logic_vector(TX_FIFO_WR_ADDR - TX_FIFO_RD_ADDR);
 
-            -- Baud Rate Generator setting.
+            -- System clock frequency.
             when "11" =>
-                DATA_OUT                 <= std_logic_vector(TX_CLOCK_DIVISOR & RX_CLOCK_DIVISOR);
+                DATA_OUT                 <= std_logic_vector(to_unsigned(BAUDCLK_FREQUENCY, wordSize));
         end case;
     end process;
 

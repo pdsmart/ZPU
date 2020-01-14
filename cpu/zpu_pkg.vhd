@@ -48,12 +48,12 @@ package zpu_pkg is
     constant EVO_USE_INSN_BUS         :     boolean          := true;                                -- Use a seperate instruction bus to connect to the BRAM memory. All other operations go over the normal bus.
     constant EVO_USE_HW_BYTE_WRITE    :     boolean          := true;                                -- Implement hardware writing of bytes, reads are always 32bit and aligned.
     constant EVO_USE_HW_WORD_WRITE    :     boolean          := true;                                -- Implement hardware writing of 16bit words,  reads are always 32bit and aligned.
-    constant EVO_USE_WB_BUS           :     boolean          := true;                                -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
+    constant EVO_USE_WB_BUS           :     boolean          := false;                               -- Implement the wishbone interface in addition to the standard direct interface. NB: Change WB_ACTIVE to 1 above if enabling.
 
     -- Debug options.
     --
-    constant DEBUG_CPU                :     boolean          := false;                               -- Enable CPU debugging output.
-    constant DEBUG_LEVEL              :     integer          := 1;                                   -- Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ 4Everything else.
+    constant DEBUG_CPU                :     boolean          := true;                                -- Enable CPU debugging output.
+    constant DEBUG_LEVEL              :     integer          := 0;                                   -- Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ 4Everything else.
     constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
     constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
     constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter.
@@ -80,9 +80,12 @@ package zpu_pkg is
     subtype ADDR_16BIT_RANGE          is natural range maxAddrBit-1    downto 1;                     -- Full address range - 2 bytes (16bit) aligned 
     subtype ADDR_32BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit;            -- Full address range - 4 bytes (32bit) aligned
     subtype ADDR_64BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit+1;          -- Full address range - 8 bytes (64bit) aligned
---  subtype ADDR_MEM_32BIT_RANGE      is natural range maxAddrBit-1    downto minAddrBit;            -- Non-EVO: Memory range.
     subtype ADDR_IOBIT_RANGE          is natural range ioBit           downto minAddrBit;            -- Non-EVO: IO range.
     subtype WORD_32BIT_RANGE          is natural range wordSize-1      downto 0;                     -- Number of bits in a word (normally 32 for this CPU).
+    subtype WORD_16BIT_RANGE          is natural range (wordSize/2)-1  downto 0;                     -- Number of bits in a half-word (normally 16 for this CPU).
+    subtype WORD_UPPER_16BIT_RANGE    is natural range (wordSize/2)-1  downto wordSize/4;            -- Number of bits in a half-word (normally 16 for this CPU).
+    subtype WORD_LOWER_16BIT_RANGE    is natural range (wordSize/4)-1  downto 0;                     -- Number of bits in a half-word (normally 16 for this CPU).
+    subtype WORD_8BIT_RANGE           is natural range (wordSize/4)-1  downto 0;                     -- Number of bits in a byte (normally 8 for this CPU).
     subtype WORD_4BYTE_RANGE          is natural range wordBytes-1     downto 0;                     -- Bits needed to represent wordSize in bytes (normally 4 for 32bits).
     subtype BYTE_RANGE                is natural range 7               downto 0;                     -- Number of bits in a byte.
 

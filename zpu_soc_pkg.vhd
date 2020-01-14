@@ -31,9 +31,25 @@ library ieee;
 library pkgs;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.all;
 use work.zpu_pkg.all;
 
 package zpu_soc_pkg is
+    ------------------------------------------------------------ 
+    -- Function prototypes
+    ------------------------------------------------------------ 
+    -- Find the maximum of two integers.
+    function IntMax(a : in integer; b : in integer) return integer;
+
+    -- Find the number of bits required to represent an integer.
+    function log2ceil(arg : positive) return natural;
+
+    -- Function to calculate the number of whole 'clock' cycles in a given time period, the period being in ns.
+    function clockTicks(period : in integer; clock : in integer) return integer;
+
+    ------------------------------------------------------------ 
+    -- Constants
+    ------------------------------------------------------------ 
 
     -- Choose which CPU to instantiate depending on requirements. Warning, keep the below 5 lines exactly the same
     -- or ensure you update the Makefile as they are set by the Makefile to generate zpu_soc_pkg.vhd
@@ -80,8 +96,7 @@ package zpu_soc_pkg is
     constant MAX_RX_FIFO_BITS         :     integer    := 8;                                                -- Size of UART RX Fifo.
     constant MAX_TX_FIFO_BITS         :     integer    := 8;                                                -- Size of UART TX Fifo.
     constant MAX_UART_DIVISOR_BITS    :     integer    := 16;                                               -- Maximum number of bits for the UART clock rate generator divisor.
-    constant INTR_MAX                 :     integer    := 16;                                               -- Maximum number of interrupt inputs.
-    constant SYSTEM_FREQUENCY         :     integer    := 100000000;                                        -- Default system clock frequency if not overriden by top level.
+    constant SYSTEM_FREQUENCY         :     integer    := 100000000;                                        -- Default system clock frequency if not overriden in top level.
 
     -- SoC specific options.
     --
@@ -94,11 +109,12 @@ package zpu_soc_pkg is
     constant SOC_IMPL_SD              :     boolean    := true;                                             -- Implement SD Card interface.
     constant SOC_SD_DEVICES           :     integer    := 1;                                                -- Number of SD card channels implemented.
     constant SOC_IMPL_INTRCTL         :     boolean    := true;                                             -- Implement the prioritised interrupt controller.
+    constant SOC_INTR_MAX             :     integer    := 16;                                               -- Maximum number of interrupt inputs.
     constant SOC_IMPL_IOCTL           :     boolean    := false;                                            -- Implement the IOCTL controller (specific to the MiSTer project).
     constant SOC_IMPL_SOCCFG          :     boolean    := true;                                             -- Implement the SoC Configuration information registers.
     -- Main Boot BRAM on sysbus, contains startup firmware.
     constant SOC_IMPL_BRAM            :     boolean    := true;                                             -- Implement BRAM for the BIOS and initial Stack.
-    constant SOC_IMPL_INSN_BRAM       :     boolean    := true;                                             -- Implement dedicated instruction BRAM for the EVO CPU. Any addr access beyond the BRAM size goes to normal memory.
+    constant SOC_IMPL_INSN_BRAM       :     boolean    := EVO_USE_INSN_BUS;                                 -- Implement dedicated instruction BRAM for the EVO CPU. Any addr access beyond the BRAM size goes to normal memory.
     constant SOC_MAX_ADDR_BRAM_BIT    :     integer    := 16;                                               -- Max address bit of the System BRAM ROM/Stack in bytes, ie. 15 = 32KB or 8K 32bit words. NB. For non evo CPUS you must adjust the maxMemBit parameter in zpu_pkg.vhd to be the same.
     constant SOC_ADDR_BRAM_START      :     integer    := 0;                                                -- Start address of BRAM.
     constant SOC_ADDR_BRAM_END        :     integer    := SOC_ADDR_BRAM_START+(2**SOC_MAX_ADDR_BRAM_BIT);   -- End address of BRAM = START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
@@ -108,13 +124,31 @@ package zpu_soc_pkg is
     constant SOC_ADDR_RAM_START       :     integer    := 32768;                                            -- Start address of RAM.
     constant SOC_ADDR_RAM_END         :     integer    := SOC_ADDR_RAM_START+(2**SOC_MAX_ADDR_RAM_BIT);     -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- SDRAM on sysbus.
-    constant SOC_IMPL_SDRAM           :     boolean    := false;                                            -- Implement Dynamic RAM and controller.
-    constant SOC_MAX_ADDR_SDRAM_BIT   :     integer    := 22;                                               -- Max address bit of the System RAM.
+    constant SOC_IMPL_SDRAM           :     boolean    := true;                                             -- Implement Dynamic RAM and controller.
+    constant SOC_SDRAM_ROWS           :     integer    := 4096;                                             -- Number of Rows within the SDRAM.
+    constant SOC_SDRAM_COLUMNS        :     integer    := 256;                                              -- Number of Columns within the SDRAM.
+    constant SOC_SDRAM_BANKS          :     integer    := 4;                                                -- Number of Banks within the SDRAM.
+    constant SOC_SDRAM_DATAWIDTH      :     integer    := 16;                                               -- Data width of SDRAM (ie. 16, 32bit).
+    constant SOC_SDRAM_CLK_FREQ       :     integer    := 100000000;                                        -- Frequency of the SDRAM clock.
+    constant SOC_SDRAM_tRCD           :     integer    := 20;                                               -- tRCD - RAS to CAS minimum period (in ns).
+    constant SOC_SDRAM_tRP            :     integer    := 20;                                               -- tRP  - Precharge delay, min time for a precharge command to complete (in ns).
+    constant SOC_SDRAM_tRFC           :     integer    := 70;                                               -- tRFC - Auto-refresh minimum time to complete (in ns), ie. 66ns
+    constant SOC_SDRAM_tREF           :     integer    := 64;                                               -- tREF - period of time a complete refresh of all rows is made within (in ms).
+    constant SOC_MAX_ADDR_SDRAM_BIT   :     integer    := log2ceil(SOC_SDRAM_ROWS * SOC_SDRAM_COLUMNS * SOC_SDRAM_BANKS)+1; -- Max address bit of the System SDRAM.
     constant SOC_ADDR_SDRAM_START     :     integer    := 65536;                                            -- Start address of RAM.
     constant SOC_ADDR_SDRAM_END       :     integer    := SOC_ADDR_SDRAM_START+(2**SOC_MAX_ADDR_SDRAM_BIT); -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- SDRAM on Wishbone bus.
-    constant SOC_IMPL_WB_SDRAM        :     boolean    := true;                                             -- Implement SDRAM over wishbone interface.
-    constant SOC_MAX_ADDR_WB_SDRAM_BIT:     integer    := 22;                                               -- Max address bit of the System RAM.
+    constant SOC_IMPL_WB_SDRAM        :     boolean    := false;                                            -- Implement SDRAM over wishbone interface.
+    constant SOC_WB_SDRAM_ROWS        :     integer    := 4096;                                             -- Number of Rows within the SDRAM.
+    constant SOC_WB_SDRAM_COLUMNS     :     integer    := 256;                                              -- Number of Columns within the SDRAM.
+    constant SOC_WB_SDRAM_BANKS       :     integer    := 4;                                                -- Number of Banks within the SDRAM.
+    constant SOC_WB_SDRAM_DATAWIDTH   :     integer    := 16;                                               -- Data width of SDRAM (ie. 16, 32bit).
+    constant SOC_WB_SDRAM_CLK_FREQ    :     integer    := 100000000;                                        -- Frequency of the SDRAM clock.
+    constant SOC_WB_SDRAM_tRCD        :     integer    := 20;                                               -- tRCD - RAS to CAS minimum period (in ns).
+    constant SOC_WB_SDRAM_tRP         :     integer    := 20;                                               -- tRP  - Precharge delay, min time for a precharge command to complete (in ns).
+    constant SOC_WB_SDRAM_tRFC        :     integer    := 70;                                               -- tRFC - Auto-refresh minimum time to complete (in ns), ie. 66ns
+    constant SOC_WB_SDRAM_tREF        :     integer    := 64;                                               -- tREF - period of time a complete refresh of all rows is made within (in ms).
+    constant SOC_MAX_ADDR_WB_SDRAM_BIT:     integer    := log2ceil(SOC_WB_SDRAM_ROWS * SOC_WB_SDRAM_COLUMNS * SOC_WB_SDRAM_BANKS)+1; -- Max address bit of the System SDRAM.
     constant SOC_ADDR_WB_SDRAM_START  :     integer    := 16777216;                                         -- Start address of RAM.
     constant SOC_ADDR_WB_SDRAM_END    :     integer    := SOC_ADDR_WB_SDRAM_START+(2**SOC_MAX_ADDR_WB_SDRAM_BIT); -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- Instruction BRAM on sysbus, typically as a 2nd port on the main Boot BRAM (ie. dualport).
@@ -122,6 +156,8 @@ package zpu_soc_pkg is
     constant SOC_ADDR_INSN_BRAM_START :     integer    := 0;                                                -- Start address of dedicated instrution BRAM.
     constant SOC_ADDR_INSN_BRAM_END   :     integer    := SOC_ADDR_BRAM_START+(2**SOC_MAX_ADDR_INSN_BRAM_BIT); -- End address of dedicated instruction BRAM = START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
 
+    -- CPU specific settings.
+    -- Define the address which is first executed upon reset, stack address, Sysbus I/O Region, Wishbone I/O Region.
     constant SOC_RESET_ADDR_CPU       :     integer    := SOC_ADDR_BRAM_START;                              -- Initial address to start execution from after reset.
     constant SOC_START_ADDR_MEM       :     integer    := SOC_ADDR_BRAM_START;                              -- Start location of program memory (BRAM/ROM/RAM).
     constant SOC_STACK_ADDR           :     integer    := SOC_ADDR_BRAM_END - 8;                            -- Stack start address (BRAM/RAM).
@@ -190,17 +226,17 @@ package zpu_soc_pkg is
 
     -- Ranges used throughout the SOC source.
     subtype ADDR_BIT_BRAM_RANGE           is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto 0;              -- Address range of the onboard B(lock)RAM - 1 byte aligned
-    subtype ADDR_BIT_BRAM_16BIT_RANGE     is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto 1;              -- Address range of the onboard B(lock)RAM - 2 bytes aligned
-    subtype ADDR_BIT_BRAM_32BIT_RANGE     is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto minAddrBit;     -- Address range of the onboard B(lock)RAM - 4 bytes aligned
+    subtype ADDR_16BIT_BRAM_RANGE         is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto 1;              -- Address range of the onboard B(lock)RAM - 2 bytes aligned
+    subtype ADDR_32BIT_BRAM_RANGE         is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto minAddrBit;     -- Address range of the onboard B(lock)RAM - 4 bytes aligned
     subtype ADDR_BIT_RAM_RANGE            is natural range SOC_MAX_ADDR_RAM_BIT-1    downto 0;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 1 byte aligned
-    subtype ADDR_BIT_RAM_16BIT_RANGE      is natural range SOC_MAX_ADDR_RAM_BIT-1    downto 1;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
-    subtype ADDR_BIT_RAM_32BIT_RANGE      is natural range SOC_MAX_ADDR_RAM_BIT-1    downto minAddrBit;     -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
+    subtype ADDR_16BIT_RAM_RANGE          is natural range SOC_MAX_ADDR_RAM_BIT-1    downto 1;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
+    subtype ADDR_32BIT_RAM_RANGE          is natural range SOC_MAX_ADDR_RAM_BIT-1    downto minAddrBit;     -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
     subtype ADDR_BIT_SDRAM_RANGE          is natural range SOC_MAX_ADDR_SDRAM_BIT-1  downto 0;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 1 byte aligned
-    subtype ADDR_BIT_SDRAM_16BIT_RANGE    is natural range SOC_MAX_ADDR_SDRAM_BIT-1  downto 1;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
-    subtype ADDR_BIT_SDRAM_32BIT_RANGE    is natural range SOC_MAX_ADDR_SDRAM_BIT-1  downto minAddrBit;     -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
+    subtype ADDR_16BIT_SDRAM_RANGE        is natural range SOC_MAX_ADDR_SDRAM_BIT-1  downto 1;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
+    subtype ADDR_32BIT_SDRAM_RANGE        is natural range SOC_MAX_ADDR_SDRAM_BIT-1  downto minAddrBit;     -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
     subtype ADDR_BIT_WB_SDRAM_RANGE       is natural range SOC_MAX_ADDR_WB_SDRAM_BIT-1  downto 0;           -- Address range of external RAM (BRAM, Dynamic, Static etc) - 1 byte aligned
-    subtype ADDR_BIT_WB_SDRAM_16BIT_RANGE is natural range SOC_MAX_ADDR_WB_SDRAM_BIT-1  downto 1;           -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
-    subtype ADDR_BIT_WB_SDRAM_32BIT_RANGE is natural range SOC_MAX_ADDR_WB_SDRAM_BIT-1  downto minAddrBit;  -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
+    subtype ADDR_16BIT_WB_SDRAM_RANGE     is natural range SOC_MAX_ADDR_WB_SDRAM_BIT-1  downto 1;           -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
+    subtype ADDR_32BIT_WB_SDRAM_RANGE     is natural range SOC_MAX_ADDR_WB_SDRAM_BIT-1  downto minAddrBit;  -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
 --  subtype ADDR_DECODE_BRAM_RANGE        is natural range maxAddrBit-1 downto SOC_MAX_ADDR_BRAM_BIT;       -- Decode range for selection of the BRAM within the address space.
 --  subtype ADDR_DECODE_RAM_RANGE         is natural range maxAddrBit-1 downto SOC_MAX_ADDR_RAM_BIT;        -- Decode range for selection of the RAM within the address space.
     subtype IO_DECODE_RANGE               is natural range maxAddrBit-WB_ACTIVE-1    downto maxIOBit;       -- Upper bits in memory defining the IO block within the address space for the EVO cpu IO. All other models use ioBit.
@@ -209,27 +245,15 @@ package zpu_soc_pkg is
     -- Device options
     type CardType_t is (SD_CARD_E, SDHC_CARD_E);                                                            -- Define the different types of SD cards.
 
+    -- Potential logic state constants.
+    constant YES                      : std_logic := '1';
+    constant NO                       : std_logic := '0';
+    constant HI                       : std_logic := '1';
+    constant LO                       : std_logic := '0';
+    constant ONE                      : std_logic := '1';
+    constant ZERO                     : std_logic := '0';
+    constant HIZ                      : std_logic := 'Z';
 
-    ------------------------------------------------------------ 
-    -- Constants
-    ------------------------------------------------------------ 
-    
-    constant YES  : std_logic := '1';
-    constant NO   : std_logic := '0';
-    constant HI   : std_logic := '1';
-    constant LO   : std_logic := '0';
-    constant ONE  : std_logic := '1';
-    constant ZERO : std_logic := '0';
-    constant HIZ  : std_logic := 'Z';
-
-    ------------------------------------------------------------ 
-    -- Function prototypes
-    ------------------------------------------------------------ 
-    -- Find the maximum of two integers.
-    function IntMax(a : in integer; b : in integer) return integer;
-
-    -- Find the number of bits required to represent an integer.
-    function log2ceil(arg : positive) return natural;
 
     ------------------------------------------------------------ 
     -- Records
@@ -341,6 +365,20 @@ package body zpu_soc_pkg is
             log := log + 1;
         end loop;
         return log;
+    end function;
+
+    -- Function to calculate the number of whole 'clock' cycles in a given time period, the period being in ns.
+    function clockTicks(period : in integer; clock : in integer) return integer is
+        variable ticks         : real;
+        variable fracTicks     : real;
+    begin
+        ticks         := (Real(period) * Real(clock)) / 1000000000.0;
+        fracTicks     := ticks - CEIL(ticks);
+        if fracTicks > 0.0001 then
+            return Integer(CEIL(ticks + 1.0));
+        else
+            return Integer(CEIL(ticks));
+        end if;
     end function;
 
 end package body;

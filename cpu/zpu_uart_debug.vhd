@@ -41,7 +41,7 @@ entity zpu_uart_debug is
     generic (
         TX_FIFO_BIT_DEPTH     : integer := DEBUG_MAX_TX_FIFO_BITS;
         DBG_FIFO_BIT_DEPTH    : integer := DEBUG_MAX_FIFO_BITS;
-		CLK_FREQ              : integer := 100000000;
+        CLK_FREQ              : integer := 100000000;
         TX_BAUD_RATE          : integer := DEBUG_TX_BAUD_RATE                   -- Default baud rate
     );
     port (

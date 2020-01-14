@@ -94,7 +94,7 @@ uint32_t app(uint32_t param1, uint32_t param2)
                 xgets(line, sizeof line);
                 ptr = line;
                 if (*ptr == '.') break;
-                if (*ptr < ' ') { addr++; continue; }
+                if (*ptr < ' ') { addr += 2; continue; }
                 if (xatoi(&ptr, &data))
                 {
                     *(uint16_t *)(addr) = (uint16_t)data;

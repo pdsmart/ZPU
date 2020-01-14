@@ -74,16 +74,20 @@ uint32_t app(uint32_t param1, uint32_t param2)
 
     if (!xatoi(&ptr, &startAddr))
     {
-        if(cfgSoC->implInsnBRAM)  { startAddr = cfgSoC->addrInsnBRAM; }
-        else if(cfgSoC->implBRAM) { startAddr = cfgSoC->addrBRAM; }
-        else if(cfgSoC->implRAM || cfgSoC->implDRAM) { startAddr = cfgSoC->addrRAM; }
+        if(cfgSoC->implInsnBRAM)      { startAddr = cfgSoC->addrInsnBRAM; }
+        else if(cfgSoC->implBRAM)     { startAddr = cfgSoC->addrBRAM; }
+        else if(cfgSoC->implRAM)      { startAddr = cfgSoC->addrRAM; }
+        else if(cfgSoC->implSDRAM)    { startAddr = cfgSoC->addrSDRAM; }
+        else if(cfgSoC->implWBSDRAM)  { startAddr = cfgSoC->addrWBSDRAM; }
         else { startAddr = cfgSoC->stackStartAddr - 512; }
     }
     if (!xatoi(&ptr,  &endAddr))
     {
-        if(cfgSoC->implInsnBRAM)  { endAddr = cfgSoC->sizeInsnBRAM; }
-        else if(cfgSoC->implBRAM) { endAddr = cfgSoC->sizeBRAM; }
-        else if(cfgSoC->implRAM || cfgSoC->implDRAM) { endAddr = cfgSoC->sizeRAM; }
+        if(cfgSoC->implInsnBRAM)      { endAddr = cfgSoC->sizeInsnBRAM; }
+        else if(cfgSoC->implBRAM)     { endAddr = cfgSoC->sizeBRAM; }
+        else if(cfgSoC->implRAM)      { endAddr = cfgSoC->sizeRAM; }
+        else if(cfgSoC->implSDRAM)    { endAddr = cfgSoC->sizeSDRAM; }
+        else if(cfgSoC->implWBSDRAM)  { endAddr = cfgSoC->sizeWBSDRAM; }
         else { endAddr = cfgSoC->stackStartAddr + 8; }
     }
     if (!xatoi(&ptr,  &bitWidth) || (bitWidth != 8 && bitWidth != 16 && bitWidth != 32))

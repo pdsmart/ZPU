@@ -41,4 +41,5 @@ APP_DIR        = ..
 BASEDIR        = ../../..
 include        $(APP_DIR)/Makefile.inc
 
+# Ensure no optimisation is made by GCC as testing memory performance may seem redundant writing and reading the same location so can get optimised away.
 CFLAGS         = -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -O0 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)

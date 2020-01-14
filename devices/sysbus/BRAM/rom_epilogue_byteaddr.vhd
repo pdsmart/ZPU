@@ -14,15 +14,15 @@ begin
         --
         if (memAWriteEnable = '1') then
             if    (memAWriteByte = '1') then
-                ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE))))(((wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 0))))*8+7) downto (wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 0))))*8) := memAWrite(7 downto 0);
+                ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE))))(((wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 0))))*8+7) downto (wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 0))))*8) := memAWrite(7 downto 0);
             elsif (memAWriteWord = '1') then
-                ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE))))(((wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 1))))*16) := memAWrite(15 downto 0);
+                ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE))))(((wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 1))))*16+15) downto (wordBytes-1-to_integer(unsigned(memAAddr(byteBits-1 downto 1))))*16) := memAWrite(15 downto 0);
             else
-                ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memAWrite;
+                ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE)))) := memAWrite;
             end if;
             memARead <= memAWrite;
         else
-            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;
@@ -31,10 +31,10 @@ process (clk)
 begin
     if (clk'event and clk = '1') then
         if (memBWriteEnable = '1') then
-            ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memBWrite;
+            ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE)))) := memBWrite;
             memBRead <= memBWrite;
         else
-            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;

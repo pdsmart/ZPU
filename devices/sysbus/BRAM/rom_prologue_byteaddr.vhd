@@ -48,12 +48,12 @@ port (
         memAWriteEnable      : in  std_logic;
         memAWriteByte        : in  std_logic;
         memAWriteWord        : in  std_logic;
-        memAAddr             : in  std_logic_vector(ADDR_BIT_BRAM_32BIT_RANGE);
+        memAAddr             : in  std_logic_vector(ADDR_32BIT_BRAM_RANGE);
         memAWrite            : in  std_logic_vector(WORD_32BIT_RANGE);
         memARead             : out std_logic_vector(WORD_32BIT_RANGE);
 
         memBWriteEnable      : in  std_logic;
-        memBAddr             : in  std_logic_vector(ADDR_BIT_BRAM_32BIT_RANGE);
+        memBAddr             : in  std_logic_vector(ADDR_32BIT_BRAM_RANGE);
         memBWrite            : in  std_logic_vector(WORD_32BIT_RANGE);
         memBRead             : out std_logic_vector(WORD_32BIT_RANGE)
 );

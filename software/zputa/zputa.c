@@ -14,6 +14,7 @@
 //
 // History:         January 2019   - Initial script written for the STORM processor then changed to the ZPU.
 //                  July 2019      - Addition of the Dhrystone and CoreMark tests.
+//                  December 2019  - Tweaks to the SoC config and additional commands (ie. mtest).
 //
 // Notes:           See Makefile to enable/disable conditional components
 //                  USELOADB              - The Byte write command is implemented in hw/sw so use it.
@@ -60,8 +61,8 @@
 #include "zputa.h"
 
 // Version info.
-#define VERSION      "v1.3"
-#define VERSION_DATE "18/07/2019"
+#define VERSION      "v1.4"
+#define VERSION_DATE "29/12/2019"
 #define PROGRAM_NAME "ZPUTA"
 
 // Utility functions.
@@ -801,16 +802,20 @@ int cmdProcessor(void)
             case CMD_MEM_DUMP:
                 if (!xatoi(&ptr, &p1))
                 {
-                    if(cfgSoC.implInsnBRAM)  { p1 = cfgSoC.addrInsnBRAM; }
-                    else if(cfgSoC.implBRAM) { p1 = cfgSoC.addrBRAM; }
-                    else if(cfgSoC.implRAM || cfgSoC.implDRAM) { p1 = cfgSoC.addrRAM; }
+                    if(cfgSoC.implInsnBRAM)     { p1 = cfgSoC.addrInsnBRAM; }
+                    else if(cfgSoC.implBRAM)    { p1 = cfgSoC.addrBRAM; }
+                    else if(cfgSoC.implRAM)     { p1 = cfgSoC.addrRAM; }
+                    else if(cfgSoC.implSDRAM)   { p1 = cfgSoC.addrSDRAM; }
+                    else if(cfgSoC.implWBSDRAM) { p1 = cfgSoC.addrWBSDRAM; }
                     else { p1 = cfgSoC.stackStartAddr - 512; }
                 }
                 if (!xatoi(&ptr,  &p2))
                 {
-                    if(cfgSoC.implInsnBRAM)  { p2 = cfgSoC.sizeInsnBRAM; }
-                    else if(cfgSoC.implBRAM) { p2 = cfgSoC.sizeBRAM; }
-                    else if(cfgSoC.implRAM || cfgSoC.implDRAM) { p2 = cfgSoC.sizeRAM; }
+                    if(cfgSoC.implInsnBRAM)     { p2 = cfgSoC.sizeInsnBRAM; }
+                    else if(cfgSoC.implBRAM)    { p2 = cfgSoC.sizeBRAM; }
+                    else if(cfgSoC.implRAM)     { p2 = cfgSoC.sizeRAM; }
+                    else if(cfgSoC.implSDRAM)   { p2 = cfgSoC.sizeSDRAM; }
+                    else if(cfgSoC.implWBSDRAM) { p2 = cfgSoC.sizeWBSDRAM; }
                     else { p2 = cfgSoC.stackStartAddr + 8; }
                 }
                 if (!xatoi(&ptr,  &p3) || (p3 != 8 && p3 != 16 && p3 != 32))
@@ -869,7 +874,7 @@ int cmdProcessor(void)
                     xgets(line, sizeof line);
                     ptr = line;
                     if (*ptr == '.') break;
-                    if (*ptr < ' ') { up1 += 4; continue; }
+                    if (*ptr < ' ') { up1 += 2; continue; }
                     if (uxatoi(&ptr, &up2))
                     {
                         *(uint16_t *)(up1) = (uint16_t)up2;
@@ -1111,8 +1116,8 @@ int main(int argc, char **argv)
   // When ZPUTA is the booted app or is booted by the tiny IOCP bootstrap, initialise hardware as it hasnt yet been done.
   #if defined(ZPUTA_BASEADDR) && (ZPUTA_BASEADDR == 0x0000 || ZPUTA_BASEADDR == 0x1000)
     // Setup the required baud rate for the UART. Once the divider is loaded, a reset takes place within the UART.
-    UART_BRGEN(UART0) = BAUDRATEGEN(115200, 115200);
-    UART_BRGEN(UART1) = BAUDRATEGEN(115200, 115200);
+    UART_BRGEN(UART0) = BAUDRATEGEN(UART0, 115200, 115200);
+    UART_BRGEN(UART1) = BAUDRATEGEN(UART1, 115200, 115200);
 
     // Enable the RX/TX units and enable FIFO mode.
     UART_CTRL(UART0)  = UART_TX_FIFO_ENABLE | UART_TX_ENABLE | UART_RX_FIFO_ENABLE | UART_RX_ENABLE;

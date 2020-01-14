@@ -40,22 +40,30 @@ typedef volatile unsigned int* register_t;
 #endif
 
 // System settings.
-#define CLK_FREQ                       100000000UL
+#define CLK_FREQ                       100000000UL                  // Default frequency used to configure SoC if not present.
 
 // Memory sizes and devices implemented - these can be ignored if the SoC Configuration register is implemented as this provides the exact build configuration.
 #define ZPU_ID                         0x0000
+#define WB_IMPL                        0
+#define WB_SDRAM_IMPL                  0
+#define WB_I2C_IMPL                    0
 #define BRAM_IMPL                      1
 #define RAM_IMPL                       1
 #define INSN_BRAM_IMPL                 1
-#define DRAM_IMPL                      1
+#define SDRAM_IMPL                     1
 #define IOCTL_IMPL                     1
 #define PS2_IMPL                       1
 #define SPI_IMPL                       1
 #define SD_IMPL                        1
 #define SD_DEVICE_CNT                  1
 #define INTRCTL_IMPL                   1
+#define INTRCTL_CHANNELS               16
 #define TIMER1_IMPL                    1
 #define TIMER1_TIMERS_CNT              1
+#define SDRAM_ADDR                     0x00010000
+#define SDRAM_SIZE                     0x00810000
+#define WB_SDRAM_ADDR                  0x01000000
+#define WB_SDRAM_SIZE                  0x017FFFFF
 #define BRAM_ADDR                      0x00000000
 #define BRAM_SIZE                      0x00007FFF
 #define INSN_BRAM_ADDR                 0x00000000
@@ -87,8 +95,7 @@ typedef volatile unsigned int* register_t;
 #define IO_ADDR_WB_PERIPHERALS         0x1F00000
 
 // Baud rate computation for UART
-//#define BAUDRATEGEN(x,y)               (((CLK_FREQ/(x))-1) << 16) | (((CLK_FREQ/(y))/16)-1)
-#define BAUDRATEGEN(x,y)               (((CLK_FREQ/(x))) << 16) | (((CLK_FREQ/(y))))
+#define BAUDRATEGEN(b,x,y)             (((UART_SYSCLK(b)/(x))) << 16) | (((UART_SYSCLK(b)/(y))))
 
 // ----------------------------------
 // CPU Bus I/O Peripheral definition.
@@ -157,11 +164,13 @@ typedef volatile unsigned int* register_t;
 #define UART_STATUS_REGISTER           0x04
 #define UART_FIFO_REGISTER             0x08
 #define UART_BAUDRATE_REGISTER         0x0C
+#define UART_SYSCLK_REGISTER           0x0C
 #define UART_DATA(x)                   (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_DATA_REGISTER))
 #define UART_STATUS(x)                 (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_STATUS_REGISTER))
 #define UART_FIFO_STATUS(x)            (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_FIFO_REGISTER))
 #define UART_CTRL(x)                   (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_CTRL_REGISTER))
 #define UART_BRGEN(x)                  (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_BAUDRATE_REGISTER))
+#define UART_SYSCLK(x)                 (MEMIO32 (UART_BASE+(x*UART_SPACING)+UART_SYSCLK_REGISTER))
 // UART Status flags.
 #define UART_RX_FIFO_EMPTY             0x00000001
 #define UART_RX_FIFO_FULL              0x00000002
@@ -332,41 +341,55 @@ typedef volatile unsigned int* register_t;
 // Registers
 #define SOCCFG_ZPU_ID                  0x00                                                   // ID of the instantiated ZPU
 #define SOCCFG_SYSFREQ                 0x04                                                   // System Clock Frequency in MHz x 10 (ie. 100KHź)
-#define SOCCFG_DEVIMPL                 0x08                                                   // Bit map of devices implemented in SOC.
-#define SOCCFG_BRAMADDR                0x0c                                                   // Address of Block RAM.
-#define SOCCFG_BRAMSIZE                0x10                                                   // Size of Block RAM.
-#define SOCCFG_RAMADDR                 0x14                                                   // Address of RAM (additional BRAM, DRAM etc).
-#define SOCCFG_RAMSIZE                 0x18                                                   // Size of RAM.
-#define SOCCFG_BRAMINSNADDR            0x1c                                                   // Address of dedicated instruction Block RAM.
-#define SOCCFG_BRAMINSNSIZE            0x20                                                   // Size of dedicated instruction Block RAM.
-#define SOCCFG_CPURSTADDR              0x24                                                   // Address CPU executes after a RESET.
-#define SOCCFG_CPUMEMSTART             0x28                                                   // Start address of Memory containing BIOS/Microcode for CPU.
-#define SOCCFG_STACKSTART              0x2c                                                   // Start address of Memory for Stack use.
+#define SOCCFG_MEMFREQ                 0x08                                                   // Sysbus SDRAM Clock Frequency in MHz x 10 (ie. 100KHź)
+#define SOCCFG_WBMEMFREQ               0x0c                                                   // Wishbone SDRAM Clock Frequency in MHz x 10 (ie. 100KHź)
+#define SOCCFG_DEVIMPL                 0x10                                                   // Bit map of devices implemented in SOC.
+#define SOCCFG_BRAMADDR                0x14                                                   // Address of Block RAM.
+#define SOCCFG_BRAMSIZE                0x18                                                   // Size of Block RAM.
+#define SOCCFG_RAMADDR                 0x1c                                                   // Address of RAM (additional BRAM, DRAM etc).
+#define SOCCFG_RAMSIZE                 0x20                                                   // Size of RAM.
+#define SOCCFG_BRAMINSNADDR            0x24                                                   // Address of dedicated instruction Block RAM.
+#define SOCCFG_BRAMINSNSIZE            0x28                                                   // Size of dedicated instruction Block RAM.
+#define SOCCFG_SDRAMADDR               0x2c                                                   // Address of SDRAM.
+#define SOCCFG_SDRAMSIZE               0x30                                                   // Size of SDRAM.
+#define SOCCFG_WBSDRAMADDR             0x34                                                   // Address of Wishbone SDRAM.
+#define SOCCFG_WBSDRAMSIZE             0x38                                                   // Size of Wishbone SDRAM.
+#define SOCCFG_CPURSTADDR              0x3c                                                   // Address CPU executes after a RESET.
+#define SOCCFG_CPUMEMSTART             0x40                                                   // Start address of Memory containing BIOS/Microcode for CPU.
+#define SOCCFG_STACKSTART              0x44                                                   // Start address of Memory for Stack use.
 // Implementation bits.
-#define IMPL_BRAM                      0x00004000
-#define IMPL_RAM                       0x00002000
-#define IMPL_INSN_BRAM                 0x00001000
-#define IMPL_DRAM                      0x00000800
-#define IMPL_IOCTL                     0x00000400
-#define IMPL_PS2                       0x00000200
-#define IMPL_SPI                       0x00000100
-#define IMPL_SD                        0x00000080
-#define IMPL_SD_DEVICE_CNT             0x00000060
-#define IMPL_INTRCTL                   0x00000010
+#define IMPL_WB                        0x00400000
+#define IMPL_WB_SDRAM                  0x00200000
+#define IMPL_WB_I2C                    0x00100000
+#define IMPL_BRAM                      0x00080000
+#define IMPL_RAM                       0x00040000
+#define IMPL_INSN_BRAM                 0x00020000
+#define IMPL_SDRAM                     0x00010000
+#define IMPL_IOCTL                     0x00008000
+#define IMPL_PS2                       0x00004000
+#define IMPL_SPI                       0x00002000
+#define IMPL_SD                        0x00001000
+#define IMPL_SD_DEVICE_CNT             0x00000C00
+#define IMPL_INTRCTL                   0x00000200
+#define IMPL_INTRCTL_CNT               0x000001F0
 #define IMPL_TIMER1                    0x00000008
 #define IMPL_TIMER1_TIMER_CNT          0x00000007
 #define IMPL_SOCCFG                    0x0000000a
 // Test macros
-#define IS_IMPL_BRAM                   ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_BRAM)          >> 14
-#define IS_IMPL_RAM                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_RAM)           >> 13
-#define IS_IMPL_INSN_BRAM              ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_INSN_BRAM)     >> 12
-#define IS_IMPL_DRAM                   ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_DRAM)          >> 11
-#define IS_IMPL_IOCTL                  ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_IOCTL)         >> 10
-#define IS_IMPL_PS2                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_PS2)           >> 9
-#define IS_IMPL_SPI                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SPI)           >> 8
-#define IS_IMPL_SD                     ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SD)            >> 7
-#define SOCCFG_SD_DEVICES              ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SD_DEVICE_CNT) >> 6
-#define IS_IMPL_INTRCTL                ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_INTRCTL)       >> 4
+#define IS_IMPL_WB                     ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_WB)            >> 22
+#define IS_IMPL_WB_SDRAM               ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_WB_SDRAM)      >> 21
+#define IS_IMPL_WB_I2C                 ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_WB_I2C)        >> 20
+#define IS_IMPL_BRAM                   ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_BRAM)          >> 19
+#define IS_IMPL_RAM                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_RAM)           >> 18
+#define IS_IMPL_INSN_BRAM              ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_INSN_BRAM)     >> 17
+#define IS_IMPL_SDRAM                  ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SDRAM)         >> 16
+#define IS_IMPL_IOCTL                  ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_IOCTL)         >> 15
+#define IS_IMPL_PS2                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_PS2)           >> 14
+#define IS_IMPL_SPI                    ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SPI)           >> 13
+#define IS_IMPL_SD                     ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SD)            >> 12
+#define SOCCFG_SD_DEVICES              ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_SD_DEVICE_CNT) >> 10
+#define IS_IMPL_INTRCTL                ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_INTRCTL)       >> 9
+#define SOCCFG_INTRCTL_CHANNELS        ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_INTRCTL_CNT)   >> 4
 #define IS_IMPL_TIMER1                 ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_TIMER1)        >> 3
 #define SOCCFG_TIMER1_TIMERS           ((MEMIO32 (SOCCFG_BASE + SOCCFG_DEVIMPL)) & IMPL_TIMER1_TIMER_CNT)
 #define IS_IMPL_SOCCFG                 (MEMIO32 (SOCCFG_BASE + SOCCFG_ZPU_ID)) >> 28 & IMPL_SOCCFG
@@ -447,22 +470,32 @@ typedef struct
     uint32_t                           sizeBRAM;
     uint32_t                           addrRAM;
     uint32_t                           sizeRAM;
+    uint32_t                           addrSDRAM;
+    uint32_t                           sizeSDRAM;
+    uint32_t                           addrWBSDRAM;
+    uint32_t                           sizeWBSDRAM;
     uint32_t                           resetVector;
     uint32_t                           cpuMemBaseAddr;
     uint32_t                           stackStartAddr;
     uint16_t                           zpuId;
     uint32_t                           sysFreq;
+    uint32_t                           memFreq;
+    uint32_t                           wbMemFreq;
     uint8_t                            implSoCCFG;    
+    uint8_t                            implWB;
+    uint8_t                            implWBSDRAM;
+    uint8_t                            implWBI2C;
     uint8_t                            implInsnBRAM;
     uint8_t                            implBRAM;
     uint8_t                            implRAM;
-    uint8_t                            implDRAM;
+    uint8_t                            implSDRAM;
     uint8_t                            implIOCTL;
     uint8_t                            implPS2;
     uint8_t                            implSPI;
     uint8_t                            implSD;
     uint8_t                            sdCardNo;
     uint8_t                            implIntrCtl;
+    uint8_t                            intrChannels;
     uint8_t                            implTimer1;
     uint8_t                            timer1No;
 } SOC_CONFIG;

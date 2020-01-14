@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------------
 --
--- Name:            sdram.vhd
+-- Name:            sdram_cached.vhd
 -- Created:         September 2019
 -- Author:          Philip Smart
 -- Description:     A configurable cached sdram controller for use with the ZPU EVO Processor and SoC.
@@ -146,7 +146,7 @@ architecture Structure of SDRAM is
     constant OP_MODE                :       std_logic_vector(1 downto 0) := "00";
     constant CAS_LATENCY            :       std_logic_vector(2 downto 0) := "011";
     constant BURST_TYPE             :       std_logic := '0';
-    constant BURST_LENGTH           :       std_logic_vector(2 downto 0) := "000";
+    constant BURST_LENGTH           :       std_logic_vector(2 downto 0) := "111";
     constant MODE                   :       std_logic_vector(SDRAM_ROW_BITS-1 downto 0) := std_logic_vector(to_unsigned(to_integer(unsigned("00" & WRITE_BURST_MODE & OP_MODE & CAS_LATENCY & BURST_TYPE & BURST_LENGTH)), SDRAM_ROW_BITS)); 
 
     -- FSM Cycle States governed in units of time, the state changes location according to the configurable parameters to ensure correct actuation at the correct time.
@@ -154,7 +154,7 @@ architecture Structure of SDRAM is
     constant CYCLE_PRECHARGE        :       integer := 0;                                                                           -- ~0
     constant CYCLE_RAS_START        :       integer := clockTicks(SDRAM_tRP, SDRAM_CLK_FREQ);                                       -- ~3
     constant CYCLE_CAS_START        :       integer := CYCLE_RAS_START  + clockTicks(SDRAM_tRCD, SDRAM_CLK_FREQ);                   -- ~3 + tRCD
-    constant CYCLE_CAS_END          :       integer := CYCLE_CAS_START  + 1;                                                        -- ~4 + tRCD
+    constant CYCLE_WRITE_END        :       integer := CYCLE_CAS_START  + 1;                                                        -- ~4 + tRCD
     constant CYCLE_READ_START       :       integer := CYCLE_CAS_START  + to_integer(unsigned(CAS_LATENCY)) + 1;                    -- ~3 + tRCD + CAS_LATENCY
     constant CYCLE_READ_END         :       integer := CYCLE_READ_START + 1;                                                        -- ~4 + tRCD + CAS_LATENCY
     constant CYCLE_END              :       integer := CYCLE_READ_END   + 1;                                                        -- ~9 + tRCD + CAS_LATENCY
@@ -167,11 +167,11 @@ architecture Structure of SDRAM is
 
     -- Array of row addresses, one per bank, to indicate the row in use per bank.
     type BankArray is array(natural range 0 to SDRAM_BANKS-1) of std_logic_vector(SDRAM_ROW_BITS-1 downto 0);
+    type BankCacheArray is array(natural range 0 to SDRAM_BANKS-1) of std_logic_vector(((SDRAM_ROW_BITS-1)+SDRAM_BANK_BITS) downto 0);
 
     -- SDRAM domain signals.
     signal sdBusy                   :       std_logic;
     signal sdCycle                  :       integer range 0 to 31;
-    signal sdDataOut                :       std_logic_vector(WORD_32BIT_RANGE);
     signal sdDone                   :       std_logic;
     shared variable sdCmd           :       std_logic_vector(4 downto 0);
     signal sdRefreshCount           :       unsigned(11 downto 0);
@@ -181,18 +181,55 @@ architecture Structure of SDRAM is
     signal sdIsReady                :       std_logic;
     signal sdActiveRow              :       BankArray;
     signal sdActiveBank             :       std_logic_vector(1 downto 0);
+    signal sdWriteColumnAddr        :       unsigned(SDRAM_COLUMN_BITS-1 downto 0);                    -- Address at byte level as bit 0 is used as part of the fifo write enable.
+    signal sdWriteCnt               :       integer range 0 to SDRAM_COLUMNS-1;
 
     -- CPU domain signals.
     signal cpuBusy                  :       std_logic;
     signal cpuDQM                   :       std_logic_vector(3 downto 0);
-    signal cpuDoneLast              :       std_logic;
     signal cpuBank                  :       natural range 0 to SDRAM_BANKS-1;
     signal cpuRow                   :       std_logic_vector(SDRAM_ROW_BITS-1 downto 0);
     signal cpuCol                   :       std_logic_vector(SDRAM_COLUMN_BITS-1 downto 0);
+    signal cpuDataOut               :       std_logic_vector(WORD_32BIT_RANGE);
     signal cpuDataIn                :       std_logic_vector(WORD_32BIT_RANGE);
+    signal cpuDoneLast              :       std_logic;
     signal cpuIsWriting             :       std_logic;
     signal cpuLastEN                :       std_logic;
+    signal cpuCachedBank            :       std_logic_vector(SDRAM_BANK_BITS-1 downto 0);
+    signal cpuCachedRow             :       BankCacheArray;
 
+    -- Infer a BRAM array for 4 banks of 16bit words. 32bit is created by 2 arrays.
+    type ramArray is array(natural range 0 to ((SDRAM_COLUMNS/2)*4)-1) of std_logic_vector(WORD_8BIT_RANGE);
+
+    -- Declare the BRAM arrays for 32bit as a set of 4 x 8bit banks.
+    shared variable fifoCache_3 : ramArray :=
+    (
+        others => X"00"
+    );
+    shared variable fifoCache_2 : ramArray :=
+    (
+        others => X"00"
+    );
+    shared variable fifoCache_1 : ramArray :=
+    (
+        others => X"00"
+    );
+    shared variable fifoCache_0 : ramArray :=
+    (
+        others => X"00"
+    );
+
+    -- Fifo control signals.
+    signal fifoDataOutHi            :       std_logic_vector(WORD_16BIT_RANGE);
+    signal fifoDataOutLo            :       std_logic_vector(WORD_16BIT_RANGE);
+    signal fifoDataInHi             :       std_logic_vector(WORD_16BIT_RANGE);
+    signal fifoDataInLo             :       std_logic_vector(WORD_16BIT_RANGE);
+    signal fifoSdWREN_1             :       std_logic;
+    signal fifoSdWREN_0             :       std_logic;
+    signal fifoCPUWREN_3            :       std_logic;
+    signal fifoCPUWREN_2            :       std_logic;
+    signal fifoCPUWREN_1            :       std_logic;
+    signal fifoCPUWREN_0            :       std_logic;
 begin
 
     -- Main FSM for SDRAM control and refresh.
@@ -200,7 +237,7 @@ begin
     begin
 
         if (SDRAM_RST = '1') then
-            sdResetTimer                              <= (others => '0'); -- 0 upto 255
+            sdResetTimer                              <= (others => '0'); -- 0 upto 127
             sdInResetCounter                          <= (others => '1'); -- 255 downto 0
             sdAutoRefresh                             <= '0';
             sdRefreshCount                            <= (others => '0');
@@ -211,10 +248,17 @@ begin
             SDRAM_DQM                                 <= (others => '1');
             sdCycle                                   <= 0;
             sdDone                                    <= '0';
+            fifoSdWREN_0                              <= '0';
+            fifoSdWREN_1                              <= '0';
+            sdWriteColumnAddr                         <= (others => '0');
 
         elsif rising_edge(SDRAM_CLK) then
 
-            -- Tri-state control of the SDRAM databus, when reading, the output drivers are disabled.
+            -- Write Enables are only 1 clock wide, clear on each cycle.
+            fifoSdWREN_1                              <= '0';
+            fifoSdWREN_0                              <= '0';
+
+            -- Tri-state control, set the SDRAM databus to tri-state if we are not in write mode.
             if (cpuIsWriting = '0') then
                 SDRAM_DQ                              <= (others => 'Z');
             end if;
@@ -277,11 +321,6 @@ begin
                 -- We only act after both Busy signals are high, thus one SDRAM clock after cpuBusy goes high.
                 sdBusy                                <= cpuBusy;
 
-                -- If the SDRAM has completed its request, reset the done indicator as it is only 1 cycle wide.
-                if sdDone = '1' then
-                    sdDone                            <= '0';
-                end if;
-
                 -- Auto refresh. On timeout it kicks in so that ROWS auto refreshes are 
                 -- issued in a tRFC period. Other bus operations are stalled during this period.
                 if (sdRefreshCount > REFRESH_PERIOD and sdCycle = 0) then 
@@ -309,7 +348,7 @@ begin
                         when others =>
                     end case;
 
-                elsif (((cpuBusy = '1' and sdBusy = '1') and sdCycle = 0) or sdCycle /= 0) then
+                elsif ((cpuBusy = '1' and sdCycle = 0) or sdCycle /= 0) then -- or (sdCycle = 0 and CS = '1')) then 
  
                     -- while the cycle is active count.
                     sdCycle                           <= sdCycle + 1;
@@ -342,69 +381,97 @@ begin
                      
                         -- CAS start, for 32 bit chips, only 1 CAS cycle is needed, for 16bit chips we need 2 to read/write 2x16bit words.
                         when CYCLE_CAS_START =>
-
                             -- If writing, setup for a write with preset mask.
                             if (cpuIsWriting = '1') then 
-
+                                sdCmd                 := CMD_WRITE;
                                 if SDRAM_DATAWIDTH = 32 then
                                     SDRAM_ADDR        <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 2) & '0' & '0')), SDRAM_ROW_BITS)); -- CAS address = Address accessing 32bit data with no auto precharge
                                     SDRAM_DQ          <= cpuDataIn;                                                  -- Assign corresponding data to the SDRAM databus.
                                     SDRAM_DQM         <= not cpuDQM(3 downto 0);
+                                    sdDone            <= '1';
                                     sdCycle           <= CYCLE_END;
+
+                                    -- A fake statement used to convince Quartus Prime to infer block ram for the fifo and not use registers.
+                                    fifoDataInHi      <= fifoDataOutHi;
+                                    fifoDataInLo      <= fifoDataOutLo;
 
                                 elsif SDRAM_DATAWIDTH = 16 then
                                     SDRAM_ADDR        <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 1) & '0')), SDRAM_ROW_BITS)); -- CAS address = Address accessing first 16bit location within the 32bit external alignment with no auto precharge
                                     SDRAM_DQ          <= cpuDataIn((SDRAM_DATAWIDTH*2)-1 downto SDRAM_DATAWIDTH);    -- Assign corresponding data to the SDRAM databus.
                                     SDRAM_DQM         <= not cpuDQM(3 downto 2);
+
+                                    -- A fake statement used to convince Quartus Prime to infer block ram for the fifo and not use registers.
+                                    fifoDataInHi      <= fifoDataOutHi;
                                 else
                                     report "SDRAM datawidth parameter invalid, should be 16 or 32!" severity error;
                                 end if;
-                                sdCmd                 := CMD_WRITE;
 
                             else
                                 -- Setup for a read.
                                 sdCmd                 := CMD_READ;
-                                SDRAM_ADDR            <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 1) & '0')), SDRAM_ROW_BITS)); -- CAS address = Address accessing first 16bit location within the 32bit external alignment with no auto precharge
+                                SDRAM_ADDR            <= (others => '0');
                                 SDRAM_DQM             <= "00";                                                       -- For reads dont mask the data output.
+                                sdWriteCnt            <= SDRAM_COLUMNS-1;
+                                sdWriteColumnAddr     <= (others => '1');
                             end if;
     
-                        when CYCLE_CAS_END =>
-                            SDRAM_ADDR                <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 1) & '1')), SDRAM_ROW_BITS)); -- CAS address = Next address accessing second 16bit location within the 32bit external alignment with no auto precharge
-
+                        -- For writes, this state writes out the second word of a 32bit word if we have a 16bit wide SDRAM chip.
+                        --
+                        when CYCLE_WRITE_END =>
                             -- When writing, setup for a write with preset mask with the correct word.
                             if (cpuIsWriting = '1') then 
+                                SDRAM_ADDR            <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 1) & '1')), SDRAM_ROW_BITS)); -- CAS address = Next address accessing second 16bit location within the 32bit external alignment with no auto precharge
+                                sdCmd                 := CMD_WRITE;
                                 SDRAM_DQM             <= not cpuDQM(1 downto 0);
                                 SDRAM_DQ              <= cpuDataIn(SDRAM_DATAWIDTH-1 downto 0);
                                 sdDone                <= '1';
                                 sdCycle               <= CYCLE_END;
-                                sdCmd                 := CMD_WRITE;
-                            else
-                                -- Setup for a read, change to write if flag set.
-                                sdCmd                 := CMD_READ;
-                                SDRAM_DQM             <= "00";                                                       -- For reads dont mask the data output.
+
+                                -- A fake statement used to convince Quartus Prime to infer block ram for the fifo and not use registers.
+                                fifoDataInLo          <= fifoDataOutLo;
                             end if;
 
-                        -- Data is available CAS Latency clocks after the read request. For 32bit chips, only 1 cycle is needed, for 16bit we need 2 read cycles of
-                        -- 16 bits each.
+                        -- Data is available after CAS Latency (2 or 3) clocks after the read request.
+                        -- The data is read as a full page burst, 1 clock per word.
                         when CYCLE_READ_START =>
 
                             if SDRAM_DATAWIDTH = 32 then
-                                sdDataOut             <= SDRAM_DQ;
-                                sdCycle               <= CYCLE_END;
-                                
+                                fifoSdWREN_1          <= '1';
+                                fifoSdWREN_0          <= '1';
+                                sdWriteCnt            <= sdWriteCnt - 2;
+                                sdWriteColumnAddr     <= sdWriteColumnAddr + 2;
+                                fifoDataInHi          <= SDRAM_DQ(WORD_UPPER_16BIT_RANGE);
+                                fifoDataInLo          <= SDRAM_DQ(WORD_LOWER_16BIT_RANGE);
+
+                                if sdWriteCnt > 1 then
+                                    sdCycle           <= CYCLE_READ_START;
+                                end if;
+
                             elsif SDRAM_DATAWIDTH = 16 then
-                                sdDataOut((SDRAM_DATAWIDTH*2)-1 downto SDRAM_DATAWIDTH) <= SDRAM_DQ;
+                                if fifoSdWREN_1 = '0' then
+                                    fifoSdWREN_1      <= '1';
+                                    fifoDataInHi      <= SDRAM_DQ;
+                                else
+                                    fifoSdWREN_0      <= '1';
+                                    fifoDataInLo      <= SDRAM_DQ;
+                                end if;
+                                sdWriteCnt            <= sdWriteCnt - 1;
+                                sdWriteColumnAddr     <= sdWriteColumnAddr + 1;
+
+                                if sdWriteCnt > 0 then
+                                    sdCycle           <= CYCLE_READ_START;
+                                end if;
+
                             else
                                 report "SDRAM datawidth parameter invalid, should be 16 or 32!" severity error;
                             end if;
 
-                        -- Second and final read cycle for 16bit SDRAM chips to create a 32bit word.
                         when CYCLE_READ_END =>
-                            sdDataOut(SDRAM_DATAWIDTH-1 downto 0) <= SDRAM_DQ;
+                            sdDone                    <= '1';
     
                         when CYCLE_END =>
-                            sdDone                    <= '1';
                             sdCycle                   <= 0;
+                            sdDone                    <= '0';
 
                         -- Other states are wait states, waiting for the correct time slot for SDRAM access.
                         when others =>
@@ -421,7 +488,6 @@ begin
             SDRAM_CAS_n                               <= sdCmd(1);
             SDRAM_WE_n                                <= sdCmd(0);
         end if;
-
     end process;
 
 
@@ -430,7 +496,23 @@ begin
     -- when the transation is complete and data read.
     --
     process(ALL)
+        variable bank                : std_logic_vector(1 downto 0);
+        variable row                 : std_logic_vector(SDRAM_ROW_BITS-1 downto 0);
+        variable writeThru           : std_logic;
     begin
+
+        -- Setup the bank and row as variables to make code reading easier.
+        bank                                          := ADDR(SDRAM_ADDR_BITS-1) & ADDR((SDRAM_COLUMN_BITS+SDRAM_BANK_BITS-1) downto (SDRAM_COLUMN_BITS+1));
+        row                                           := ADDR(SDRAM_ADDR_BITS-2 downto (SDRAM_COLUMN_BITS+SDRAM_BANK_BITS));
+
+        -- For write operations, if the cached page row for the current bank is the same as the row given by the cpu then we write to both the SDRAM and to the cache.
+        if cpuCachedBank(to_integer(unsigned(bank))) = '1' and cpuCachedRow(to_integer(unsigned(bank))) = ADDR(SDRAM_ADDR_BITS-1) & ADDR((SDRAM_COLUMN_BITS+SDRAM_BANK_BITS-1) downto (SDRAM_COLUMN_BITS+1)) & row then
+            writeThru                                 := '1';
+        else
+            writeThru                                 := '0';
+        end if;
+
+        -- Setup signals to initial state, critical they start at the right values.
         if (RESET = '1') then
             cpuDoneLast                               <= '0';
             cpuBusy                                   <= '0';
@@ -439,6 +521,12 @@ begin
             cpuCol                                    <= (others => '0');
             cpuDQM                                    <= (others => '1');
             cpuLastEN                                 <= '0';
+            cpuCachedBank                             <= (others => '0');
+            cpuCachedRow                              <= ( others => (others => '0') );
+            fifoCPUWREN_3                             <= '0';
+            fifoCPUWREN_2                             <= '0';
+            fifoCPUWREN_1                             <= '0';
+            fifoCPUWREN_0                             <= '0';
 
         -- Wait for the SDRAM to become ready by holding the CPU in a wait state.
         elsif sdIsReady = '0' then
@@ -446,59 +534,120 @@ begin
 
         elsif rising_edge(CLK) then
 
+            -- CPU Cache writes are only 1 cycle wide, so clear any asserted write.
+            fifoCPUWREN_3                             <= '0';
+            fifoCPUWREN_2                             <= '0';
+            fifoCPUWREN_1                             <= '0';
+            fifoCPUWREN_0                             <= '0';
+
             -- Preserve current enable state to detect activation.
             cpuLastEN <= (RDEN or WREN) and CS;
 
             -- Detect a Chip Select state change signalling access.
             if cpuLastEN = '0' and (RDEN = '1' or WREN = '1') then
-                cpuBusy                               <= '1';
-                cpuIsWriting                          <= WREN;
-                cpuBank                               <= to_integer(unsigned(ADDR(SDRAM_ADDR_BITS-1 downto SDRAM_ARRAY_BITS+1)));
-                cpuRow                                <= std_logic_vector(to_unsigned(to_integer(unsigned(ADDR(SDRAM_ARRAY_BITS downto SDRAM_COLUMN_BITS+1))), SDRAM_ROW_BITS));
+
+                -- Organisation of the memory is as follows:
+                --
+                -- Bank:   [(SDRAM_ADDR_BITS-1) .. (SDRAM_ADDR_BITS-1)] & [((SDRAM_COLUMN_BITS+SDRAM_BANK_BITS-1) .. (SDRAM_COLUMN_BITS+1)]
+                -- Row:    [(SDRAM_ADDR_BITS-2) .. (SDRAM_COLUMN_BITS+SDRAM_BANK_BITS)]
+                -- Column: [(SDRAM_COLUMN_BITS downto 2)]
+                -- The bank is split so that the Bank MSB splits the SDRAM in 2, upper and lower segment, this is because Stack normally resides in the top upper
+                -- segment and code in the bottom lower segment. The remaining bank bits are split at the page level such that 2 or more pages residing in different
+                -- banks are contiguous, hoping to gain a little performance benefit through having a wider spread for code caching and stack caching and write thru.
+                --
+                cpuBank                               <= to_integer(unsigned(bank));
+                cpuRow                                <= row;
                 cpuCol                                <= ADDR(SDRAM_COLUMN_BITS downto 2) & '0';
 
-                -- Preset the write selects according to the CPU signals. Let Quartus optimize as easier to read seeing all mask values.
-                if(WRITE_BYTE = '1') then
-                    case ADDR(1 downto 0) is
-                        when "00" => cpuDQM           <= "1000";
-                                     cpuDataIn        <= DATA_IN(WORD_8BIT_RANGE) & X"000000";
-                        when "01" => cpuDQM           <= "0100";
-                                     cpuDataIn        <= X"00" & DATA_IN(WORD_8BIT_RANGE) & X"0000";
-                        when "10" => cpuDQM           <= "0010";
-                                     cpuDataIn        <= X"0000" & DATA_IN(WORD_8BIT_RANGE) & X"00";
-                        when "11" => cpuDQM           <= "0001";
-                                     cpuDataIn        <= X"000000" & DATA_IN(WORD_8BIT_RANGE);
-                        when others =>
-                    end case;
-                    
-                elsif(WRITE_HWORD = '1') then
+                -- For write operations, we write direct to memory. If the data is in cache then a write-thru is performed to preserve the cached bank.
+                if WREN = '1' then
 
-                    case ADDR(1) is
-                        when '0' =>  cpuDQM           <= "1100";
-                                     cpuDataIn        <= DATA_IN(WORD_16BIT_RANGE) & X"0000";
-                        when '1' =>  cpuDQM           <= "0011";
-                                     cpuDataIn        <= X"0000" & DATA_IN(WORD_16BIT_RANGE);
-                    end case;
+                    -- Preset the write selects according to the CPU signals. Let Quartus optimize as easier to read seeing all mask values.
+                    if(WRITE_BYTE = '1') then
+                        case ADDR(1 downto 0) is
+                            when "00" => 
+                                cpuDQM                <= "1000";
+                                cpuDataIn             <= DATA_IN(WORD_8BIT_RANGE) & X"000000";
+                                if writeThru = '1' then
+                                    fifoCPUWREN_3     <= '1';
+                                end if;
+                            when "01" => 
+                                cpuDQM                <= "0100";
+                                cpuDataIn             <= X"00" & DATA_IN(WORD_8BIT_RANGE) & X"0000";
+                                if writeThru = '1' then
+                                    fifoCPUWREN_2     <= '1';
+                                end if;
+                            when "10" => 
+                                cpuDQM                <= "0010";
+                                cpuDataIn             <= X"0000" & DATA_IN(WORD_8BIT_RANGE) & X"00";
+                                if writeThru = '1' then
+                                    fifoCPUWREN_1     <= '1';
+                                end if;
+                            when "11" => 
+                                cpuDQM                <= "0001";
+                                cpuDataIn             <= X"000000" & DATA_IN(WORD_8BIT_RANGE);
+                                if writeThru = '1' then
+                                    fifoCPUWREN_0     <= '1';
+                                end if;
+                            when others =>
+                        end case;
+                        
+                    elsif(WRITE_HWORD = '1') then
 
-                else
-                    -- Reads are always 32bit wide and if no part word signal is asserted, writes are 32bit.
-                    cpuDataIn                         <= DATA_IN(WORD_32BIT_RANGE);
-                    cpuDQM                            <= "1111";
+                        case ADDR(1) is
+                            when '0' =>  
+                                cpuDQM                <= "1100";
+                                cpuDataIn             <= DATA_IN(WORD_16BIT_RANGE) & X"0000";
+                                if writeThru = '1' then
+                                    fifoCPUWREN_3     <= '1';
+                                    fifoCPUWREN_2     <= '1';
+                                end if;
+                            when '1' =>  
+                                cpuDQM                <= "0011";
+                                cpuDataIn             <= X"0000" & DATA_IN(WORD_16BIT_RANGE);
+                                if writeThru = '1' then
+                                    fifoCPUWREN_1     <= '1';
+                                    fifoCPUWREN_0     <= '1';
+                                end if;
+                        end case;
+
+                    else
+                        -- Reads are always 32bit wide and if no part word signal is asserted, writes are 32bit.
+                        cpuDataIn                     <= DATA_IN(31 downto 0);
+                        cpuDQM                        <= "1111";
+                        if writeThru = '1' then
+                            fifoCPUWREN_3             <= '1';
+                            fifoCPUWREN_2             <= '1';
+                            fifoCPUWREN_1             <= '1';
+                            fifoCPUWREN_0             <= '1';
+                        end if;
+                    end if;
+
+                    -- Set the flags, cpuBusy indicates to the SDRAM FSM to perform an operation, it also halts the CPU.
+                    cpuIsWriting                      <= WREN;
+                    cpuBusy                           <= '1';
+
+                -- For reads, if the row is cached then we just fall through to perform a read operation from cache otherwise the
+                -- SDRAM needs to be instructed to read a page into cache before reading.
+                --
+                elsif cpuCachedBank(to_integer(unsigned(bank))) = '0' or cpuCachedRow(to_integer(unsigned(bank))) /= ADDR(SDRAM_ADDR_BITS-1) & ADDR((SDRAM_COLUMN_BITS+SDRAM_BANK_BITS-1) downto (SDRAM_COLUMN_BITS+1)) & row then
+
+                    cpuCachedBank(to_integer(unsigned(bank))) <= '1';
+                    cpuCachedRow (to_integer(unsigned(bank))) <= ADDR(SDRAM_ADDR_BITS-1) & ADDR((SDRAM_COLUMN_BITS+SDRAM_BANK_BITS-1) downto (SDRAM_COLUMN_BITS+1)) & row;
+
+                    -- Set the flags, cpuBusy indicates to the SDRAM FSM to perform an operation, it also halts the CPU.
+                    cpuBusy                           <= '1';
                 end if;
             end if;
 
             -- Note SDRAM activity via a previous/last signal.
             cpuDoneLast                               <= sdDone;
 
-            -- A change in the Done signal indicates the end of the SDRAM request so read the data (read request) and release the CPU.
-            if (cpuDoneLast = '0' and  sdDone = '1') then
-                DATA_OUT                              <= sdDataOut;
-            end if;
-            if (cpuDoneLast = '1' and  sdDone = '0') then
+            -- A change in the Done signal then we end the SDRAM request and release the CPU.
+            if (cpuDoneLast xor sdDone) = '1' then
                 cpuBusy                               <= '0';
                 cpuIsWriting                          <= '0';
             end if;
-
         end if;
     end process;
 
@@ -506,4 +655,82 @@ begin
     BUSY                                     <= '1' when (cpuLastEN = '0' and (RDEN = '1' or WREN = '1')) else cpuBusy;
     SDRAM_READY                              <= sdIsReady;
 
+    -------------------------------------------------------------------------------------------------------------------------
+    -- Inferred Dual Port RAM.
+    --
+    -- The dual port ram is used to buffer a full page within the SDRAM, one buffer for each bank. The addressing is such 
+    -- that half of the banks appear in the lower segment of the address space and half in the top segment, the MSB of the
+    -- SDRAM address is used for the split. This is to cater for stack where typically, on the ZPU, the stack would reside
+    -- in the very top of memory working down and the applications would reside at the bottom of the memory working up.
+    --
+    -------------------------------------------------------------------------------------------------------------------------
+
+    -- SDRAM Side of dual port RAM.
+    -- For Read:  fifoDataOutHi     <= fifoCache_3(sdWriteColumnAddr)
+    --            fifoDataOutLo     <= fifoCache_0(sdWriteColumnAddr)
+    -- For Write: fifoCache_3 _1    <= fifoDataIn when sdWriteColumnAddr(0) = '0'
+    --            fifoCache_2 _0    <= fifoDataIn when sdWriteColumnAddr(0) = '1'
+    --            fifoSdWREN must be asserted ('1') for write operations.
+    process(ALL)
+        variable cacheAddr           : unsigned(SDRAM_COLUMN_BITS-2+SDRAM_BANK_BITS downto 0);
+    begin
+        -- Setup the address based on the index (sdWriteColumnAddr) and the bank (cpuBank) as the cache is linear for 4 banks.
+        --
+        cacheAddr := to_unsigned(cpuBank, SDRAM_BANK_BITS) & sdWriteColumnAddr(SDRAM_COLUMN_BITS-1 downto 1); 
+
+        if rising_edge(SDRAM_CLK) then
+            if fifoSdWREN_1 = '1' then
+                fifoCache_3(to_integer(cacheAddr))                                               := fifoDataInHi(WORD_UPPER_16BIT_RANGE);
+                fifoCache_2(to_integer(cacheAddr))                                               := fifoDataInHi(WORD_LOWER_16BIT_RANGE);
+            else
+                fifoDataOutHi(WORD_UPPER_16BIT_RANGE)                                            <= fifoCache_3(to_integer(cacheAddr));
+                fifoDataOutHi(WORD_LOWER_16BIT_RANGE)                                            <= fifoCache_2(to_integer(cacheAddr));
+            end if;
+
+            if fifoSdWREN_0 = '1' then
+                fifoCache_1(to_integer(cacheAddr))                                               := fifoDataInLo(WORD_UPPER_16BIT_RANGE);
+                fifoCache_0(to_integer(cacheAddr))                                               := fifoDataInLo(WORD_LOWER_16BIT_RANGE);
+            else
+                fifoDataOutLo(WORD_UPPER_16BIT_RANGE)                                            <= fifoCache_1(to_integer(cacheAddr));
+                fifoDataOutLo(WORD_LOWER_16BIT_RANGE)                                            <= fifoCache_0(to_integer(cacheAddr));
+            end if;
+        end if;
+    end process;
+
+    -- CPU Side of dual port RAM, byte addressable.
+    -- For Read:  DATA_OUT          <= fifoCache(bank + ADDR(COLUMN_BITS .. 2))
+    -- For Write: fifoCache(0..3)   <= cpuDataIn
+    process(ALL)
+        variable cacheAddr           : unsigned(SDRAM_COLUMN_BITS-2+SDRAM_BANK_BITS downto 0);
+    begin
+        -- Setup the address based on the column address bits, 32 bit aligned and the bank (cpuBank) as the cache is linear for 4 banks.
+        --
+        cacheAddr := to_unsigned(cpuBank, SDRAM_BANK_BITS) & unsigned(ADDR(SDRAM_COLUMN_BITS downto 2)); 
+
+        if rising_edge(CLK) then
+            if fifoCPUWREN_3 = '1' then
+                fifoCache_3(to_integer(cacheAddr)) := cpuDataIn(31 downto 24);
+            else
+                DATA_OUT((SDRAM_DATAWIDTH*2)-1 downto ((SDRAM_DATAWIDTH*2)-(SDRAM_DATAWIDTH/2))) <= fifoCache_3(to_integer(unsigned(cacheAddr)));
+            end if;
+
+            if fifoCPUWREN_2 = '1' then
+                fifoCache_2(to_integer(cacheAddr)) := cpuDataIn(23 downto 16);
+            else
+                DATA_OUT(((SDRAM_DATAWIDTH*2)-(SDRAM_DATAWIDTH/2))-1 downto SDRAM_DATAWIDTH)     <= fifoCache_2(to_integer(unsigned(cacheAddr)));
+            end if;
+
+            if fifoCPUWREN_1 = '1' then
+                fifoCache_1(to_integer(cacheAddr)) := cpuDataIn(15 downto 8);
+            else
+                DATA_OUT(SDRAM_DATAWIDTH-1 downto SDRAM_DATAWIDTH/2)                             <= fifoCache_1(to_integer(unsigned(cacheAddr)));
+            end if;
+
+            if fifoCPUWREN_0 = '1' then
+                fifoCache_0(to_integer(cacheAddr)) := cpuDataIn(7 downto 0);
+            else
+                DATA_OUT((SDRAM_DATAWIDTH/2)-1 downto 0)                                         <= fifoCache_0(to_integer(unsigned(cacheAddr)));
+            end if;
+        end if;
+    end process;
 end Structure;

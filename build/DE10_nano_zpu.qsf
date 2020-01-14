@@ -481,11 +481,18 @@ set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBootBRAM.
 set_global_assignment -name VHDL_FILE ../devices/sysbus/BRAM/SinglePortBRAM.vhd
 set_global_assignment -name VHDL_FILE ../devices/sysbus/ioctl/ioctl.vhd
 #set_global_assignment -name VHDL_FILE ../devices/sysbus/TCPU/tcpu.vhd
-set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/sdram.qip
-#set_global_assignment -name VHDL_FILE ../devices/sysbus/SDRAM/sdram.vhd
+#set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/48LC16M16.qip
+#set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/48LC16M16_cached.qip
+#set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/W9864G6.qip
+#set_global_assignment -name QIP_FILE ../devices/sysbus/SDRAM/W9864G6_cached.qip
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_top.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_byte_ctrl.vhd
 set_global_assignment -name VHDL_FILE ../devices/WishBone/I2C/i2c_master_bit_ctrl.vhd
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/48LC16M16.qip
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/48LC16M16_cached.qip
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/W9864G6.qip
+#set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/W9864G6_cached.qip
+
 #set_global_assignment -name QIP_FILE ../devices/WishBone/SDRAM/wbsdram.qip
 set_global_assignment -name VHDL_FILE ../devices/WishBone/SDRAM/wbsdram.vhd
 set_global_assignment -name OPTIMIZATION_MODE "HIGH PERFORMANCE EFFORT"

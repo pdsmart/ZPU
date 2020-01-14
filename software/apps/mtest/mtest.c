@@ -268,7 +268,7 @@ void test16bit(uint32_t start, uint32_t end, uint32_t testsToDo)
             {
                 xprintf( "\rError (16bit ap) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
                 if(errCnt++ == 20)
-                    xprintf( "\rError count (8bit wp) > 20, stopping test.\n");
+                    xprintf( "\rError count (16bit wp) > 20, stopping test.\n");
             }
             *memPtr++;
             data++;
@@ -305,7 +305,7 @@ void test16bit(uint32_t start, uint32_t end, uint32_t testsToDo)
             {
                 xprintf( "\rError (16bit wp) at 0x%08lX (%04x:%04x)\n", memPtr, *memPtr, data );
                 if(errCnt++ == 20)
-                    xprintf( "\rError count (8bit wp) > 20, stopping test.\n");
+                    xprintf( "\rError count (16bit wp) > 20, stopping test.\n");
             }
             *memPtr++;
             if( data == 0xAA55 )
@@ -382,7 +382,7 @@ void test32bit(uint32_t start, uint32_t end, uint32_t testsToDo)
             {
                 xprintf( "\rError (32bit ap) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
                 if(errCnt++ == 20)
-                    xprintf( "\rError count (8bit wp) > 20, stopping test.\n");
+                    xprintf( "\rError count (32bit wp) > 20, stopping test.\n");
             }
             *memPtr++;
             data++;
@@ -420,7 +420,7 @@ void test32bit(uint32_t start, uint32_t end, uint32_t testsToDo)
             {
                 xprintf( "\rError (32bit wp) at 0x%08lX (%08lx:%08lx)\n", memPtr, *memPtr, data );
                 if(errCnt++ == 20)
-                    xprintf( "\rError count (8bit wp) > 20, stopping test.\n");
+                    xprintf( "\rError count (32bit wp) > 20, stopping test.\n");
             }
             *memPtr++;
             if( data == 0xAA55AA55 )
@@ -481,16 +481,20 @@ uint32_t app(uint32_t param1, uint32_t param2)
     // Get parameters or use defaults if not provided.
     if(!xatoi(&ptr, &startAddr))
     {
-        if(cfgSoC->implInsnBRAM)  { startAddr = cfgSoC->addrInsnBRAM; }
-        else if(cfgSoC->implBRAM) { startAddr = cfgSoC->addrBRAM; }
-        else if(cfgSoC->implRAM || cfgSoC->implDRAM) { startAddr = cfgSoC->addrRAM; }
+        if(cfgSoC->implInsnBRAM)      { startAddr = cfgSoC->addrInsnBRAM; }
+        else if(cfgSoC->implBRAM)     { startAddr = cfgSoC->addrBRAM; }
+        else if(cfgSoC->implRAM)      { startAddr = cfgSoC->addrRAM; }
+        else if(cfgSoC->implSDRAM)    { startAddr = cfgSoC->addrSDRAM; }
+        else if(cfgSoC->implWBSDRAM)  { startAddr = cfgSoC->addrWBSDRAM; }
         else { startAddr = cfgSoC->stackStartAddr - 512; }
     }
     if(!xatoi(&ptr,  &endAddr))
     {
-        if(cfgSoC->implInsnBRAM)  { endAddr = cfgSoC->sizeInsnBRAM; }
-        else if(cfgSoC->implBRAM) { endAddr = cfgSoC->sizeBRAM; }
-        else if(cfgSoC->implRAM || cfgSoC->implDRAM) { endAddr = cfgSoC->sizeRAM; }
+        if(cfgSoC->implInsnBRAM)      { endAddr = cfgSoC->sizeInsnBRAM; }
+        else if(cfgSoC->implBRAM)     { endAddr = cfgSoC->sizeBRAM; }
+        else if(cfgSoC->implRAM)      { endAddr = cfgSoC->sizeRAM; }
+        else if(cfgSoC->implSDRAM)    { endAddr = cfgSoC->sizeSDRAM; }
+        else if(cfgSoC->implWBSDRAM)  { endAddr = cfgSoC->sizeWBSDRAM; }
         else { endAddr = cfgSoC->stackStartAddr + 8; }
     }
     if(!xatoi(&ptr,  &iterations))

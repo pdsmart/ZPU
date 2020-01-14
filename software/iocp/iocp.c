@@ -397,8 +397,8 @@ int cmdProcessor(void)
 int main(int argc, char **argv)
 {
     // Setup the required baud rate for the UART. Once the divider is loaded, a reset takes place within the UART.
-    UART_BRGEN(UART0) = BAUDRATEGEN(115200, 115200);
-    UART_BRGEN(UART1) = BAUDRATEGEN(115200, 115200);
+    UART_BRGEN(UART0) = BAUDRATEGEN(UART0, 115200, 115200);
+    UART_BRGEN(UART1) = BAUDRATEGEN(UART1, 115200, 115200);
 
     // Enable the RX/TX units and enable FIFO mode.
     UART_CTRL(UART0)  = UART_TX_FIFO_ENABLE | UART_TX_ENABLE | UART_RX_FIFO_ENABLE | UART_RX_ENABLE;

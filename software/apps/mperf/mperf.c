@@ -54,10 +54,9 @@
 #include "tools.c"
 
 // Version info.
-#define VERSION      "v1.0"
-#define VERSION_DATE "03/12/2019"
+#define VERSION      "v1.1"
+#define VERSION_DATE "23/12/2019"
 #define APP_NAME     "MPERF"
-
 
 
 // Main entry and start point of a ZPUTA Application. Only 2 parameters are catered for and a 32bit return code, additional parameters can be added by changing the appcrt0.s
@@ -74,7 +73,6 @@ uint32_t app(uint32_t param1, uint32_t param2)
     long      endAddr;
     long      bitWidth;
     long      xferSize;
-    long      memReadSum = 0;
     uint32_t  writePerf;
     uint32_t  readPerf;
     uint32_t  basePerf;
@@ -85,6 +83,9 @@ uint32_t app(uint32_t param1, uint32_t param2)
     uint32_t  xferSizeAdj;
     uint32_t  writePerfMBs;
     uint32_t  readPerfMBs;
+    uint32_t  memReadWord  = 0;
+    uint16_t  memReadHWord = 0;
+    uint8_t   memReadByte  = 0;
 
 
     if (!xatoi(&ptr, &startAddr))
@@ -147,33 +148,91 @@ uint32_t app(uint32_t param1, uint32_t param2)
                 writePerf = TIMER_MILLISECONDS_UP;
                 break;
         }
-        readPerf  = 0;
         memAddr   = startAddr;
         xferCount = xferSize * (1024*1024);
-        TIMER_MILLISECONDS_UP = 0;
-        while(xferCount > 0)
+        switch(bitWidth)
         {
-            memReadSum = *(uint32_t *)(memAddr);
-            memAddr   += 4;
-            xferCount -= 4;
-            if(memAddr > endAddr) { memAddr = startAddr; }
-        }
-        readPerf = TIMER_MILLISECONDS_UP;
+            case 1:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memReadByte = *(uint8_t *)(memAddr);
+                    memAddr   += 1;
+                    xferCount -= 1;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                readPerf = TIMER_MILLISECONDS_UP;
+                break;
 
+            case 2:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memReadHWord = *(uint16_t *)(memAddr);
+                    memAddr   += 2;
+                    xferCount -= 2;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                readPerf = TIMER_MILLISECONDS_UP;
+                break;
+
+            case 4:
+            default:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memReadWord = *(uint32_t *)(memAddr);
+                    memAddr   += 4;
+                    xferCount -= 4;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                readPerf = TIMER_MILLISECONDS_UP;
+                break;
+        }
+
+        // Basemark time, ie. all the actions without the memory operation to ascertain the ZPU stack and code overhead.
         memAddr   = startAddr;
         xferCount = xferSize * (1024*1024);
-        TIMER_MILLISECONDS_UP = 0;
-        while(xferCount > 0)
+        switch(bitWidth)
         {
-            memAddr   += 4;
-            xferCount -= 4;
-            if(memAddr > endAddr) { memAddr = startAddr; }
+            case 1:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memAddr   += 1;
+                    xferCount -= 1;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                basePerf = TIMER_MILLISECONDS_UP;
+                break;
+
+            case 2:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memAddr   += 2;
+                    xferCount -= 2;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                basePerf = TIMER_MILLISECONDS_UP;
+                break;
+
+            case 4:
+            default:
+                TIMER_MILLISECONDS_UP = 0;
+                while(xferCount > 0)
+                {
+                    memAddr   += 4;
+                    xferCount -= 4;
+                    if(memAddr > endAddr) { memAddr = startAddr; }
+                }
+                basePerf = TIMER_MILLISECONDS_UP;
+                break;
         }
-        basePerf = TIMER_MILLISECONDS_UP;
 
         writePerfAdj = writePerf - basePerf;              // Actual time spent in write portion of loop.
         readPerfAdj  = readPerf  - basePerf;              // Actual time spent in read portion of loop.
-        xferSizeAdj  = xferSize * 1000 * 1000;            // Transfer size adjusted to calculate milliseconds per MB transfer.
+        xferSizeAdj  = xferSize * 1024 * 1024;            // Transfer size adjusted to calculate milliseconds per MB transfer.
         writePerfMBs = (xferSizeAdj / writePerfAdj)/1000; // Round value of MB/s for write.
         readPerfMBs  = (xferSizeAdj / readPerfAdj)/1000;  // Round value of MB/s for read.
 

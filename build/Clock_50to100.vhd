@@ -59,13 +59,14 @@ ARCHITECTURE SYN OF clock_50to100 IS
     SIGNAL sub_wire3    : STD_LOGIC ;
     SIGNAL sub_wire4    : STD_LOGIC ;
     SIGNAL sub_wire5    : STD_LOGIC_VECTOR (1 DOWNTO 0);
-    SIGNAL sub_wire6_bv    : BIT_VECTOR (0 DOWNTO 0);
+    SIGNAL sub_wire6_bv : BIT_VECTOR (0 DOWNTO 0);
     SIGNAL sub_wire6    : STD_LOGIC_VECTOR (0 DOWNTO 0);
 
 
 
     COMPONENT altpll
     GENERIC (
+        bandwidth_type        : STRING;
         clk0_divide_by        : NATURAL;
         clk0_duty_cycle        : NATURAL;
         clk0_multiply_by        : NATURAL;
@@ -146,18 +147,19 @@ BEGIN
 
     altpll_component : altpll
     GENERIC MAP (
+        bandwidth_type => "AUTO",
         clk0_divide_by => 1,
         clk0_duty_cycle => 50,
         clk0_multiply_by => 2,
         clk0_phase_shift => "0",
-        clk1_divide_by => 2,
+        clk1_divide_by => 1,
         clk1_duty_cycle => 50,
         clk1_multiply_by => 2,
-        clk1_phase_shift => "00",
+        clk1_phase_shift => "-2500 ps",
         compensate_clock => "CLK0",
         gate_lock_signal => "NO",
         inclk0_input_frequency => 20000,
-        intended_device_family => "Cyclone II",
+        intended_device_family => "Cyclone V",
         invalid_lock_multiplier => 5,
         lpm_hint => "CBX_MODULE_PREFIX=Clock_50to100",
         lpm_type => "altpll",

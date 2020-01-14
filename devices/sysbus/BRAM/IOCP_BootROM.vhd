@@ -46,10 +46,10 @@ port (
         clk                  : in  std_logic;
         areset               : in  std_logic := '0';
         memAWriteEnable      : in  std_logic;
-        memAAddr             : in  std_logic_vector(ADDR_BIT_BRAM_32BIT_RANGE);
+        memAAddr             : in  std_logic_vector(ADDR_32BIT_BRAM_RANGE);
         memAWrite            : in  std_logic_vector(WORD_32BIT_RANGE);
         memBWriteEnable      : in  std_logic;
-        memBAddr             : in  std_logic_vector(ADDR_BIT_BRAM_32BIT_RANGE);
+        memBAddr             : in  std_logic_vector(ADDR_32BIT_BRAM_RANGE);
         memBWrite            : in  std_logic_vector(WORD_32BIT_RANGE);
         memARead             : out std_logic_vector(WORD_32BIT_RANGE);
         memBRead             : out std_logic_vector(WORD_32BIT_RANGE)
@@ -224,7 +224,7 @@ shared variable ram : ram_type :=
            159 => x"00000000",
            160 => x"71fc0608",
            161 => x"0b0b0b9f",
-           162 => x"88738306",
+           162 => x"cc738306",
            163 => x"10100508",
            164 => x"060b0b0b",
            165 => x"88ac0400",
@@ -344,8 +344,8 @@ shared variable ram : ram_type :=
            279 => x"51535104",
            280 => x"80040088",
            281 => x"e2040000",
-           282 => x"009fac70",
-           283 => x"9fdc278b",
+           282 => x"009ff070",
+           283 => x"a0a0278b",
            284 => x"38807170",
            285 => x"8405530c",
            286 => x"88eb0488",
@@ -515,14 +515,14 @@ shared variable ram : ram_type :=
            450 => x"8c085170",
            451 => x"802e8838",
            452 => x"710b0b0b",
-           453 => x"9fa8340b",
-           454 => x"0b0b9fa8",
+           453 => x"9fec340b",
+           454 => x"0b0b9fec",
            455 => x"33880c83",
            456 => x"3d0d04fa",
            457 => x"3d0d787b",
            458 => x"7d565856",
            459 => x"800b0b0b",
-           460 => x"0b9fa833",
+           460 => x"0b9fec33",
            461 => x"81065255",
            462 => x"82527075",
            463 => x"2e098106",
@@ -585,7 +585,7 @@ shared variable ram : ram_type :=
            520 => x"52853d0d",
            521 => x"04f93d0d",
            522 => x"790b0b0b",
-           523 => x"9fac0857",
+           523 => x"9ff00857",
            524 => x"57817727",
            525 => x"80ed3876",
            526 => x"88170827",
@@ -618,7 +618,7 @@ shared variable ram : ram_type :=
            553 => x"5574880c",
            554 => x"893d0d04",
            555 => x"fb3d0d0b",
-           556 => x"0b0b9fac",
+           556 => x"0b0b9ff0",
            557 => x"08fe1988",
            558 => x"1208fe05",
            559 => x"55565480",
@@ -631,7 +631,7 @@ shared variable ram : ram_type :=
            566 => x"04fd3d0d",
            567 => x"7554800b",
            568 => x"0b0b0b9f",
-           569 => x"ac087033",
+           569 => x"f0087033",
            570 => x"51535371",
            571 => x"832e0981",
            572 => x"068c3894",
@@ -644,7 +644,7 @@ shared variable ram : ram_type :=
            579 => x"880c853d",
            580 => x"0d04fc3d",
            581 => x"0d760b0b",
-           582 => x"0b9fac08",
+           582 => x"0b9ff008",
            583 => x"55558075",
            584 => x"23881508",
            585 => x"5372812e",
@@ -666,7 +666,7 @@ shared variable ram : ram_type :=
            601 => x"71880c86",
            602 => x"3d0d04fa",
            603 => x"3d0d780b",
-           604 => x"0b0b9fac",
+           604 => x"0b0b9ff0",
            605 => x"08712281",
            606 => x"057083ff",
            607 => x"ff065754",
@@ -840,7 +840,7 @@ shared variable ram : ram_type :=
            775 => x"04ed3d0d",
            776 => x"6559800b",
            777 => x"0b0b0b9f",
-           778 => x"ac0cf59b",
+           778 => x"f00cf59b",
            779 => x"3f880881",
            780 => x"06558256",
            781 => x"7482f238",
@@ -935,11 +935,11 @@ shared variable ram : ram_type :=
            870 => x"1b0c5580",
            871 => x"0b811a34",
            872 => x"780b0b0b",
-           873 => x"9fac0c80",
+           873 => x"9ff00c80",
            874 => x"5675880c",
            875 => x"953d0d04",
            876 => x"ea3d0d0b",
-           877 => x"0b0b9fac",
+           877 => x"0b0b9ff0",
            878 => x"08558554",
            879 => x"74802e80",
            880 => x"df38800b",
@@ -970,7 +970,7 @@ shared variable ram : ram_type :=
            905 => x"3d0d04f6",
            906 => x"3d0d7d7f",
            907 => x"7e0b0b0b",
-           908 => x"9fac0859",
+           908 => x"9ff00859",
            909 => x"5b5c5880",
            910 => x"7b0c8557",
            911 => x"75802e81",
@@ -1029,42 +1029,59 @@ shared variable ram : ram_type :=
            964 => x"80577688",
            965 => x"0c8c3d0d",
            966 => x"04fb3d0d",
-           967 => x"9b9086e4",
-           968 => x"0b87c094",
-           969 => x"8c0c9b90",
-           970 => x"86e40b87",
-           971 => x"c0949c0c",
-           972 => x"8c80830b",
-           973 => x"87c09484",
-           974 => x"0c8c8083",
-           975 => x"0b87c094",
-           976 => x"940c9fb0",
-           977 => x"51f9d63f",
-           978 => x"8808b838",
-           979 => x"9f9851fc",
-           980 => x"df3f8808",
-           981 => x"ae38a080",
-           982 => x"0b880887",
-           983 => x"c098880c",
-           984 => x"55873dfc",
-           985 => x"05538480",
-           986 => x"527451fd",
-           987 => x"ba3f8808",
-           988 => x"8d387554",
-           989 => x"73802e86",
-           990 => x"38731555",
-           991 => x"e439a080",
-           992 => x"54730480",
-           993 => x"54fb3900",
-           994 => x"00ffffff",
-           995 => x"ff00ffff",
-           996 => x"ffff00ff",
-           997 => x"ffffff00",
-           998 => x"424f4f54",
-           999 => x"54494e59",
-          1000 => x"2e524f4d",
-          1001 => x"00000000",
-          1002 => x"01000000",
+           967 => x"87c0948c",
+           968 => x"08548784",
+           969 => x"80527351",
+           970 => x"ead73f88",
+           971 => x"08902b87",
+           972 => x"c0948c08",
+           973 => x"56548784",
+           974 => x"80527451",
+           975 => x"eac33f73",
+           976 => x"88080787",
+           977 => x"c0948c0c",
+           978 => x"87c0949c",
+           979 => x"08548784",
+           980 => x"80527351",
+           981 => x"eaab3f88",
+           982 => x"08902b87",
+           983 => x"c0949c08",
+           984 => x"56548784",
+           985 => x"80527451",
+           986 => x"ea973f73",
+           987 => x"88080787",
+           988 => x"c0949c0c",
+           989 => x"8c80830b",
+           990 => x"87c09484",
+           991 => x"0c8c8083",
+           992 => x"0b87c094",
+           993 => x"940c9ff4",
+           994 => x"51f9923f",
+           995 => x"8808b838",
+           996 => x"9fdc51fc",
+           997 => x"9b3f8808",
+           998 => x"ae38a080",
+           999 => x"0b880887",
+          1000 => x"c098880c",
+          1001 => x"55873dfc",
+          1002 => x"05538480",
+          1003 => x"527451fc",
+          1004 => x"f63f8808",
+          1005 => x"8d387554",
+          1006 => x"73802e86",
+          1007 => x"38731555",
+          1008 => x"e439a080",
+          1009 => x"54730480",
+          1010 => x"54fb3900",
+          1011 => x"00ffffff",
+          1012 => x"ff00ffff",
+          1013 => x"ffff00ff",
+          1014 => x"ffffff00",
+          1015 => x"424f4f54",
+          1016 => x"54494e59",
+          1017 => x"2e524f4d",
+          1018 => x"00000000",
+          1019 => x"01000000",
         others => x"00000000"
     );
 
@@ -1078,10 +1095,10 @@ begin
         end if;
     
         if (memAWriteEnable = '1') then
-            ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memAWrite;
+            ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE)))) := memAWrite;
             memARead <= memAWrite;
         else
-            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memARead <= ram(to_integer(unsigned(memAAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;
@@ -1090,10 +1107,10 @@ process (clk)
 begin
     if (clk'event and clk = '1') then
         if (memBWriteEnable = '1') then
-            ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE)))) := memBWrite;
+            ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE)))) := memBWrite;
             memBRead <= memBWrite;
         else
-            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_BIT_BRAM_32BIT_RANGE))));
+            memBRead <= ram(to_integer(unsigned(memBAddr(ADDR_32BIT_BRAM_RANGE))));
         end if;
     end if;
 end process;

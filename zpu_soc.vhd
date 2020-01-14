@@ -140,8 +140,8 @@ architecture rtl of zpu_soc is
 
     -- Reset processing.
     signal RESET_n                :       std_logic := '0';
-    signal RESET_COUNTER          :       unsigned(15 downto 0) := X"FFFF";
-    signal RESET_COUNTER_RX       :       unsigned(15 downto 0) := X"FFFF";
+    signal RESET_COUNTER          :       unsigned(15 downto 0);
+    signal RESET_COUNTER_RX       :       unsigned(15 downto 0);
 
     -- Millisecond counter
     signal MICROSEC_DOWN_COUNTER  :       unsigned(23 downto 0);                       -- Allow for 16 seconds delay.
@@ -312,9 +312,9 @@ architecture rtl of zpu_soc is
     signal WB_INTA_I              :       std_logic;
     
     -- Interrupt signals
-    signal INT_TRIGGERS           :       std_logic_vector(INTR_MAX downto 0);
-    signal INT_ENABLE             :       std_logic_vector(INTR_MAX downto 0);
-    signal INT_STATUS             :       std_logic_vector(INTR_MAX downto 0);
+    signal INT_TRIGGERS           :       std_logic_vector(SOC_INTR_MAX downto 0);
+    signal INT_ENABLE             :       std_logic_vector(SOC_INTR_MAX downto 0);
+    signal INT_STATUS             :       std_logic_vector(SOC_INTR_MAX downto 0);
     signal INT_REQ                :       std_logic;
     signal INT_TRIGGER            :       std_logic;
     signal INT_ACK                :       std_logic;
@@ -652,10 +652,10 @@ begin
             port map (
                 clk                  => SYSCLK,
                 memAWriteEnable      => MEM_A_WRITE_ENABLE,
-                memAAddr             => MEM_A_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+                memAAddr             => MEM_A_ADDR(ADDR_32BIT_BRAM_RANGE),
                 memAWrite            => MEM_A_WRITE,
                 memBWriteEnable      => MEM_B_WRITE_ENABLE,
-                memBAddr             => MEM_B_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+                memBAddr             => MEM_B_ADDR(ADDR_32BIT_BRAM_RANGE),
                 memBWrite            => MEM_B_WRITE,
                 memARead             => MEM_A_READ,
                 memBRead             => MEM_B_READ
@@ -678,7 +678,7 @@ begin
   --            memAWrite            => MEM_A_WRITE,
   --            memARead             => MEM_A_READ,
 
-  --            memBAddr             => MEM_B_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+  --            memBAddr             => MEM_B_ADDR(ADDR_32BIT_BRAM_RANGE),
   --            memBWrite            => MEM_B_WRITE,
   --            memBWriteEnable      => MEM_B_WRITE_ENABLE,
   --            memBRead             => MEM_B_READ
@@ -690,10 +690,10 @@ begin
             port map (
                 clk                  => SYSCLK,
                 memAWriteEnable      => BRAM_WREN,
-                memAAddr             => MEM_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+                memAAddr             => MEM_ADDR(ADDR_32BIT_BRAM_RANGE),
                 memAWrite            => MEM_DATA_WRITE,
                 memBWriteEnable      => '0',
-                memBAddr             => MEM_ADDR(ADDR_BIT_BRAM_32BIT_RANGE),
+                memBAddr             => MEM_ADDR(ADDR_32BIT_BRAM_RANGE),
                 memBWrite            => (others => '0'),
                 memARead             => open,
                 memBRead             => BRAM_DATA_READ
@@ -715,7 +715,7 @@ begin
                 memAWrite            => MEM_DATA_WRITE,
                 memARead             => BRAM_DATA_READ,
 
-                memBAddr             => MEM_ADDR_INSN(ADDR_BIT_BRAM_32BIT_RANGE),
+                memBAddr             => MEM_ADDR_INSN(ADDR_32BIT_BRAM_RANGE),
                 memBWrite            => (others => '0'),
                 memBWriteEnable      => '0',
                 memBRead             => MEM_DATA_READ_INSN
@@ -768,56 +768,60 @@ begin
     ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
 
         ZPUSDRAM : entity work.SDRAM
+            generic map (
+                SDRAM_ROWS           => SOC_SDRAM_ROWS,                -- Number of Rows in the SDRAM.
+                SDRAM_COLUMNS        => SOC_SDRAM_COLUMNS,             -- Number of Columns in an SDRAM page (ie. 1 row).
+                SDRAM_BANKS          => SOC_SDRAM_BANKS,               -- Number of banks in the SDRAM.
+                SDRAM_DATAWIDTH      => SOC_SDRAM_DATAWIDTH,           -- Data width of SDRAM chip (ie. 16, 32).
+                SDRAM_CLK_FREQ       => SOC_SDRAM_CLK_FREQ,            -- Frequency of SDRAM clock in Hertz.
+                SDRAM_tRCD           => SOC_SDRAM_tRCD,                -- tRCD - RAS to CAS minimum period (in ns), ie. 20ns -> 2 cycles@100MHz
+                SDRAM_tRP            => SOC_SDRAM_tRP,                 -- tRP  - Precharge delay, min time for a precharge command to complete (in ns), ie. 15ns -> 2 cycles@100MHz
+                SDRAM_tRFC           => SOC_SDRAM_tRFC,                -- tRFC - Auto-refresh minimum time to complete (in ns), ie. 66ns
+                SDRAM_tREF           => SOC_SDRAM_tREF                 -- tREF - period of time a complete refresh of all rows is made within (in ms).
+            )
             port map (
                 -- SDRAM Interface
-                SDRAM_CLK        => MEMCLK,           -- sdram is accessed at 100MHz
-                SDRAM_RST        => not RESET_n,      -- reset the sdram controller.
-                SDRAM_CKE        => SDRAM_CKE,        -- clock enable.
-                SDRAM_DQ         => SDRAM_DQ,         -- 16 bit bidirectional data bus
-                SDRAM_ADDR       => SDRAM_ADDR,       -- 12 bit multiplexed address bus
-                SDRAM_DQM        => SDRAM_DQM,        -- two byte masks
-                SDRAM_BA         => SDRAM_BA,         -- two banks
-                SDRAM_CS_n       => SDRAM_CS_n,       -- a single chip select
-                SDRAM_WE_n       => SDRAM_WE_n,       -- write enable
-                SDRAM_RAS_n      => SDRAM_RAS_n,      -- row address select
-                SDRAM_CAS_n      => SDRAM_CAS_n,      -- columns address select
-                SDRAM_READY      => SDRAM_READY,      -- sd ready.
+                SDRAM_CLK            => MEMCLK,                        -- sdram clock running at an offset from system clock.
+                SDRAM_RST            => not RESET_n,                   -- reset the sdram controller.
+                SDRAM_CKE            => SDRAM_CKE,                     -- clock enable.
+                SDRAM_DQ             => SDRAM_DQ,                      -- 16 bit bidirectional data bus
+                SDRAM_ADDR           => SDRAM_ADDR,                    -- 12 bit multiplexed address bus
+                SDRAM_DQM            => SDRAM_DQM,                     -- two byte masks
+                SDRAM_BA             => SDRAM_BA,                      -- two banks
+                SDRAM_CS_n           => SDRAM_CS_n,                    -- a single chip select
+                SDRAM_WE_n           => SDRAM_WE_n,                    -- write enable
+                SDRAM_RAS_n          => SDRAM_RAS_n,                   -- row address select
+                SDRAM_CAS_n          => SDRAM_CAS_n,                   -- columns address select
+                SDRAM_READY          => SDRAM_READY,                   -- sd ready.
 
                 -- CPU Interface
-                CLK              => SYSCLK,           -- System master clock
-                RESET            => not RESET_n,      -- high active sync reset
-                ADDR             => MEM_ADDR(ADDR_BIT_SDRAM_RANGE),
-                DATA_IN          => MEM_DATA_WRITE,   -- write data
-                DATA_OUT         => SDRAM_DATA_READ,  -- read data
-                WRITE_BYTE       => MEM_WRITE_BYTE_ENABLE,  -- Write a single byte.
-                WRITE_HWORD      => MEM_WRITE_HWORD_ENABLE, -- Write a 16 bit word.
-                CS               => '1', --SDRAM_SELECT,     -- Chip Select.
-                WREN             => SDRAM_WREN,       -- Write enable.
-                RDEN             => SDRAM_RDEN,  -- Read enable.
-                BUSY             => SDRAM_MEM_BUSY                   
+                CLK                  => SYSCLK,                        -- System master clock
+                RESET                => not RESET_n,                   -- high active sync reset
+                ADDR                 => MEM_ADDR(ADDR_BIT_SDRAM_RANGE),
+                DATA_IN              => MEM_DATA_WRITE,                -- write data
+                DATA_OUT             => SDRAM_DATA_READ,               -- read data
+                WRITE_BYTE           => MEM_WRITE_BYTE_ENABLE,         -- Write a single byte.
+                WRITE_HWORD          => MEM_WRITE_HWORD_ENABLE,        -- Write a 16 bit word.
+                CS                   => SDRAM_SELECT,                  -- Chip Select.
+                WREN                 => SDRAM_WREN,                    -- Write enable.
+                RDEN                 => SDRAM_RDEN,                    -- Read enable.
+                BUSY                 => SDRAM_MEM_BUSY                   
             );
 
---        ZPUSDRAM : entity work.SinglePortBRAM
---            generic map (
---                addrbits             => 4
---            )
---            port map (
---                clk                  => SYSCLK,
---                memAAddr             => MEM_ADDR(3 downto 0),
---                memAWriteEnable      => SDRAM_WREN,
---                memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
---                memAWriteHalfWord    => MEM_WRITE_HWORD_ENABLE,
---                memAWrite            => MEM_DATA_WRITE,
---                memARead             => SDRAM_DATA_READ
---            );
-            
---  clock: entity work.oddrff
---    port map (
---      D0 => '0',
---      D1 => '1',
---      O => SDRAM_CLK,
---      CLK => SYSCLK
---    );
+      ---- Replace the SDRAM with a block of BRAM over WishBone, primarily used for testing.
+      --ZPUSDRAM : entity work.SinglePortBRAM
+      --generic map (
+      --    addrbits             => 4
+      --)
+      --port map (
+      --    clk                  => SYSCLK,
+      --    memAAddr             => MEM_ADDR(3 downto 0),
+      --    memAWriteEnable      => SDRAM_WREN,
+      --    memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
+      --    memAWriteHalfWord    => MEM_WRITE_HWORD_ENABLE,
+      --    memAWrite            => MEM_DATA_WRITE,
+      --    memARead             => SDRAM_DATA_READ
+      --);
 
         -- SDRAM clock based on system clock.
         SDRAM_CLK                <= MEMCLK;
@@ -831,76 +835,7 @@ begin
                                      else '0';
         SDRAM_RDEN               <= '1' when SDRAM_SELECT = '1' and MEM_READ_ENABLE = '1'
                                      else '0';
-
---        ZPUSDRAM : entity work.sdram_controller
---          generic map (
---            HIGH_BIT => 21,
---            MHZ => 100,
---            REFRESH_CYCLES => 4096,
---            ADDRESS_BITS => 12
---          )
---          PORT MAP (
---              clock_100 => SYSCLK,
---              clock_100_delayed_3ns => MEMCLK,
---              rst => not RESET_n,
---        
---           -- Signals to/from the SDRAM chip
---           DRAM_ADDR   => SDRAM_ADDR, 
---           DRAM_BA     => SDRAM_BA, 
---           DRAM_CAS_N  => SDRAM_CAS_n, 
---           DRAM_CKE    => SDRAM_CKE, 
---           DRAM_CLK    => SDRAM_CLK, 
---           DRAM_CS_N   => SDRAM_CS_n, 
---           DRAM_DQ     => SDRAM_DQ, 
---           DRAM_DQM    => SDRAM_DQM, 
---           DRAM_RAS_N  => SDRAM_RAS_n, 
---           DRAM_WE_N   => SDRAM_WE_n,
---        
---           pending     => SDRAM_MEM_BUSY,
---        
---           --- Inputs from rest of the system
---           address     => MEM_ADDR(ADDR_BIT_SDRAM_32BIT_RANGE), 
---           req_read    => SRD, 
---           req_write   => SWR, 
---           data_out    => SDRAM_DATA_READ, 
---           data_out_valid => open, --SDRAM_MEM_BUSY,
---           data_in     => dataWord, 
---           data_mask   => dataMask
---           );            
---
---        -- RAM Range SOC_ADDR_SDRAM_START) -> SOC_ADDR_SDRAM_END
---        SDRAM_SELECT             <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
---                                    else '0';
---            SRD <= '1' when SDRAM_SELECT = '1' and MEM_READ_ENABLE = '1' else '0';
---            SWR <= '1' when SDRAM_SELECT = '1' and MEM_WRITE_ENABLE = '1' else '0';
---
---            dataMask <="0001" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "00"
---                       else
---                       "0010" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "01"
---                       else
---                       "0100" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "10"
---                       else
---                       "1000" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "11"
---                       else
---                       "0011" when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '0'
---                       else
---                       "1100" when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '1'
---                   else
---                       "1111";
---             dataWord <= X"000000" & MEM_DATA_WRITE(7 downto 0)       when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "00"
---                         else
---                         X"0000" & MEM_DATA_WRITE(7 downto 0) & X"00" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "01"
---                         else
---                         X"00" & MEM_DATA_WRITE(7 downto 0) & X"0000" when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "10"
---                         else
---                         MEM_DATA_WRITE(7 downto 0) & X"000000"       when MEM_WRITE_BYTE_ENABLE = '1' and MEM_ADDR(1 downto 0) = "11"
---                         else
---                         X"0000" & MEM_DATA_WRITE(15 downto 0)        when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '0'
---                         else
---                         MEM_DATA_WRITE(15 downto 0) & X"0000"        when MEM_WRITE_HWORD_ENABLE = '1' and MEM_ADDR(1) = '1'
---                     else MEM_DATA_WRITE;
     end generate;
-
 
     -- Force the CPU to wait when slower memory/IO is accessed and it cant deliver an immediate result.
     MEM_BUSY                  <= '1'                  when (UART0_CS = '1' or UART1_CS = '1' or TIMER0_CS = '1') and MEM_READ_ENABLE = '1'
@@ -1093,8 +1028,11 @@ begin
             end if; -- rising-edge(SYSCLK)
         end process;
 
-        TIMER1_CS                    <= '1' when IO_TIMER_SELECT = '1'  and MEM_ADDR(7 downto 6) = "01"     -- 0xC40-C7F
-                                        else '0';
+        TIMER1_CS                                                   <= '1' when IO_TIMER_SELECT = '1'  and MEM_ADDR(7 downto 6) = "01"     -- 0xC40-C7F
+                                                                       else '0';
+    else generate
+        TIMER_REG_REQ                                               <= '0';
+        IO_WAIT_TIMER1                                              <= '0';
     end generate;
 
     -- PS2 devices
@@ -1102,7 +1040,7 @@ begin
         PS2KEYBOARD : entity work.io_ps2_com
             generic map (
                 clockFilter          => 15,
-                ticksPerUsec         => SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100)
+                ticksPerUsec         => SYSCLK_FREQUENCY/1000000
             )
             port map (
                 clk                  => SYSCLK,
@@ -1172,6 +1110,10 @@ begin
                       else '0';
     else generate
         PS2_INT                                                     <= '0';
+        PS2_CS                                                      <= '0';
+        KBD_SEND_TRIGGER                                            <= '0';
+        KBD_RECV_REG                                                <= '0';
+        IO_WAIT_PS2                                                 <= '0';
     end generate;
 
     -- SPI host
@@ -1293,6 +1235,10 @@ begin
 
         SPI0_CS     <= '1' when IO_SELECT = '1'    and MEM_ADDR(11 downto 4) = "11010000"  -- SPI Range 0xFFFFFDxx, 0xD00-D0F
                        else '0';
+    else generate
+        SPI_CS                                                      <= '1';
+        SPI_ACTIVE                                                  <= '0';
+        IO_WAIT_SPI                                                 <= '0';
     end generate;
 
     -- SD Card interface. Upto 4 SD Cards can be configured, add an entity for each and set the generics to the values required.
@@ -1558,13 +1504,27 @@ begin
                 end case;
             end if;
         end process;
+    else generate
+        SD_ADDR                                                     <= (others => (others => DontCareValue));
+        SD_RD                                                       <= (others => '0');
+        SD_WR                                                       <= (others => '0');
+        SD_RESET                                                    <= (others => '0');
+        SD_CARD_TYPE                                                <= (others => '0');
+        SD_CONTINUE                                                 <= (others => '0');
+        SD_HNDSHK_IN                                                <= (others => '0');
+        SD_OVERRUN                                                  <= '0'; 
+        SD_DATA_REQ                                                 <= '0';
+        SD_DATA_VALID                                               <= '0';
+        SD_RESET_TIMER                                              <= 0;
+        SD_STATE                                                    <= SD_STATE_RESET;
+        IO_WAIT_SD                                                  <= '0';
     end generate;
 
     -- Interrupt controller
     INTRCTL: if SOC_IMPL_INTRCTL = true generate
         INTCONTROLLER : entity work.interrupt_controller
             generic map (
-                max_int              => INTR_MAX
+                max_int              => SOC_INTR_MAX
             )
             port map (
                 clk                  => SYSCLK,
@@ -1575,6 +1535,53 @@ begin
                 int                  => INT_REQ,
                 status               => INT_STATUS
             );
+
+        process(SYSCLK, RESET_n)
+        begin
+            ------------------------
+            -- HIGH LEVEL         --
+            ------------------------
+
+            ------------------------
+            -- ASYNCHRONOUS RESET --
+            ------------------------
+            if RESET_n='0' then
+                INT_ENABLE                                          <= (others => '0');
+                IO_WAIT_INTR                                        <= '0';
+                IO_DATA_READ_INTRCTL                                <= (others => 'X');
+
+            -----------------------
+            -- RISING CLOCK EDGE --
+            -----------------------                
+            elsif rising_edge(SYSCLK) then
+
+                IO_WAIT_INTR                                        <= '0';
+
+                -- CPU Write?
+                if MEM_WRITE_ENABLE = '1' and INTR0_CS = '1' then
+
+                    -- Write to interrupt controller sets the enable mask bits.
+                    case MEM_ADDR(2) is
+                        when '0' =>
+
+                        when '1' =>
+                            INT_ENABLE                              <= MEM_DATA_WRITE(SOC_INTR_MAX downto 0);
+                    end case;
+
+                -- IO Read?
+                elsif MEM_READ_ENABLE = '1' and INTR0_CS = '1' then
+
+                    -- Read interrupt status, 32 bits showing which interrupts have been triggered.
+                    IO_DATA_READ_INTRCTL                            <= (others => 'X');
+                    if MEM_ADDR(2) = '0' then
+                        IO_DATA_READ_INTRCTL(SOC_INTR_MAX downto 0) <= INT_STATUS;
+                    else
+                        Io_DATA_READ_INTRCTL(SOC_INTR_MAX downto 0) <= INT_ENABLE;
+                    end if;
+
+                end if;
+            end if; -- rising-edge(SYSCLK)
+        end process;
     
         INT_TRIGGERS                 <= ( 0      => '0',
                                           1      => MICROSEC_DOWN_INTR,
@@ -1595,7 +1602,10 @@ begin
                                         else '0';
 
     else generate
-        INT_TRIGGER                  <= '0';
+        IO_DATA_READ_INTRCTL                                        <= (others => 'X');
+        INT_TRIGGER                                                 <= '0';
+        INT_ENABLE                                                  <= (others => '0');
+        IO_WAIT_INTR                                                <= '0';
     end generate;
 
     -- UART
@@ -1603,7 +1613,8 @@ begin
         generic map (
             RX_FIFO_BIT_DEPTH        => MAX_RX_FIFO_BITS,
             TX_FIFO_BIT_DEPTH        => MAX_TX_FIFO_BITS,
-            COUNTER_BITS             => 16
+            COUNTER_BITS             => 16,
+            BAUDCLK_FREQUENCY        => SYSCLK_FREQUENCY
         )
         port map (
             -- CPU Interface
@@ -1629,7 +1640,8 @@ begin
         generic map (
             RX_FIFO_BIT_DEPTH        => MAX_RX_FIFO_BITS,
             TX_FIFO_BIT_DEPTH        => MAX_TX_FIFO_BITS,
-            COUNTER_BITS             => 16
+            COUNTER_BITS             => 16,
+            BAUDCLK_FREQUENCY        => SYSCLK_FREQUENCY
         )
         port map (
             -- CPU Interface
@@ -1691,52 +1703,6 @@ begin
             -- ASYNCHRONOUS RESET --
             ------------------------
             if RESET_n='0' then
-                INT_ENABLE                                          <= (others => '0');
-                IO_WAIT_INTR                                        <= '0';
-
-            -----------------------
-            -- RISING CLOCK EDGE --
-            -----------------------                
-            elsif rising_edge(SYSCLK) then
-
-                IO_WAIT_INTR                                        <= '0';
-
-                -- CPU Write?
-                if MEM_WRITE_ENABLE = '1' and INTR0_CS = '1' then
-
-                    -- Write to interrupt controller sets the enable mask bits.
-                    case MEM_ADDR(2) is
-                        when '0' =>
-
-                        when '1' =>
-                            INT_ENABLE                              <= MEM_DATA_WRITE(INTR_MAX downto 0);
-                    end case;
-
-                -- IO Read?
-                elsif MEM_READ_ENABLE = '1' and INTR0_CS = '1' then
-
-                    -- Read interrupt status, 32 bits showing which interrupts have been triggered.
-                    IO_DATA_READ_INTRCTL                            <= (others => '0');
-                    if MEM_ADDR(2) = '0' then
-                        IO_DATA_READ_INTRCTL(INTR_MAX downto 0)     <= INT_STATUS;
-                    else
-                        IO_DATA_READ_INTRCTL(INTR_MAX downto 0)     <= INT_ENABLE;
-                    end if;
-
-                end if;
-            end if; -- rising-edge(SYSCLK)
-        end process;
-
-        process(SYSCLK, RESET_n)
-        begin
-            ------------------------
-            -- HIGH LEVEL         --
-            ------------------------
-
-            ------------------------
-            -- ASYNCHRONOUS RESET --
-            ------------------------
-            if RESET_n='0' then
                 IO_WAIT_IOCTL                                       <= '0';
 
             -----------------------
@@ -1763,6 +1729,8 @@ begin
         IOCTL_CS  <= '1' when IO_SELECT = '1' and MEM_ADDR(11 downto 4) = "10000000"           -- Ioctl Range 0xFFFFF8xx 0x800-80F
                      else '0';
     else generate
+        IOCTL_CS                                                    <= '0';
+        IO_WAIT_IOCTL                                               <= '0';
         IOCTL_RDINT                                                 <= '0';
         IOCTL_WRINT                                                 <= '0';
     end generate;
@@ -1786,8 +1754,8 @@ begin
     
                 -- SoC Configuration.
                 IO_DATA_READ_SOCCFG                                 <= (others => 'X');
-                case MEM_ADDR(5 downto 2) is
-                    when "0000" => -- ZPU Id
+                case MEM_ADDR(7 downto 2) is
+                    when "000000" => -- ZPU Id
                         IO_DATA_READ_SOCCFG(31 downto 28)           <= "1010";                                                            -- Identifier to show SoC Configuration registers are implemented.
                         if ZPU_SMALL = 1 then
                             IO_DATA_READ_SOCCFG(15 downto 0)        <= std_logic_vector(to_unsigned(ZPU_ID_SMALL, 16));
@@ -1799,50 +1767,120 @@ begin
                             IO_DATA_READ_SOCCFG(15 downto 0)        <= std_logic_vector(to_unsigned(ZPU_ID_EVO, 16));
                         elsif ZPU_EVO_MINIMAL = 1 then
                             IO_DATA_READ_SOCCFG(15 downto 0)        <= std_logic_vector(to_unsigned(ZPU_ID_EVO_MINIMAL, 16));
+                        else
+                            IO_DATA_READ_SOCCFG(15 downto 0)        <= (others => '0');
                         end if;
 
-                    when "0001" => -- System Frequency
+                    when "000001" => -- System Frequency
                         IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SYSCLK_FREQUENCY, wordSize));
 
-                    when "0010" => -- Devices Implemented
-                        IO_DATA_READ_SOCCFG(14 downto 0)            <= to_std_logic(SOC_IMPL_BRAM) & 
-                                                                       to_std_logic(SOC_IMPL_RAM) & 
-                                                                       to_std_logic(SOC_IMPL_INSN_BRAM) &
-                                                                       to_std_logic(SOC_IMPL_SDRAM) & 
-                                                                       to_std_logic(SOC_IMPL_IOCTL) &
-                                                                       to_std_logic(SOC_IMPL_PS2) & 
-                                                                       to_std_logic(SOC_IMPL_SPI) & 
-                                                                       to_std_logic(SOC_IMPL_SD) & 
-                                                                       std_logic_vector(to_unsigned(SOC_SD_DEVICES, 2)) &
-                                                                       to_std_logic(SOC_IMPL_INTRCTL) & 
-                                                                       to_std_logic(SOC_IMPL_TIMER1) & 
+                    when "000010" => -- Sysbus Memory Frequency
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_SDRAM_CLK_FREQ, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "000011" => -- Wishbone Memory Frequency
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_WB_SDRAM_CLK_FREQ, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "000100" => -- Devices Implemented
+                        IO_DATA_READ_SOCCFG(22 downto 0)            <= to_std_logic(SOC_IMPL_WB)                                &
+                                                                       to_std_logic(SOC_IMPL_WB_SDRAM)                          & 
+                                                                       to_std_logic(SOC_IMPL_WB_I2C)                            & 
+                                                                       to_std_logic(SOC_IMPL_BRAM)                              & 
+                                                                       to_std_logic(SOC_IMPL_RAM)                               & 
+                                                                       to_std_logic(SOC_IMPL_INSN_BRAM)                         &
+                                                                       to_std_logic(SOC_IMPL_SDRAM)                             & 
+                                                                       to_std_logic(SOC_IMPL_IOCTL)                             &
+                                                                       to_std_logic(SOC_IMPL_PS2)                               & 
+                                                                       to_std_logic(SOC_IMPL_SPI)                               & 
+                                                                       to_std_logic(SOC_IMPL_SD)                                & 
+                                                                       std_logic_vector(to_unsigned(SOC_SD_DEVICES,         2)) &
+                                                                       to_std_logic(SOC_IMPL_INTRCTL)                           & 
+                                                                       std_logic_vector(to_unsigned(SOC_INTR_MAX,           5)) &
+                                                                       to_std_logic(SOC_IMPL_TIMER1)                            & 
                                                                        std_logic_vector(to_unsigned(2**SOC_TIMER1_COUNTERS, 3));
 
-                    when "0011" => -- BRAM Address
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, wordSize));
+                    when "000101" => -- BRAM Address
+                        if SOC_IMPL_BRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, wordSize));
+                        end if;
 
-                    when "0100" => -- BRAM Size
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END - SOC_ADDR_BRAM_START, wordSize));
+                    when "000110" => -- BRAM Size
+                        if SOC_IMPL_BRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END - SOC_ADDR_BRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
 
-                    when "0101" => -- RAM Address
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, wordSize));
+                    when "000111" => -- RAM Address
+                        if SOC_IMPL_RAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
 
-                    when "0110" => -- RAM Size
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_RAM_END - SOC_ADDR_RAM_START, wordSize));
+                    when "001000" => -- RAM Size
+                        if SOC_IMPL_RAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_RAM_END - SOC_ADDR_RAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
 
-                    when "0111" => -- Instruction BRAM Address
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_INSN_BRAM_START, wordSize));
+                    when "001001" => -- Instruction BRAM Address
+                        if SOC_IMPL_INSN_BRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_INSN_BRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
 
-                    when "1000" => -- Instruction BRAM Size
-                        IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_ADDR_INSN_BRAM_END - SOC_ADDR_INSN_BRAM_START, wordSize));
+                    when "001010" => -- Instruction BRAM Size
+                        if SOC_IMPL_INSN_BRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_INSN_BRAM_END - SOC_ADDR_INSN_BRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
 
-                    when "1001" => -- CPU Reset Address
+                    when "001011" => -- SDRAM Address
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "001100" => -- SDRAM Size
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END - SOC_ADDR_SDRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "001101" => -- WB SDRAM Address
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_WB_SDRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "001110" => -- WB SDRAM Size
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true then
+                            IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_WB_SDRAM_END - SOC_ADDR_WB_SDRAM_START, wordSize));
+                        else
+                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                        end if;
+
+                    when "001111" => -- CPU Reset Address
                         IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_RESET_ADDR_CPU, wordSize));
 
-                    when "1010" => -- CPU Memory Start Address
+                    when "010000" => -- CPU Memory Start Address
                         IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_START_ADDR_MEM, wordSize));
 
-                    when "1011" => -- Stack Start Address
+                    when "010001" => -- Stack Start Address
                         IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SOC_STACK_ADDR, wordSize));
 
                     when others =>
@@ -1850,8 +1888,10 @@ begin
             end if; -- rising-edge(SYSCLK)
         end process;
 
-        SOCCFG_CS             <= '1' when IO_SELECT = '1' and MEM_ADDR(11 downto 6) = "111100"        -- SoC COnfig Range 0xF00-F40, step 4 for 32 bit registers.
+        SOCCFG_CS             <= '1' when IO_SELECT = '1' and MEM_ADDR(11 downto 8) = "1111"          -- SoC Config Range 0xF00-FF0, step 4 for 32 bit registers.
                                  else '0';
+    else generate
+        IO_DATA_READ_SOCCFG                                         <= (others => '0');
     end generate;
     ------------------------------------------------------------------------------------
     -- END Direct I/O devices
@@ -1914,34 +1954,45 @@ begin
     ZPUWBSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
 
         ZPUWBSDRAM : entity work.WBSDRAM
+            generic map (
+                SDRAM_ROWS       => SOC_WB_SDRAM_ROWS,              -- Number of Rows in the SDRAM.
+                SDRAM_COLUMNS    => SOC_WB_SDRAM_COLUMNS,           -- Number of Columns in an SDRAM page (ie. 1 row).
+                SDRAM_BANKS      => SOC_WB_SDRAM_BANKS,             -- Number of banks in the SDRAM.
+                SDRAM_DATAWIDTH  => SOC_WB_SDRAM_DATAWIDTH,         -- Data width of SDRAM chip (ie. 16, 32).
+                SDRAM_CLK_FREQ   => SOC_WB_SDRAM_CLK_FREQ,          -- Frequency of SDRAM clock in Hertz.
+                SDRAM_tRCD       => SOC_WB_SDRAM_tRCD,              -- tRCD - RAS to CAS minimum period (in ns), ie. 20ns -> 2 cycles@100MHz
+                SDRAM_tRP        => SOC_WB_SDRAM_tRP,               -- tRP  - Precharge delay, min time for a precharge command to complete (in ns), ie. 15ns -> 2 cycles@100MHz
+                SDRAM_tRFC       => SOC_WB_SDRAM_tRFC,              -- tRFC - Auto-refresh minimum time to complete (in ns), ie. 66ns
+                SDRAM_tREF       => SOC_WB_SDRAM_tREF               -- tREF - period of time a complete refresh of all rows is made within (in ms).
+            )
             port map (
                 -- SDRAM Interface
-                SDRAM_CLK        => MEMCLK,           -- sdram is accessed at 100MHz
-                SDRAM_RST        => not RESET_n,      -- reset the sdram controller.
-                SDRAM_CKE        => SDRAM_CKE,        -- clock enable.
-                SDRAM_DQ         => SDRAM_DQ,         -- 16 bit bidirectional data bus
-                SDRAM_ADDR       => SDRAM_ADDR,       -- 12 bit multiplexed address bus
-                SDRAM_DQM        => SDRAM_DQM,        -- two byte masks
-                SDRAM_BA         => SDRAM_BA,         -- two banks
-                SDRAM_CS_n       => SDRAM_CS_n,       -- a single chip select
-                SDRAM_WE_n       => SDRAM_WE_n,       -- write enable
-                SDRAM_RAS_n      => SDRAM_RAS_n,      -- row address select
-                SDRAM_CAS_n      => SDRAM_CAS_n,      -- columns address select
-                SDRAM_READY      => SDRAM_READY,      -- sd ready.
+                SDRAM_CLK        => MEMCLK,                         -- sdram clock running at an offset from system clock.
+                SDRAM_RST        => not RESET_n,                    -- reset the sdram controller.
+                SDRAM_CKE        => SDRAM_CKE,                      -- clock enable.
+                SDRAM_DQ         => SDRAM_DQ,                       -- 16 bit bidirectional data bus
+                SDRAM_ADDR       => SDRAM_ADDR,                     -- 12 bit multiplexed address bus
+                SDRAM_DQM        => SDRAM_DQM,                      -- two byte masks
+                SDRAM_BA         => SDRAM_BA,                       -- two banks
+                SDRAM_CS_n       => SDRAM_CS_n,                     -- a single chip select
+                SDRAM_WE_n       => SDRAM_WE_n,                     -- write enable
+                SDRAM_RAS_n      => SDRAM_RAS_n,                    -- row address select
+                SDRAM_CAS_n      => SDRAM_CAS_n,                    -- columns address select
+                SDRAM_READY      => SDRAM_READY,                    -- sd ready.
 
                 -- WishBone interface.
-                WB_CLK           => WB_CLK_I,         -- 100MHz chipset clock to which sdram state machine is synchonized    
-                WB_RST_I         => not RESET_n,      -- Reset baased on CPU reset active high.
-                WB_DATA_I        => WB_DAT_O,         -- data input from chipset/cpu
-                WB_DATA_O        => WB_DATA_READ_SDRAM, -- data output to chipset/cpu
+                WB_CLK           => WB_CLK_I,                       -- clock to which sdram state machine is synchonized    
+                WB_RST_I         => not RESET_n,                    -- Reset baased on CPU reset active high.
+                WB_DATA_I        => WB_DAT_O,                       -- data input from chipset/cpu
+                WB_DATA_O        => WB_DATA_READ_SDRAM,             -- data output to chipset/cpu
                 WB_ACK_O         => WB_SDRAM_ACK, 
                 WB_ADR_I         => WB_ADR_O(ADDR_BIT_WB_SDRAM_RANGE), -- lower 2 bits are ignored.
                 WB_SEL_I         => WB_SEL_O, 
-                WB_CTI_I         => WB_CTI_O,         -- cycle type. 
+                WB_CTI_I         => WB_CTI_O,                       -- cycle type. 
                 WB_STB_I         => WB_SDRAM_STB, 
-                WB_CYC_I         => WB_CYC_O,         -- cpu/chipset requests cycle
-                WB_WE_I          => WB_SDRAM_WREN,    -- cpu/chipset requests write   
-                WB_TGC_I         => "0000000",        -- cycle tag
+                WB_CYC_I         => WB_CYC_O,                       -- cpu/chipset requests cycle
+                WB_WE_I          => WB_SDRAM_WREN,                  -- cpu/chipset requests write   
+                WB_TGC_I         => "0000000",                      -- cycle tag
                 WB_HALT_O        => open,
                 WB_ERR_O         => open
             );
@@ -1982,6 +2033,11 @@ begin
                                     else '0';
 
         -- SDRAM clock based on system clock.
+        SDRAM_CLK                <= MEMCLK;
+    else generate
+        WB_SDRAM_SELECT          <= '0';
+        WB_SDRAM_WREN            <= '0';
+        WB_SDRAM_STB             <= '0';
         SDRAM_CLK                <= MEMCLK;
     end generate;
 
@@ -2194,49 +2250,56 @@ begin
             if RTC_TICK_HALT = '0' then
                 RTC_MICROSEC_TICK                                   <= RTC_MICROSEC_TICK+1;
             end if;
-            if RTC_MICROSEC_TICK = (SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100)) then               -- Sys clock has to be > 1MHz or will not be accurate.
+            if RTC_MICROSEC_TICK = ((SYSCLK_FREQUENCY/1000000) -1) then                                 -- Sys clock has to be > 1MHz or will not be accurate.
                 RTC_MICROSEC_TICK                                   <= 0;
                 RTC_MICROSEC_COUNTER                                <= RTC_MICROSEC_COUNTER + 1;
-            end if;
-            if RTC_MICROSEC_COUNTER = 1000 then
-                RTC_MICROSEC_COUNTER                                <= 0;
-                RTC_MILLISEC_COUNTER                                <= RTC_MILLISEC_COUNTER + 1;
-            end if;
-            if RTC_MILLISEC_COUNTER = 1000 then
-                RTC_SECOND_COUNTER                                  <= RTC_SECOND_COUNTER + 1; 
-                RTC_MILLISEC_COUNTER                                <= 0;
-            end if;
-            if RTC_SECOND_COUNTER = 60 then
-                RTC_MINUTE_COUNTER                                  <= RTC_MINUTE_COUNTER + 1;
-                RTC_SECOND_COUNTER                                  <= 0;
-            end if;
-            if RTC_MINUTE_COUNTER = 60 then
-                RTC_HOUR_COUNTER                                    <= RTC_HOUR_COUNTER + 1;
-                RTC_MINUTE_COUNTER                                  <= 0;
-            end if;
-            if RTC_HOUR_COUNTER = 24 then
-                RTC_DAY_COUNTER                                     <= RTC_DAY_COUNTER + 1;
-                RTC_HOUR_COUNTER                                    <= 0;
-            end if;
-            if (RTC_DAY_COUNTER = 31 and (RTC_MONTH_COUNTER = 4 or RTC_MONTH_COUNTER = 6 or RTC_MONTH_COUNTER = 9 or RTC_MONTH_COUNTER = 11)) 
-               or
-               (RTC_DAY_COUNTER = 32 and RTC_MONTH_COUNTER /= 4 and RTC_MONTH_COUNTER /= 6 and RTC_MONTH_COUNTER /= 9 and RTC_MONTH_COUNTER /= 11)
-               or
-               (RTC_DAY_COUNTER = 29 and RTC_MONTH_COUNTER = 2 and std_logic_vector(to_unsigned(RTC_YEAR_COUNTER, 2)) /= "00")
-               or
-               (RTC_DAY_COUNTER = 30 and RTC_MONTH_COUNTER = 2 and std_logic_vector(to_unsigned(RTC_YEAR_COUNTER, 2))  = "00")
-            then
-                RTC_MONTH_COUNTER                                   <= RTC_MONTH_COUNTER + 1;
-                RTC_DAY_COUNTER                                     <= 1;
-            end if;
-            if RTC_MONTH_COUNTER = 13 then
-                RTC_YEAR_COUNTER                                    <= RTC_YEAR_COUNTER + 1;
-                RTC_MONTH_COUNTER                                   <= 1;
+
+                if RTC_MICROSEC_COUNTER = (1000 - 1) then
+                    RTC_MICROSEC_COUNTER                            <= 0;
+                    RTC_MILLISEC_COUNTER                            <= RTC_MILLISEC_COUNTER + 1;
+
+                    if RTC_MILLISEC_COUNTER = (1000 - 1) then
+                        RTC_SECOND_COUNTER                          <= RTC_SECOND_COUNTER + 1; 
+                        RTC_MILLISEC_COUNTER                        <= 0;
+
+                        if RTC_SECOND_COUNTER = (60 - 1) then
+                            RTC_MINUTE_COUNTER                      <= RTC_MINUTE_COUNTER + 1;
+                            RTC_SECOND_COUNTER                      <= 0;
+
+                            if RTC_MINUTE_COUNTER = (60 - 1) then
+                                RTC_HOUR_COUNTER                    <= RTC_HOUR_COUNTER + 1;
+                                RTC_MINUTE_COUNTER                  <= 0;
+
+                                if RTC_HOUR_COUNTER = (24 - 1) then
+                                    RTC_DAY_COUNTER                 <= RTC_DAY_COUNTER + 1;
+                                    RTC_HOUR_COUNTER                <= 0;
+
+                                    if (RTC_DAY_COUNTER = 31 and (RTC_MONTH_COUNTER = 4 or RTC_MONTH_COUNTER = 6 or RTC_MONTH_COUNTER = 9 or RTC_MONTH_COUNTER = 11)) 
+                                       or
+                                       (RTC_DAY_COUNTER = 32 and RTC_MONTH_COUNTER /= 4 and RTC_MONTH_COUNTER /= 6 and RTC_MONTH_COUNTER /= 9 and RTC_MONTH_COUNTER /= 11)
+                                       or
+                                       (RTC_DAY_COUNTER = 29 and RTC_MONTH_COUNTER = 2 and std_logic_vector(to_unsigned(RTC_YEAR_COUNTER, 2)) /= "00")
+                                       or
+                                       (RTC_DAY_COUNTER = 30 and RTC_MONTH_COUNTER = 2 and std_logic_vector(to_unsigned(RTC_YEAR_COUNTER, 2))  = "00")
+                                    then
+                                        RTC_MONTH_COUNTER           <= RTC_MONTH_COUNTER + 1;
+                                        RTC_DAY_COUNTER             <= 1;
+
+                                        if RTC_MONTH_COUNTER = 13 then
+                                            RTC_YEAR_COUNTER        <= RTC_YEAR_COUNTER + 1;
+                                            RTC_MONTH_COUNTER       <= 1;
+                                        end if;
+                                    end if;
+                                end if;
+                            end if;
+                        end if;
+                    end if;
+                end if;
             end if;
 
             -- Down and up counters, each have independent ticks which reset on counter set, this guarantees timer is accurate.
             MICROSEC_DOWN_TICK                                      <= MICROSEC_DOWN_TICK+1;
-            if MICROSEC_DOWN_TICK = (SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100)) then               -- Sys clock has to be > 1MHz or will not be accurate.
+            if MICROSEC_DOWN_TICK = ((SYSCLK_FREQUENCY/1000000) -1) then                            -- Sys clock has to be > 1MHz or will not be accurate.
                 MICROSEC_DOWN_TICK                                  <= 0;
 
                 -- Decrement microsecond down counter if not yet zero.
@@ -2249,7 +2312,7 @@ begin
             end if;
 
             MILLISEC_DOWN_TICK                                      <= MILLISEC_DOWN_TICK+1;
-            if MILLISEC_DOWN_TICK = (SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100))*1000 then          -- Sys clock has to be > 1MHz or will not be accurate.
+            if MILLISEC_DOWN_TICK = (((SYSCLK_FREQUENCY/1000000)*1000) -1) then                     -- Sys clock has to be > 1MHz or will not be accurate.
                 MILLISEC_DOWN_TICK                                  <= 0;
 
                 -- Decrement millisecond down counter if not yet zero.
@@ -2262,13 +2325,13 @@ begin
             end if;
 
             MILLISEC_UP_TICK                                        <= MILLISEC_UP_TICK+1;
-            if MILLISEC_UP_TICK = (SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100))*1000 then            -- Sys clock has to be > 1MHz or will not be accurate.
+            if MILLISEC_UP_TICK = (((SYSCLK_FREQUENCY/1000000)*1000) - 1) then                      -- Sys clock has to be > 1MHz or will not be accurate.
                 MILLISEC_UP_TICK                                    <= 0;
                 MILLISEC_UP_COUNTER                                 <= MILLISEC_UP_COUNTER + 1;
             end if;
 
             SECOND_DOWN_TICK                                        <= SECOND_DOWN_TICK+1;
-            if SECOND_DOWN_TICK = (SYSCLK_FREQUENCY/(SYSCLK_FREQUENCY/100))*1000000 then         -- Sys clock has to be > 1MHz or will not be accurate.
+            if SECOND_DOWN_TICK = (((SYSCLK_FREQUENCY/1000000)*1000000) - 1) then                   -- Sys clock has to be > 1MHz or will not be accurate.
                 SECOND_DOWN_TICK                                    <= 0;
 
                 -- Decrement second down counter if not yet zero.
