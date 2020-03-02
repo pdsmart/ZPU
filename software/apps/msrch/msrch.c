@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// Name:            ht.c
+// Name:            msrch.c
 // Created:         July 2019
 // Author(s):       Philip Smart
 // Description:     Standalone App for the ZPU test application.
@@ -48,15 +48,16 @@
 #include "xprintf.h"
 #include "utils.h"
 #include "zputa_app.h"
-#include "ht.h"
+#include "msrch.h"
 
 // Utility functions.
 #include "tools.c"
 
 // Version info.
 #define VERSION      "v1.0"
-#define VERSION_DATE "18/07/2019"
-#define APP_NAME     "HT"
+#define VERSION_DATE "30/01/2020"
+#define APP_NAME     "MSRCH"
+
 
 // Main entry and start point of a ZPUTA Application. Only 2 parameters are catered for and a 32bit return code, additional parameters can be added by changing the appcrt0.s
 // startup code to add them to the stack prior to app() call.
@@ -68,37 +69,30 @@ uint32_t app(uint32_t param1, uint32_t param2)
     // Initialisation.
     //
     char      *ptr = (char *)param1;
+    long      startAddr;
+    long      endAddr;
+    long      bitWidth;
+    long      srchValue;
 
-    xputs("Testing RTC & Up/Down Timers\n");
-    TIMER_MILLISECONDS_UP = 60000;
-xputs("Timer Set\n");
-    while(getserial_nonblocking() == -1)
+    if (!xatoi(&ptr, &startAddr))
     {
-xputs("While loop\n");
-        if(TIMER_MICROSECONDS_DOWN == 0)
+        xprintf("Illegal <start addr> value.\n");
+    } else if (!xatoi(&ptr, &endAddr))
+    {
+        xprintf("Illegal <end addr> value.\n");
+    } else if (!xatoi(&ptr, &srchValue))
+        xprintf("Illegal <value> to search.\n");
+    else
+    {
+        // Optional width
+        xatoi(&ptr,  &bitWidth);
+        if(bitWidth != 8 && bitWidth != 16 && bitWidth != 32)
         {
-            TIMER_MICROSECONDS_DOWN = 10000000;
-            xputs("\r\nuSec down counter expired.\n");
-        }
-        if(TIMER_MILLISECONDS_DOWN == 0)
-        {
-            TIMER_MILLISECONDS_DOWN = 60000;
-            xputs("\r\nmSec down counter expired.\n");
-        }
-        if(TIMER_SECONDS_DOWN == 0)
-        {
-            TIMER_SECONDS_DOWN = 60;
-            xputs("\r\nSecond down counter expired.\n");
-        }
-        if(TIMER_MILLISECONDS_UP == 60000)
-        {
-            TIMER_MILLISECONDS_UP = 0;
-            xputs("\r\nmSec up counter expired.\n");
+            bitWidth = 32;
         }
 
-        xprintf("%02d/%02d/%02d %02d:%02d:%02d.%03d%03d %10lu %10lu %10lu %10lu\r", RTC_YEAR, RTC_MONTH, RTC_DAY, RTC_HOUR, RTC_MINUTE, RTC_SECOND, RTC_MILLISECONDS, RTC_MICROSECONDS, TIMER_MICROSECONDS_DOWN, TIMER_MILLISECONDS_DOWN, TIMER_SECONDS_DOWN, TIMER_MILLISECONDS_UP);
+        xputs("Not implemented, please complete code!\n");
     }
-    xputs("\n");
 
     return(0);
 }

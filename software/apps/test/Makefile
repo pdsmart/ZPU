@@ -35,30 +35,9 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #########################################################################################################
-BASE	       = zpu-elf
-CC             = $(BASE)-gcc
-LD             = $(BASE)-gcc
-AS             = $(BASE)-as
-CP             = $(BASE)-objcopy
-DUMP           = $(BASE)-objdump
 
-FS_SUBDIRS    := falloc fattr fcat fcd fclose fconcat fcp fdel fdir fdrive fdump finspect flabel fmkdir
-FS_SUBDIRS    += fmkfs fopen fread frename fsave fseek fshowdir fstat ftime ftrunc fwrite fxtract
-DISK_SUBDIRS  := ddump dstat
-BUFFER_SUBDIRS:= bdump bedit bread bwrite bfill blen
-MEM_SUBDIRS   := mclear mcopy mdiff mdump meb meh mew mperf msrch mtest
-HW_SUBDIRS    := hr ht
-TST_SUBDIRS   := dhry coremark
-MISC_SUBDIRS  := help time test
-SUBDIRS       := $(FS_SUBDIRS) $(DISK_SUBDIRS) $(BUFFER_SUBDIRS) $(MEM_SUBDIRS) $(HW_SUBDIRS) $(TST_SUBDIRS) $(MISC_SUBDIRS)
-BASEDIR        = ../..
-TARGETS       := all clean install
-
-# Our target.
-$(TARGETS): $(SUBDIRS)
-#
-$(SUBDIRS):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
-
-install:
-.PHONY: $(TARGETS) $(SUBDIRS)
+APP_NAME       = test
+APP_DIR        = ..
+BASEDIR        = ../../..
+CFLAGS         = -I. -I$(COMMON_DIR) -I$(FATFS_DIR) -I$(ZPUTADIR) -I$(INCLUDE_DIR) -c -O0 -ffunction-sections -fdata-sections $(ZPUOPTS) -DZPU -DZPUTA_BASEADDR=$(ZPUTA_BASEADDR) -DZPUTA_APPADDR=$(ZPUTA_APPADDR)
+include        $(APP_DIR)/Makefile.inc

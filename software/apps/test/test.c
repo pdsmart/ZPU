@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// Name:            ht.c
+// Name:            test.c
 // Created:         July 2019
 // Author(s):       Philip Smart
 // Description:     Standalone App for the ZPU test application.
@@ -13,7 +13,7 @@
 // Credits:         
 // Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
 //
-// History:         July 2019    - Initial framework creation.
+// History:         January 2020    - Initial framework creation.
 //
 // Notes:           See Makefile to enable/disable conditional components
 //
@@ -48,15 +48,15 @@
 #include "xprintf.h"
 #include "utils.h"
 #include "zputa_app.h"
-#include "ht.h"
+#include "test.h"
 
 // Utility functions.
 #include "tools.c"
 
 // Version info.
 #define VERSION      "v1.0"
-#define VERSION_DATE "18/07/2019"
-#define APP_NAME     "HT"
+#define VERSION_DATE "23/01/2020"
+#define APP_NAME     "TEST"
 
 // Main entry and start point of a ZPUTA Application. Only 2 parameters are catered for and a 32bit return code, additional parameters can be added by changing the appcrt0.s
 // startup code to add them to the stack prior to app() call.
@@ -67,38 +67,35 @@ uint32_t app(uint32_t param1, uint32_t param2)
 {
     // Initialisation.
     //
-    char      *ptr = (char *)param1;
+    //uint32_t *pWordArray = malloc(2048);
+    //uint16_t *pHwordArray = malloc(2048);
+    //uint8_t  *pByteArray  = malloc(2048);
+    static uint32_t wordArray[2048];
+    static uint16_t hwordArray[2048];
+    static uint8_t  byteArray[2048];
+    static uint     idx;
+    static uint32_t sum;
 
-    xputs("Testing RTC & Up/Down Timers\n");
-    TIMER_MILLISECONDS_UP = 60000;
-xputs("Timer Set\n");
-    while(getserial_nonblocking() == -1)
+    xputs("This is a test.\n");
+    xputs("Print another line.\n");
+    xprintf("This is another test.\n");
+    xputs("All done\n");
+
+    // These are just memory tests, the main test is in premain where a closer knit write operation of BSS fails, thus trying to debug.
+    for(idx=0, sum=0; idx < 2048; idx++)
     {
-xputs("While loop\n");
-        if(TIMER_MICROSECONDS_DOWN == 0)
-        {
-            TIMER_MICROSECONDS_DOWN = 10000000;
-            xputs("\r\nuSec down counter expired.\n");
-        }
-        if(TIMER_MILLISECONDS_DOWN == 0)
-        {
-            TIMER_MILLISECONDS_DOWN = 60000;
-            xputs("\r\nmSec down counter expired.\n");
-        }
-        if(TIMER_SECONDS_DOWN == 0)
-        {
-            TIMER_SECONDS_DOWN = 60;
-            xputs("\r\nSecond down counter expired.\n");
-        }
-        if(TIMER_MILLISECONDS_UP == 60000)
-        {
-            TIMER_MILLISECONDS_UP = 0;
-            xputs("\r\nmSec up counter expired.\n");
-        }
-
-        xprintf("%02d/%02d/%02d %02d:%02d:%02d.%03d%03d %10lu %10lu %10lu %10lu\r", RTC_YEAR, RTC_MONTH, RTC_DAY, RTC_HOUR, RTC_MINUTE, RTC_SECOND, RTC_MILLISECONDS, RTC_MICROSECONDS, TIMER_MICROSECONDS_DOWN, TIMER_MILLISECONDS_DOWN, TIMER_SECONDS_DOWN, TIMER_MILLISECONDS_UP);
+	    sum += wordArray[idx];
     }
-    xputs("\n");
+
+    for(idx=0, sum=0; idx < 2048; idx++)
+    {
+	    sum += hwordArray[idx];
+    }
+
+    for(idx=0, sum=0; idx < 2048; idx++)
+    {
+	    sum += byteArray[idx];
+    }
 
     return(0);
 }

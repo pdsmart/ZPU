@@ -51,6 +51,7 @@
 #define BUILTIN_MEM_DIFF            0
 #define BUILTIN_MEM_DUMP            0
 #define BUILTIN_MEM_PERF            0
+#define BUILTIN_MEM_SRCH            0
 #define BUILTIN_MEM_TEST            0
 #define BUILTIN_MEM_EDIT_BYTES      1
 #define BUILTIN_MEM_EDIT_HWORD      0

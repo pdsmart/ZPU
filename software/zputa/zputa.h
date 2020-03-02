@@ -43,7 +43,7 @@
 #define BUILTIN_BUFFER_FILL         0
 #define BUILTIN_BUFFER_LEN          0
 // Memory components to be embedded in the program.
-#define BUILTIN_MEM_CLEAR           0
+#define BUILTIN_MEM_CLEAR           1
 #define BUILTIN_MEM_COPY            0
 #define BUILTIN_MEM_DIFF            0
 #define BUILTIN_MEM_DUMP            1
@@ -51,6 +51,7 @@
 #define BUILTIN_MEM_EDIT_HWORD      1
 #define BUILTIN_MEM_EDIT_WORD       1
 #define BUILTIN_MEM_PERF            0
+#define BUILTIN_MEM_SRCH            1
 #define BUILTIN_MEM_TEST            0
 // Hardware components to be embedded in the program.
 #define BUILTIN_HW_SHOW_REGISTER    0

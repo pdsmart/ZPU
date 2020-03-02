@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// Name:            flabel.h
+// Name:            msrch.h
 // Created:         July 2018
 // Author(s):       Philip Smart
 // Description:     Standalone App for the ZPU test application.
@@ -8,7 +8,7 @@
 // Credits:         
 // Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
 //
-// History:         July 2019  - Initial framework created.
+// History:         December 2019  - Initial framework created.
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This source file is free software: you can redistribute it and/or modify
@@ -24,8 +24,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef FLABEL_H
-#define FLABEL_H
+#ifndef MSRCH_H
+#define MSRCH_H
 
 // Constants.
 
@@ -50,9 +50,9 @@
 #define BUILTIN_MEM_COPY            0
 #define BUILTIN_MEM_DIFF            0
 #define BUILTIN_MEM_DUMP            0
-#define BUILTIN_MEM_PERF            0
-#define BUILTIN_MEM_SRCH            0
 #define BUILTIN_MEM_TEST            0
+#define BUILTIN_MEM_PERF            0
+#define BUILTIN_MEM_SRCH            1
 #define BUILTIN_MEM_EDIT_BYTES      0
 #define BUILTIN_MEM_EDIT_HWORD      0
 #define BUILTIN_MEM_EDIT_WORD       0
@@ -80,7 +80,7 @@
 #define BUILTIN_FS_CHANGEDIR        0
 #define BUILTIN_FS_CHANGEDRIVE      0
 #define BUILTIN_FS_SHOWDIR          0
-#define BUILTIN_FS_SETLABEL         1
+#define BUILTIN_FS_SETLABEL         0
 #define BUILTIN_FS_CREATEFS         0
 #define BUILTIN_FS_LOAD             0
 #define BUILTIN_FS_DUMP             0
@@ -105,4 +105,4 @@ SOC_CONFIG                   *cfgSoC;
 // Global scope variables in the app memory space.
 volatile UINT                Timer;                                    /* Performance timer (100Hz increment) */
 
-#endif // FLABEL_H
+#endif // MSRCH_H

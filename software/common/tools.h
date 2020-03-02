@@ -80,7 +80,8 @@ extern "C" {
 #define CMD_MEM_EDIT_HWORD         66
 #define CMD_MEM_EDIT_WORD          67
 #define CMD_MEM_PERF               68
-#define CMD_MEM_TEST               69
+#define CMD_MEM_SRCH               69
+#define CMD_MEM_TEST               70
 #define CMD_HW_INTR_DISABLE        80              // HW Commands Range 80 .. 99
 #define CMD_HW_INTR_ENABLE         81
 #define CMD_HW_SHOW_REGISTER       82
@@ -311,6 +312,9 @@ static t_cmdstruct cmdTable[] = {
     #if (defined(BUILTIN_MEM_PERF) && BUILTIN_MEM_PERF == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
     { "mperf",      BUILTIN_MEM_PERF,         CMD_MEM_PERF,         CMD_GROUP_MEM },
     #endif
+    #if (defined(BUILTIN_MEM_SRCH) && BUILTIN_MEM_SRCH == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
+    { "msrch",      BUILTIN_MEM_SRCH,         CMD_MEM_SRCH,         CMD_GROUP_MEM },
+    #endif
     #if (defined(BUILTIN_MEM_TEST) && BUILTIN_MEM_TEST == 1) || (defined(BUILTIN_MISC_HELP) == 1 && BUILTIN_MISC_HELP == 1)
     { "mtest",      BUILTIN_MEM_TEST,         CMD_MEM_TEST,         CMD_GROUP_MEM },
     #endif
@@ -427,6 +431,7 @@ static t_helpstruct helpTable[] = {
     { CMD_MEM_EDIT_HWORD,   "<addr> <h-word> [...]",              "Edit memory (H-Word)" },
     { CMD_MEM_EDIT_WORD,    "<addr> <word> [...]",                "Edit memory (Word)" },
     { CMD_MEM_PERF,         "<start> <end> [<width>] [<xfersz>]", "Test performance" },
+    { CMD_MEM_SRCH,         "<start> <end> <value>",              "Search memory for value" },
     { CMD_MEM_TEST,         "[<start> [<end>] [iter] [tests]]",   "Test memory" },
     // Hardware commands.
     { CMD_HW_INTR_DISABLE,  "",                                   "Disable Interrupts" },

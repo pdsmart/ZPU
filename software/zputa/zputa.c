@@ -233,6 +233,7 @@ int cmdProcessor(void)
     char              line[120];
     uint8_t           diskInitialised = 0;
     uint8_t           fsInitialised = 0;
+    uint8_t           trying = 0;
     long              p1;
     long              p2;
     long              p3;
@@ -923,6 +924,43 @@ int cmdProcessor(void)
                 break;
           #endif
 
+          #if defined(BUILTIN_MEM_SRCH) && BUILTIN_MEM_SRCH == 1
+            // Search memory for first occurrence of a word.
+            case CMD_MEM_SRCH:
+                if (!xatoi(&ptr, &p1))
+                {
+                    if(cfgSoC.implInsnBRAM)     { p1 = cfgSoC.addrInsnBRAM; }
+                    else if(cfgSoC.implBRAM)    { p1 = cfgSoC.addrBRAM; }
+                    else if(cfgSoC.implRAM)     { p1 = cfgSoC.addrRAM; }
+                    else if(cfgSoC.implSDRAM)   { p1 = cfgSoC.addrSDRAM; }
+                    else if(cfgSoC.implWBSDRAM) { p1 = cfgSoC.addrWBSDRAM; }
+                    else { p1 = cfgSoC.stackStartAddr - 512; }
+                }
+                if (!xatoi(&ptr,  &p2))
+                {
+                    if(cfgSoC.implInsnBRAM)     { p2 = cfgSoC.sizeInsnBRAM; }
+                    else if(cfgSoC.implBRAM)    { p2 = cfgSoC.sizeBRAM; }
+                    else if(cfgSoC.implRAM)     { p2 = cfgSoC.sizeRAM; }
+                    else if(cfgSoC.implSDRAM)   { p2 = cfgSoC.sizeSDRAM; }
+                    else if(cfgSoC.implWBSDRAM) { p2 = cfgSoC.sizeWBSDRAM; }
+                    else { p2 = cfgSoC.stackStartAddr + 8; }
+                }
+                if (!xatoi(&ptr,  &p3))
+                {
+                    p3 = 0;
+                }
+                xputs("Searching..\n");
+                for(memAddr=p1; memAddr < p2; memAddr+=4)
+                {
+                    if(*(uint32_t *)(memAddr) == p3)
+                    {
+                        xprintf("%08lx->%08lx\n", memAddr, *(uint32_t *)(memAddr));
+                    }
+                }
+                xputs("\n");
+                break;
+          #endif
+
           #if defined(BUILTIN_MEM_TEST) && BUILTIN_MEM_TEST == 1
             // Test memory, [<start addr> [<end addr>] [<iter>] [<test bitmap>]]
             case CMD_MEM_TEST:
@@ -1065,8 +1103,8 @@ int cmdProcessor(void)
           #endif
 
             // Test screen
-            case CMD_MISC_TEST:
-                break;
+            //case CMD_MISC_TEST:
+            //    break;
 
             // Configuration information
             case CMD_MISC_INFO:
@@ -1084,8 +1122,45 @@ int cmdProcessor(void)
                     {
                         // Append the app extension to the command and try to execute.
                         src1FileName=getStrParam(&ptr);
-                        xsprintf(&line[40], "%d:\\%s\\%s.%s", APP_CMD_BIN_DRIVE, APP_CMD_BIN_DIR, src1FileName, APP_CMD_EXTENSION);
-                        retCode = fileExec(&line[40], APP_CMD_LOAD_ADDR, APP_CMD_EXEC_ADDR, EXEC_MODE_CALL, (uint32_t) ++ptr, 0, (uint32_t)&G, (uint32_t)&cfgSoC);
+
+                        // The user normally just types the command, but it is possible to type the drive and or path and or extension, so cater
+                        // for these possibilities by trial. An alternate way is to disect the entered command but I think this would take more code space.
+                        trying = 1;
+                        while(trying)
+                        {
+                            switch(trying)
+                            {
+                                // Try formatting with all the required drive and path fields.
+                                case 1:
+                                    xsprintf(&line[40], "%d:\\%s\\%s.%s", APP_CMD_BIN_DRIVE, APP_CMD_BIN_DIR, src1FileName, APP_CMD_EXTENSION);
+                                    break;
+                                   
+                                // Try command as is.
+                                case 2:
+                                    xsprintf(&line[40], "%s");
+                                    break;
+                                     
+                                // Try command as is but with drive and bin dir.
+                                case 3: 
+                                    xsprintf(&line[40], "%d:\\%s\\%s", APP_CMD_BIN_DRIVE, APP_CMD_BIN_DIR, src1FileName);
+                                    break;
+                                   
+                                // Try command as is but with just drive.
+                                case 4: 
+                                default:
+                                    xsprintf(&line[40], "%d:\\%s", APP_CMD_BIN_DRIVE, src1FileName);
+                                    break;
+                            }
+
+                            retCode = fileExec(&line[40], APP_CMD_LOAD_ADDR, APP_CMD_EXEC_ADDR, EXEC_MODE_CALL, (uint32_t) ++ptr, 0, (uint32_t)&G, (uint32_t)&cfgSoC);
+                            if(retCode == 0xffffffff && trying <= 3)
+                            {
+                                trying++;
+                            } else
+                            {
+                                trying = 0;
+                            }
+                        }
                     }
                     if(!diskInitialised || !fsInitialised || retCode == 0xffffffff)
                     {
