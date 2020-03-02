@@ -53,4 +53,13 @@ software/startup/iocp_bram_0x000000.ld
 software/startup/old/
 software/startup/zputa_standalone_boot_in_bram.ld
 software/startup/zputa_with_tiny_iocp_in_bram.ld
-
+build/ReVerSE-U16.qpf
+build/ddd
+cpu/zpu_core_evo.vhd.bakPreMultChange
+devices/WishBone/SDRAM.old/
+devices/WishBone/SDRAM/old/
+devices/sysbus/SDRAM.bak/
+devices/sysbus/SDRAM/old/
+nohup.out
+software/micropython/
+software/x/
