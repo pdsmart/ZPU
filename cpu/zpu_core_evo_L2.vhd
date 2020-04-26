@@ -98,7 +98,7 @@ architecture arch of evo_L2cache is
 
 begin
 
-    -- Correctly assing the Little Endian value to the correct array, byte writes the data is in '7 downto 0', h-word writes
+    -- Correctly assigning the Little Endian value to the correct array, byte writes the data is in '7 downto 0', h-word writes
     -- the data is in '15 downto 0'.
     --
     RAM0_DATA <= memAWrite(7 downto 0);

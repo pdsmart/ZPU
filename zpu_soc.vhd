@@ -274,6 +274,7 @@ architecture rtl of zpu_soc is
     signal MEM_WRITE_BYTE_ENABLE  :       std_logic; 
     signal MEM_WRITE_HWORD_ENABLE :       std_logic; 
     signal MEM_READ_ENABLE        :       std_logic;
+    signal MEM_READ_ENABLE_LAST   :       std_logic;
     signal MEM_DATA_READ_INSN     :       std_logic_vector(WORD_32BIT_RANGE);
     signal MEM_ADDR_INSN          :       std_logic_vector(ADDR_BIT_RANGE);
     signal MEM_READ_ENABLE_INSN   :       std_logic;
@@ -441,6 +442,7 @@ begin
                 interrupt_done       => INT_DONE,               -- Interrupt service routine completed/done.
                 break                => open,
                 debug_txd            => UART2_TX,               -- Debug serial output.
+                --
                 MEM_A_WRITE_ENABLE   => MEM_A_WRITE_ENABLE,
                 MEM_A_ADDR           => MEM_A_ADDR,
                 MEM_A_WRITE          => MEM_A_WRITE,
@@ -760,12 +762,11 @@ begin
 
             -- Enable write to RAM when selected and CPU in write state.
             RAM_WREN                 <= '1' when RAM_SELECT = '1' and MEM_WRITE_ENABLE = '1'
-                                        else
-                                        '0';
+                                        else '0';
     end generate;
 
     -- SDRAM over System bus.
-    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
+    ZPUSDRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and SOC_IMPL_SDRAM = true and (BOARD_QMV = true or BOARD_CYC1000 = true) generate
 
         ZPUSDRAM : entity work.SDRAM
             generic map (
@@ -803,62 +804,42 @@ begin
                 WRITE_BYTE           => MEM_WRITE_BYTE_ENABLE,         -- Write a single byte.
                 WRITE_HWORD          => MEM_WRITE_HWORD_ENABLE,        -- Write a 16 bit word.
                 CS                   => SDRAM_SELECT,                  -- Chip Select.
-                WREN                 => SDRAM_WREN,                    -- Write enable.
-                RDEN                 => SDRAM_RDEN,                    -- Read enable.
+                WREN                 => MEM_WRITE_ENABLE, --SDRAM_WREN,                    -- Write enable.
+                RDEN                 => MEM_READ_ENABLE, --SDRAM_RDEN,                    -- Read enable.
                 BUSY                 => SDRAM_MEM_BUSY                   
             );
 
-      ---- Replace the SDRAM with a block of BRAM over WishBone, primarily used for testing.
-      --ZPUSDRAM : entity work.SinglePortBRAM
-      --generic map (
-      --    addrbits             => 4
-      --)
-      --port map (
-      --    clk                  => SYSCLK,
-      --    memAAddr             => MEM_ADDR(3 downto 0),
-      --    memAWriteEnable      => SDRAM_WREN,
-      --    memAWriteByte        => MEM_WRITE_BYTE_ENABLE,
-      --    memAWriteHalfWord    => MEM_WRITE_HWORD_ENABLE,
-      --    memAWrite            => MEM_DATA_WRITE,
-      --    memARead             => SDRAM_DATA_READ
-      --);
-
         -- SDRAM clock based on system clock.
-        SDRAM_CLK                <= MEMCLK;
+        SDRAM_CLK                    <= MEMCLK;
 
         -- RAM Range SOC_ADDR_SDRAM_START) -> SOC_ADDR_SDRAM_END
-        SDRAM_SELECT             <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
-                                    else '0';
-
-        -- Enable write to RAM when selected and CPU in write state.
-        SDRAM_WREN               <= '1' when SDRAM_SELECT = '1' and MEM_WRITE_ENABLE = '1'
-                                     else '0';
-        SDRAM_RDEN               <= '1' when SDRAM_SELECT = '1' and MEM_READ_ENABLE = '1'
-                                     else '0';
+        SDRAM_SELECT                 <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
+        --SDRAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, MEM_ADDR'LENGTH)))
+                                        else '0';
     end generate;
 
     -- Force the CPU to wait when slower memory/IO is accessed and it cant deliver an immediate result.
-    MEM_BUSY                  <= '1'                  when (UART0_CS = '1' or UART1_CS = '1' or TIMER0_CS = '1') and MEM_READ_ENABLE = '1'
+    MEM_BUSY                  <= '1'                  when (UART0_CS = '1' or UART1_CS = '1' or TIMER0_CS = '1') and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1'
                                  else
-                                 '1'                  when SOC_IMPL_SDRAM = true   and (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1)  and (BOARD_QMV = true or BOARD_CYC1000 = true) and SDRAM_MEM_BUSY = '1'
+                                 '1'                  when SOC_IMPL_SDRAM = true   and (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1)  and SDRAM_MEM_BUSY = '1' and (BOARD_QMV = true or BOARD_CYC1000 = true)
                                  else
                            --    '1'                  when BRAM_SELECT = '1'       and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
                            --    else
                            --    '1'                  when IO_SELECT = '1'         and  (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_READ_ENABLE = '1')
                            --    else
-                                 '1'                  when SOC_IMPL_SD = true      and SD_CS = '1'     and MEM_READ_ENABLE = '1'
+                                 '1'                  when SOC_IMPL_SD = true      and SD_CS = '1'     and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1'
                                  else
-                                 '1'                  when SOC_IMPL_SPI = true     and SPI_CS = '1'    and MEM_READ_ENABLE = '1' and IO_WAIT_SPI = '1'
+                                 '1'                  when SOC_IMPL_SPI = true     and SPI_CS = '1'    and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1' and IO_WAIT_SPI = '1'
                                  else
-                                 '1'                  when SOC_IMPL_PS2 = true     and PS2_CS = '1'    and MEM_READ_ENABLE = '1' and IO_WAIT_PS2 = '1'
+                                 '1'                  when SOC_IMPL_PS2 = true     and PS2_CS = '1'    and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1' and IO_WAIT_PS2 = '1'
                                  else
-                                 '1'                  when SOC_IMPL_INTRCTL = true and INTR0_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_INTR = '1'
+                                 '1'                  when SOC_IMPL_INTRCTL = true and INTR0_CS = '1'  and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1' and IO_WAIT_INTR = '1'
                                  else
-                                 '1'                  when SOC_IMPL_TIMER1 = true  and TIMER1_CS = '1' and MEM_READ_ENABLE = '1' and IO_WAIT_TIMER1 = '1'
+                                 '1'                  when SOC_IMPL_TIMER1 = true  and TIMER1_CS = '1' and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1' and IO_WAIT_TIMER1 = '1'
                                  else
-                                 '1'                  when SOC_IMPL_IOCTL = true   and (BOARD_CYC1000 = true or BOARD_DE10 = true) and IOCTL_CS = '1'  and MEM_READ_ENABLE = '1' and IO_WAIT_IOCTL = '1'
+                                 '1'                  when SOC_IMPL_IOCTL = true   and IOCTL_CS = '1'  and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1' and IO_WAIT_IOCTL = '1'   and (BOARD_CYC1000 = true or BOARD_DE10 = true)
                                  else
-                                 '1'                  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1' and MEM_READ_ENABLE = '1'
+                                 '1'                  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1' and MEM_READ_ENABLE_LAST = '0' and MEM_READ_ENABLE = '1'
                                  else
                                  '0';
 
@@ -867,7 +848,7 @@ begin
                                  else
                                  RAM_DATA_READ        when SOC_IMPL_RAM = true     and RAM_SELECT = '1'
                                  else
-                                 SDRAM_DATA_READ      when SOC_IMPL_SDRAM = true   and (BOARD_QMV = true or BOARD_CYC1000 = true) and SDRAM_SELECT = '1'
+                                 SDRAM_DATA_READ      when SOC_IMPL_SDRAM = true   and SDRAM_SELECT = '1' and (BOARD_QMV = true or BOARD_CYC1000 = true)
                                  else
                                  IO_DATA_READ_SD      when SOC_IMPL_SD = true      and SD_CS = '1'
                                  else
@@ -879,7 +860,7 @@ begin
                                  else
                                  IO_DATA_READ_SOCCFG  when SOC_IMPL_SOCCFG = true  and SOCCFG_CS = '1'
                                  else
-                                 IO_DATA_READ_IOCTL   when SOC_IMPL_IOCTL = true   and (BOARD_CYC1000 = true or BOARD_DE10 = true) and IOCTL_CS = '1'
+                                 IO_DATA_READ_IOCTL   when SOC_IMPL_IOCTL = true   and IOCTL_CS = '1'     and (BOARD_CYC1000 = true or BOARD_DE10 = true)
                                  else
                                  IO_DATA_READ         when IO_SELECT = '1'
                                  else
@@ -934,7 +915,7 @@ begin
     -- Enable write to System BRAM when selected and CPU in write state.
     BRAM_WREN                 <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and MEM_WRITE_ENABLE = '1' and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END, MEM_ADDR'LENGTH)))
                                  else
-                                 '1' when ZPU_MEDIUM = 1 and MEM_WRITE_ENABLE = '1' and MEM_ADDR(ioBit) = '0'
+                                 '1' when ZPU_MEDIUM = 1 and MEM_WRITE_ENABLE = '1' and MEM_ADDR(ioBit) = '0' and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR <= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END, MEM_ADDR'LENGTH)))
                                  else
                                  '0';
 
@@ -946,7 +927,9 @@ begin
                                  -- BRAM Range 0x00000000 - (2^SOC_MAX_ADDR_INSN_BRAM_BIT)-1
     BRAM_SELECT               <= '1'                  when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END, MEM_ADDR'LENGTH)))
                                  else
-                                 '1'                  when (ZPU_MEDIUM = 1 or ZPU_FLEX = 1 or ZPU_SMALL = 1) and MEM_ADDR(ioBit) = '0'
+                                 '1'                  when ZPU_MEDIUM = 1 and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_BRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_BRAM_END, MEM_ADDR'LENGTH)))
+                                 else
+                                 '1'                  when (ZPU_FLEX = 1 or ZPU_SMALL = 1) and MEM_ADDR(ioBit) = '0'
                                  else '0';
                                  -- IO Range for EVO CPU
     IO_SELECT                 <= '1'                  when (ZPU_SMALL = 1 or ZPU_MEDIUM = 1 or ZPU_FLEX = 1) and MEM_ADDR(ioBit) = '1'                         -- IO Range for Small, Medium and Flex CPU
@@ -1775,17 +1758,17 @@ begin
                         IO_DATA_READ_SOCCFG                         <= std_logic_vector(to_unsigned(SYSCLK_FREQUENCY, wordSize));
 
                     when "000010" => -- Sysbus Memory Frequency
-                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and SOC_IMPL_SDRAM = true then
                             IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_SDRAM_CLK_FREQ, wordSize));
                         else
-                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                            IO_DATA_READ_SOCCFG                     <= (others => '0');
                         end if;
 
                     when "000011" => -- Wishbone Memory Frequency
                         if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_WB = true and SOC_IMPL_WB_SDRAM = true then
                             IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_WB_SDRAM_CLK_FREQ, wordSize));
                         else
-                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                            IO_DATA_READ_SOCCFG                     <= (others => '0');
                         end if;
 
                     when "000100" => -- Devices Implemented
@@ -1847,17 +1830,17 @@ begin
                         end if;
 
                     when "001011" => -- SDRAM Address
-                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and SOC_IMPL_SDRAM = true then
                             IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, wordSize));
                         else
-                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                            IO_DATA_READ_SOCCFG                     <= (others => '0');
                         end if;
 
                     when "001100" => -- SDRAM Size
-                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_SDRAM = true then
+                        if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and SOC_IMPL_SDRAM = true then
                             IO_DATA_READ_SOCCFG                     <= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END - SOC_ADDR_SDRAM_START, wordSize));
                         else
-                            IO_DATA_READ_SOCCFG                     <= (others => 'X');
+                            IO_DATA_READ_SOCCFG                     <= (others => '0');
                         end if;
 
                     when "001101" => -- WB SDRAM Address
@@ -2067,6 +2050,8 @@ begin
         -- RISING CLOCK EDGE --
         -----------------------                
         elsif rising_edge(SYSCLK) then
+
+    MEM_READ_ENABLE_LAST      <= MEM_READ_ENABLE;
 
             -- If the RX receives a break signal, count down to ensure it is held low for correct period, when the count reaches
             -- zero, start a reset.

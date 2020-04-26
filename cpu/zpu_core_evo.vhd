@@ -338,6 +338,7 @@ architecture behave of zpu_core_evo is
     (
         State_PreSetAddr,
         State_LatchAddr,
+        State_LatchAddrPause,
         State_Decode,
         State_Store
     );
@@ -391,6 +392,7 @@ architecture behave of zpu_core_evo is
         Debug_DumpL1_1,
         Debug_DumpL1_2,
         Debug_DumpL2,
+        Debug_DumpL2_0,
         Debug_DumpL2_1,
         Debug_DumpL2_2,
         Debug_DumpMem,
@@ -509,6 +511,7 @@ architecture behave of zpu_core_evo is
     signal cacheL2IncAddr                  : std_logic;                      -- A flag to indicate when the L2 cache write address should be incremented, generally after a write pulse.
     signal cacheL2MxAddrInCache            : std_logic;                      -- A flag to indicate when an MXP address exists in the L2 cache.
     signal cacheL2Full                     : std_logic;                      -- A flag to indicate when the L2 cache is full.
+signal cacheL2InsnAfterPC              : unsigned(ADDR_BIT_RANGE);       -- Count of how many instructions are in the cache after the current program counter.
     
     -- Memory transaction processor.
     --
@@ -518,7 +521,7 @@ architecture behave of zpu_core_evo is
     signal mxFifoReadIdx                   : unsigned(MAX_MXCACHE_BITS-1 downto 0);
     signal mxInsnData                      : std_logic_vector(WORD_32BIT_RANGE);
     signal mxMemVal                        : WordRecord;                     -- Direct memory read result.
-    signal mxHoldCycles                    : integer range 0 to 3;           -- Cycles to hold and extend memory transactions.
+    signal mxHoldCycles                    : integer range 0 to 2047;           -- Cycles to hold and extend memory transactions.
     
     -- Hardware Debugging.
     --
@@ -533,7 +536,7 @@ architecture behave of zpu_core_evo is
     signal debugRec                        : zpu_dbg_t;
     signal debugLoad                       : std_logic;                      -- Load a debug record into the debug serialiser fsm, 1 = load, 0 = inactive.
     signal debugReady                      : std_logic;                      -- Flag to indicate serializer fsm is busy (0) or available (1).
-    
+signal pause : integer range 0 to 65535;
     ---------------------------------------------
     -- Functions specific to the CPU core.
     ---------------------------------------------
@@ -588,8 +591,9 @@ begin
                                                   else '0';
     cacheL2Empty                           <= '1' when cacheL2FetchIdx(ADDR_32BIT_RANGE) = cacheL2StartAddr(ADDR_32BIT_RANGE)
                                                   else '0';
-    cacheL2Invalid                         <= '1' when pc(ADDR_32BIT_RANGE) < cacheL2StartAddr(ADDR_32BIT_RANGE) or (pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE))
-                                                  else '0';
+--    cacheL2Invalid                         <= '1' when pc(ADDR_32BIT_RANGE) < cacheL2StartAddr(ADDR_32BIT_RANGE) or (pc(ADDR_32BIT_RANGE) > cacheL2FetchIdx(ADDR_32BIT_RANGE))
+    cacheL2Invalid                         <= '0' when pc(ADDR_32BIT_RANGE) >= cacheL2StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL2FetchIdx(ADDR_32BIT_RANGE)
+                                                  else '1';
     cacheL2Mux2Addr                        <= cacheL1FetchIdx(L2CACHE_32BIT_RANGE) when DEBUG_CPU = false or (DEBUG_CPU = true and debugState = Debug_Idle)
                                                   else
                                                   debugPC(L2CACHE_32BIT_RANGE) when DEBUG_CPU = true
@@ -599,6 +603,9 @@ begin
                                                   else '0';
     cacheL2Full                            <= '1' when cacheL2FetchIdx(ADDR_32BIT_RANGE) - cacheL2StartAddr(ADDR_32BIT_RANGE) = MAX_L2CACHE_SIZE / 4
                                                   else '0';
+
+    cacheL2InsnAfterPC                                       <= cacheL2FetchIdx - pc when cacheL2Invalid = '0' 
+                                                                else to_unsigned(0, cacheL2InsnAfterPC'length);
     ---------------------------------------------
     -- End of Cache storage.
     ---------------------------------------------
@@ -656,16 +663,26 @@ begin
         -- RISING CLOCK EDGE --
         -----------------------
         elsif rising_edge(CLK) then
+
+            -- If the hold cycle counter is not 0, then we are holding on the current transaction until it reaches zero, so decrement
+            -- ready to test next cycle. This mechanism is to prolong a memory cycle as without it, address setup and hold is 1 cycle and 
+            -- valid data is expected at the end of the cycle. ie. the address and control signals are set on the current rising edge and become
+            -- active shortly thereafter and on the next rising edge the data is expected to be valid, few components (ie. register ram) can meet
+            -- this timing requirement.
+            if mxHoldCycles > 0 then
+                mxHoldCycles                                 <= mxHoldCycles - 1;
+            end if;
+        
             -- TOS/NOS values read in by the MXP are only valid for 1 cycle, so reset the valid flag.
             mxTOS.valid                                      <= '0';
             mxNOS.valid                                      <= '0';
 
-            -- Memory signals are one clock width wide, reset them to inactive on each clock to ensure this.^^
-            MEM_READ_ENABLE                                  <= '0';
-            MEM_WRITE_ENABLE                                 <= '0';
-
-            -- Width signals are one clock width wide unless extended by busy signal.
+            -- Memory signals are one clock width wide unless extended by a wait, if no wait, reset them to inactive to ensure this.
             if MEM_BUSY = '0' then
+                MEM_READ_ENABLE                              <= '0';
+                MEM_WRITE_ENABLE                             <= '0';
+
+                -- Width signals are one clock width wide unless extended by a wait signal.
                 MEM_WRITE_BYTE                               <= '0';
                 MEM_WRITE_HWORD                              <= '0';
             end if;
@@ -701,16 +718,8 @@ begin
                 WB_STB_O                                     <= '0';
             end if;
 
-            -- If the hold cycle counter is not 0, then we are holding on the current transaction until it reaches zero, so decrement
-            -- ready to test next cycle. This mechanism is to prolong a memory cycle as without it, address setup and hold is 1 cycle and 
-            -- valid data is expected at the end of the cycle. ie. the address and control signals are set on the current rising edge and become
-            -- active and on the next rising edge the data is expected to be valid, few components (ie. register ram) can meet this timing requirement.
-            if mxHoldCycles > 0 then
-                mxHoldCycles                                 <= mxHoldCycles - 1;
-            end if;
-        
             -- If the external memory is busy (1) or the wishbone interface is active and no ACK received then we have to back off and wait till next clock cycle and check again.
-            if MEM_BUSY = '0' and ((IMPL_USE_WB_BUS = true and ((wbXactActive = '1' and WB_ACK_I = '1') or wbXactActive = '0')) or IMPL_USE_WB_BUS = false) and mxHoldCycles = 0 then
+            if mxHoldCycles = 0 and MEM_BUSY = '0' and ((IMPL_USE_WB_BUS = true and ((wbXactActive = '1' and WB_ACK_I = '1') or wbXactActive = '0')) or IMPL_USE_WB_BUS = false) then
 
                 -- Memory transaction processor state machine. Idle is the control state and depending upon entries in the queue, debug or L2 usage, it
                 -- directs the FSM states accordingly. 
@@ -739,7 +748,9 @@ begin
     
                         -- If instruction queue is empty or there are no memory transactions to process and the instruction queue isnt full,
                         -- read the next instruction and fill the instruction queue.
-                        elsif cacheL2Active = '1' and (mxFifoWriteIdx - mxFifoReadIdx) = 0 and cacheL2Invalid = '0' and cacheL2Full = '0' and cacheL2IncAddr = '0' then
+                        --elsif cacheL2Active = '1' and (mxFifoWriteIdx - mxFifoReadIdx) = 0 and cacheL2Invalid = '0' and cacheL2Full = '0' and cacheL2IncAddr = '0' then
+                        --elsif cacheL2Active = '1' and (mxFifoWriteIdx - mxFifoReadIdx) = 0 and cacheL2Invalid = '0' and cacheL2Full = '0' and cacheL2IncAddr = '0' then
+                        elsif cacheL2Active = '1' and (mxFifoWriteIdx - mxFifoReadIdx) = 0 and cacheL2Full = '0' and cacheL2IncAddr = '0' then
                             if IMPL_USE_WB_BUS = true and cacheL2FetchIdx(WB_SELECT_BIT) = '1' then
                                 WB_ADR_O(ADDR_32BIT_RANGE)          <= std_logic_vector(cacheL2FetchIdx(ADDR_32BIT_RANGE));
                                 WB_ADR_O(minAddrBit-1 downto 0)     <= (others => '0');
@@ -1001,6 +1012,7 @@ begin
                             cacheL2WriteData                        <= MEM_DATA_IN;
                         end if;
 
+--mxHoldCycles                        <= 1;
                         -- Initiate a cache memory write.
                         cacheL2Write                                <= '1';
                         cacheL2IncAddr                              <= '1';
@@ -1224,7 +1236,7 @@ begin
                 end if;
 
                 -- If the PC goes out of scope of L2 data, reset and start fetching a fresh from the current PC address.
-                if cacheL2Invalid = '1' then
+                if cacheL2Invalid = '1' and cacheL2Empty = '0' then
                     cacheL2FetchIdx                             <= pc(ADDR_32BIT_RANGE) & "00";
                     cacheL2StartAddr                            <= pc(ADDR_32BIT_RANGE) & "00";
                     cacheL2Write                                <= '0';
@@ -1273,6 +1285,7 @@ begin
             l1State                                      <= State_PreSetAddr;
             MEM_READ_ENABLE_INSN                         <= '0';
             MEM_ADDR_INSN                                <= (others => DontCareValue);
+    pause <= 0;
 
         ------------------------
         -- FALLING CLOCK EDGE --
@@ -1284,8 +1297,15 @@ begin
         -----------------------
         elsif rising_edge(CLK) then
 
+    if pause > 0 then
+        pause <= pause - 1;
+    end if;
+
             -- If the cache becomes invalid due to a change in the PC or no cached data available then resync.
-            if (cacheL1Invalid = '1' and cacheL1Empty = '0') then -- or (cacheL2Active = '1' and cacheL2Invalid = '1') then
+            if (cacheL1Invalid = '1' and cacheL1Empty = '0') then
+
+
+--     elsif pc(ADDR_32BIT_RANGE) >= cacheL1StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL1FetchIdx(ADDR_32BIT_RANGE) 
 
                 -- RESYNC L1 Cache with BRAM/L2 Cache starting at current PC value..
                 cacheL1FetchIdx                                                         <= pc(ADDR_32BIT_RANGE) & "00";
@@ -1300,7 +1320,13 @@ begin
                 end if;
 
                 -- State machine goes directly to the latch address phase.
-                l1State                                                                 <= State_LatchAddr;
+                l1State                                                                 <= State_LatchAddrPause;
+
+    -- WHat the issue will be is the L2 cache is being filled correctly from the SDRAM but it is taking too long for the L1 which is expecting the data
+    -- thus need to see what signal it has to wait for and add in.
+--    if pc >= X"00010000" then
+--       pause <= 2047;
+--    end if;
 
             -- If there is space in the L1 cache and data is available in the L2 cache/BRAM and we are not outputting debug information, fetch the next word, decode and place in L1.
             elsif cacheL1Full = '0'
@@ -1309,10 +1335,13 @@ begin
                   ((cacheL2Active = '0' and MEM_BUSY_INSN = '0') or (cacheL2Active = '1'))
                   and
                   -- If using L2 cache then only process when cached data is available in L2.
-                  (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Empty = '0' and cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL1FetchIdx(ADDR_32BIT_RANGE)+1 ))
+                 -- (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Empty = '0' and MEM_BUSY = '0' and cacheL1StartAddr(ADDR_32BIT_RANGE) >= cacheL2StartAddr(ADDR_32BIT_RANGE) and cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL1FetchIdx(ADDR_32BIT_RANGE)+1 )) -- and cacheL2Full = '1' )) --cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL2StartAddr(ADDR_32BIT_RANGE)+16 ))
+                  (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2InsnAfterPC > 8 and MEM_BUSY = '0' and cacheL1StartAddr(ADDR_32BIT_RANGE) >= cacheL2StartAddr(ADDR_32BIT_RANGE) and cacheL2FetchIdx(ADDR_32BIT_RANGE) > cacheL1FetchIdx(ADDR_32BIT_RANGE)+1 ))
+
                   and
                   -- If debugging, only process if the debug FSM is idle as the L2 address is muxed with the debug address.
                   ((DEBUG_CPU = false or (DEBUG_CPU = true and debugState = Debug_Idle))) then
+
 
                 case l1State is
                     when State_PreSetAddr =>
@@ -1324,6 +1353,11 @@ begin
                         --else for L2 the address is automatically set in cacheL1FetchIdx
                         end if;
                         l1State                                                         <= State_LatchAddr;
+
+                    when State_LatchAddrPause =>
+    if pause = 0 then
+                        l1State                                                         <= State_Decode;
+    end if;
 
                     -- This state gives time for the BRAM/L2 to latch the address ready for decode.
                     when State_LatchAddr =>
@@ -1463,7 +1497,8 @@ begin
                                                                 else to_unsigned(0, cacheL1InsnAfterPC'length);
     cacheL1Empty                                             <= '1' when cacheL1FetchIdx(ADDR_32BIT_RANGE) = cacheL1StartAddr(ADDR_32BIT_RANGE)
                                                                 else '0';
-    cacheL1Invalid                                           <= '0' when (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Invalid = '0')) and pc(ADDR_32BIT_RANGE) >= cacheL1StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL1FetchIdx(ADDR_32BIT_RANGE) 
+    --cacheL1Invalid                                           <= '0' when (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Invalid = '0')) and pc(ADDR_32BIT_RANGE) >= cacheL1StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL1FetchIdx(ADDR_32BIT_RANGE) 
+    cacheL1Invalid                                           <= '0' when (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2InsnAfterPC > 8)) and pc(ADDR_32BIT_RANGE) >= cacheL1StartAddr(ADDR_32BIT_RANGE) and pc(ADDR_32BIT_RANGE) < cacheL1FetchIdx(ADDR_32BIT_RANGE) 
                                                                 else '1';
     cacheL1Full                                              <= '1' when cacheL1FetchIdx(ADDR_32BIT_RANGE) - cacheL1StartAddr(ADDR_32BIT_RANGE) = MAX_L1CACHE_SIZE / 4
                                                                 else '0';
@@ -1568,8 +1603,8 @@ begin
 
             -- In debug mode, the memory dump start and stop address are controlled by 2 vectors, preload them with defaults if uninitialised.
             if DEBUG_CPU = true and debugPC_EndAddr = 0 then
-                debugPC_StartAddr                                                       <= to_unsigned(16#1000000#, debugPC_StartAddr'LENGTH);
-                debugPC_EndAddr                                                         <= to_unsigned(16#1001000#, debugPC_EndAddr'LENGTH);
+                debugPC_StartAddr                                                       <= to_unsigned(16#0010000#, debugPC_StartAddr'LENGTH);
+                debugPC_EndAddr                                                         <= to_unsigned(16#0010800#, debugPC_EndAddr'LENGTH);
             end if;
 
             -- If the Memory Transaction processor has updated the stack parameters, update our working copy.
@@ -1721,7 +1756,7 @@ begin
 
                         -- Execution depends on the L1 having decoded instructions stored at the current PC.
                         -- As a minimum the cache must be valid and that there is at least 1 instruction in the cache.
-                        elsif cacheL1Invalid = '0' and cacheL1InsnAfterPC > 4 then -- and (cacheL2Active = '0' or (cacheL2Active = '1' and cacheL2Full = '1')) then
+                        elsif cacheL1Invalid = '0' then --and cacheL1InsnAfterPC > 4 then
 
                             -- Remember the last PC location executed, used for jump detection.
                             pcLast                                                      <= pc;
@@ -1772,7 +1807,7 @@ begin
                                                 TOS.word(i)                             <= cacheL1(to_integer(pc))(6);
                                             end loop;
 
-                                            -- For non-optimised hardware or optimised but we only have 1 Im, used the original logic.
+                                            -- For non-optimised hardware or optimised but we only have 1 Im, use the original logic.
                                             if IMPL_OPTIMIZE_IM = false then
                                                 TOS.word(IM_DATA_RANGE)                 <= unsigned(cacheL1(to_integer(pc))(IM_DATA_RANGE));
  
@@ -1814,10 +1849,6 @@ begin
                                                     debugLoad                           <= '1';
                                                 end if;
 
-                                                -- TODO:
-                                                -- Perhaps use cacheL1InsnAfterPC in this loop to preserve logic.
-                                                -- Same for extended instructions.
-                                                --
                                                 -- 5 Consecutive IM's
                                                 --if cacheL1FetchIdx - pc > 5    and cacheL1(to_integer(pc))(7) = '1' and cacheL1(to_integer(incPC))(7) = '1' and cacheL1(to_integer(incIncPC))(7) = '1' and cacheL1(to_integer(inc3PC))(7) = '1' and cacheL1(to_integer(inc4PC))(7) = '1' and cacheL1(to_integer(inc5PC))(7) = '0' then
                                                 if cacheL1InsnAfterPC > 5    and cacheL1(to_integer(pc))(7) = '1' and cacheL1(to_integer(incPC))(7) = '1' and cacheL1(to_integer(incIncPC))(7) = '1' and cacheL1(to_integer(inc3PC))(7) = '1' and cacheL1(to_integer(inc4PC))(7) = '1' and cacheL1(to_integer(inc5PC))(7) = '0' then
@@ -2455,7 +2486,7 @@ begin
                                 -- Read the aligned dword pointed to by the TOS and update just the one required word,
                                 -- The loadb and storeb can be sped up by implementing hardware byte read/write.
                                 when Insn_Storeh =>
-                                    if IMPL_STOREB = true then
+                                    if IMPL_STOREH = true then
                                         if muxTOS.valid = '1' and muxNOS.valid = '1' then
                                             tInsnExec                                   := '1';
                                             idimFlag                                    <= '0';
@@ -2729,15 +2760,16 @@ begin
                             end case;
 
                             -- During waits, if debug enabled, output state and dump the L1 cache.
-                            if DEBUG_CPU = true and DEBUG_LEVEL >= 1 and (pc = X"1f00010") then
+                            if DEBUG_CPU = true and DEBUG_LEVEL >= 0 and (pc = X"00010008") then
                                 if debugState = Debug_Idle then
-                                    debugState                                      <= Debug_DumpL2;
+                                    --debugState                                      <= Debug_DumpL2;
+                                    debugState                                      <= Debug_Start;
                                 end if;
                             end if;
 
-                            -- Debug code, if enabled, writes out the current instruction.
-                          --if ((DEBUG_CPU = true and DEBUG_LEVEL >= 1) or (DEBUG_CPU = true and pc >= X"00010000")) and tInsnExec = '1' then
-                            if ((DEBUG_CPU = true and DEBUG_LEVEL >= 1)) and tInsnExec = '1' then
+                          -- Debug code, if enabled, writes out the current instruction.
+                          if ((DEBUG_CPU = true and DEBUG_LEVEL >= 1) or (DEBUG_CPU = true and pc >= X"00010000")) and tInsnExec = '1' then
+                          --if ((DEBUG_CPU = true and DEBUG_LEVEL >= 1)) and tInsnExec = '1' then
                                 debugRec.FMT_DATA_PRTMODE                               <= "01";
                                 debugRec.FMT_PRE_SPACE                                  <= '0';
                                 debugRec.FMT_POST_SPACE                                 <= '1';
@@ -2778,7 +2810,8 @@ begin
                                         debugState                                      <= Debug_DumpL2;
                                     end if;
                                 end if;
-                                if (DEBUG_CPU = true and DEBUG_LEVEL >= 1) then --or (DEBUG_CPU = true and pc >= X"00010000") then
+                                --if (DEBUG_CPU = true and DEBUG_LEVEL >= 1) then
+                                if (DEBUG_CPU = true and DEBUG_LEVEL >= 1) or (DEBUG_CPU = true and pc >= X"00020000") then
                                     debugRec.FMT_DATA_PRTMODE                           <= "01";
                                     debugRec.FMT_PRE_SPACE                              <= '0';
                                     debugRec.FMT_POST_SPACE                             <= '1';
@@ -3224,6 +3257,10 @@ begin
 
                         when Debug_DumpL2 =>
                             debugPC                                       <= (others => '0');
+                            debugState                                    <= Debug_DumpL2_0;
+
+                        -- Wait state at start of dump so initial address gets registered in cache memory and data output.
+                        when Debug_DumpL2_0 =>
                             debugState                                    <= Debug_DumpL2_1;
 
                         -- Output the contents of L2 in the format <addr> <instruction ... x 20>

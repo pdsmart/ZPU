@@ -63,3 +63,4 @@ devices/sysbus/SDRAM/old/
 nohup.out
 software/micropython/
 software/x/
+docker/QuartusPrime/files/bad/

@@ -278,9 +278,9 @@ begin
                 sdBusy                                <= cpuBusy;
 
                 -- If the SDRAM has completed its request, reset the done indicator as it is only 1 cycle wide.
-                if sdDone = '1' then
-                    sdDone                            <= '0';
-                end if;
+ --               if sdDone = '1' then
+ --                   sdDone                            <= '0';
+ --               end if;
 
                 -- Auto refresh. On timeout it kicks in so that ROWS auto refreshes are 
                 -- issued in a tRFC period. Other bus operations are stalled during this period.
@@ -351,6 +351,7 @@ begin
                                     SDRAM_DQ          <= cpuDataIn;                                                  -- Assign corresponding data to the SDRAM databus.
                                     SDRAM_DQM         <= not cpuDQM(3 downto 0);
                                     sdCycle           <= CYCLE_END;
+                                    sdDone            <= '1';
 
                                 elsif SDRAM_DATAWIDTH = 16 then
                                     SDRAM_ADDR        <= std_logic_vector(to_unsigned(to_integer(unsigned(cpuCol(SDRAM_COLUMN_BITS-1 downto 1) & '0')), SDRAM_ROW_BITS)); -- CAS address = Address accessing first 16bit location within the 32bit external alignment with no auto precharge
@@ -389,21 +390,26 @@ begin
                         when CYCLE_READ_START =>
 
                             if SDRAM_DATAWIDTH = 32 then
-                                sdDataOut             <= SDRAM_DQ;
+                              --sdDataOut             <= SDRAM_DQ;
+                                DATA_OUT              <= SDRAM_DQ;
                                 sdCycle               <= CYCLE_END;
+                                sdDone                <= '1';
                                 
                             elsif SDRAM_DATAWIDTH = 16 then
-                                sdDataOut((SDRAM_DATAWIDTH*2)-1 downto SDRAM_DATAWIDTH) <= SDRAM_DQ;
+                              --  sdDataOut((SDRAM_DATAWIDTH*2)-1 downto SDRAM_DATAWIDTH) <= SDRAM_DQ;
+                                DATA_OUT((SDRAM_DATAWIDTH*2)-1 downto SDRAM_DATAWIDTH) <= SDRAM_DQ;
                             else
                                 report "SDRAM datawidth parameter invalid, should be 16 or 32!" severity error;
                             end if;
 
                         -- Second and final read cycle for 16bit SDRAM chips to create a 32bit word.
                         when CYCLE_READ_END =>
-                            sdDataOut(SDRAM_DATAWIDTH-1 downto 0) <= SDRAM_DQ;
+                            --sdDataOut(SDRAM_DATAWIDTH-1 downto 0) <= SDRAM_DQ;
+                            DATA_OUT(SDRAM_DATAWIDTH-1 downto 0) <= SDRAM_DQ;
+                            sdDone                    <= '1';
     
                         when CYCLE_END =>
-                            sdDone                    <= '1';
+                            sdDone                    <= '0';
                             sdCycle                   <= 0;
 
                         -- Other states are wait states, waiting for the correct time slot for SDRAM access.
@@ -450,7 +456,7 @@ begin
             cpuLastEN <= (RDEN or WREN) and CS;
 
             -- Detect a Chip Select state change signalling access.
-            if cpuLastEN = '0' and (RDEN = '1' or WREN = '1') then
+            if cpuLastEN = '0' and ((RDEN = '1' or WREN = '1') and CS = '1') then
                 cpuBusy                               <= '1';
                 cpuIsWriting                          <= WREN;
                 cpuBank                               <= to_integer(unsigned(ADDR(SDRAM_ADDR_BITS-1 downto SDRAM_ARRAY_BITS+1)));
@@ -491,10 +497,11 @@ begin
             cpuDoneLast                               <= sdDone;
 
             -- A change in the Done signal indicates the end of the SDRAM request so read the data (read request) and release the CPU.
-            if (cpuDoneLast = '0' and  sdDone = '1') then
-                DATA_OUT                              <= sdDataOut;
-            end if;
-            if (cpuDoneLast = '1' and  sdDone = '0') then
+     --       if (cpuDoneLast = '0' and  sdDone = '1') then
+     --           DATA_OUT                              <= sdDataOut;
+     --       end if;
+            if (cpuDoneLast = '0' and  sdDone = '1') or CS = '0' or (RDEN = '0' and WREN = '0') then
+          --      DATA_OUT                              <= sdDataOut;
                 cpuBusy                               <= '0';
                 cpuIsWriting                          <= '0';
             end if;
@@ -503,7 +510,8 @@ begin
     end process;
 
     -- System bus control signals.
-    BUSY                                     <= '1' when (cpuLastEN = '0' and (RDEN = '1' or WREN = '1')) else cpuBusy;
+    BUSY                                     <= '1' when (cpuLastEN = '0' and (RDEN = '1' or WREN = '1') and CS = '1') else cpuBusy;
+    --BUSY                                     <= cpuBusy;
     SDRAM_READY                              <= sdIsReady;
 
 end Structure;

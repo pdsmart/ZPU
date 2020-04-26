@@ -544,7 +544,7 @@ begin
             cpuLastEN <= (RDEN or WREN) and CS;
 
             -- Detect a Chip Select state change signalling access.
-            if cpuLastEN = '0' and (RDEN = '1' or WREN = '1') then
+            if cpuLastEN = '0' and (RDEN = '1' or WREN = '1') and CS = '1' then
 
                 -- Organisation of the memory is as follows:
                 --
@@ -644,7 +644,8 @@ begin
             cpuDoneLast                               <= sdDone;
 
             -- A change in the Done signal then we end the SDRAM request and release the CPU.
-            if (cpuDoneLast xor sdDone) = '1' then
+            --if (cpuDoneLast xor sdDone) = '1' then
+            if (cpuDoneLast ='0' and sdDone = '1') then
                 cpuBusy                               <= '0';
                 cpuIsWriting                          <= '0';
             end if;
@@ -652,7 +653,7 @@ begin
     end process;
 
     -- System bus control signals.
-    BUSY                                     <= '1' when (cpuLastEN = '0' and (RDEN = '1' or WREN = '1')) else cpuBusy;
+    BUSY                                     <= '1' when (cpuLastEN = '0' and (RDEN = '1' or WREN = '1') and CS = '1') else cpuBusy;
     SDRAM_READY                              <= sdIsReady;
 
     -------------------------------------------------------------------------------------------------------------------------

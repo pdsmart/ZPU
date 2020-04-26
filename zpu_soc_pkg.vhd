@@ -120,8 +120,8 @@ package zpu_soc_pkg is
     constant SOC_ADDR_BRAM_END        :     integer    := SOC_ADDR_BRAM_START+(2**SOC_MAX_ADDR_BRAM_BIT);   -- End address of BRAM = START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- Secondary block of sysbus RAM, typically implemented in BRAM.
     constant SOC_IMPL_RAM             :     boolean    := false;                                            -- Implement RAM using BRAM, typically for Application programs seperate to BIOS.
-    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 13;                                               -- Max address bit of the System RAM.
-    constant SOC_ADDR_RAM_START       :     integer    := 32768;                                            -- Start address of RAM.
+    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 15;                                               -- Max address bit of the System RAM.
+    constant SOC_ADDR_RAM_START       :     integer    := 65536;                                            -- Start address of RAM.
     constant SOC_ADDR_RAM_END         :     integer    := SOC_ADDR_RAM_START+(2**SOC_MAX_ADDR_RAM_BIT);     -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- SDRAM on sysbus.
     constant SOC_IMPL_SDRAM           :     boolean    := true;                                             -- Implement Dynamic RAM and controller.
