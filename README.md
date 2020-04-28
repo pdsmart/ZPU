@@ -1,17 +1,14 @@
-Please consult my [GitHub](https://pdsmart.github.io) website for more upto date information.
 <br>
-<br>
-
-The ZPU is a 32bit Stack based microprocessor and was designed by Øyvind Harboe from [Zylin AS](https://opensource.zylin.com/) and original documentation can be found on the [Zylin/OpenCore website or Wikipedia](https://en.wikipedia.org/wiki/ZPU_\(microprocessor\)). It is a microprocessor intended for FPGA embedded applications with minimal logic element and BRAM usage with the sacrifice of speed of execution. 
+The ZPU is a 32bit Stack based microprocessor and was originally designed by Øyvind Harboe from [Zylin AS](https://opensource.zylin.com/) and original documentation can be found on the [Zylin/OpenCore website or Wikipedia](https://en.wikipedia.org/wiki/ZPU_\(microprocessor\)). It is a microprocessor intended for FPGA embedded applications with minimal logic element and BRAM usage with the sacrifice of speed of execution. 
 
 Zylin produced two designs which it made open source, namely the Small and Medium ZPU versions. Additional designs were produced by external developers such as the Flex and ZPUino variations, each offering enhancements to the original design such as Wishbone interface, performance etc.
 
 This document describes another design which I like to deem as the ZPU Evo(lution) model whose focus is on *performance*, *connectivity* and *instruction expansion*. This came about as I needed a CPU for an emulator of a vintage computer i am writing which would act as the IO processor to provide Menu, Peripheral and SD services.
 
-An example of the *performance* of the ZPU Evo can be seen using CoreMark which returns a value of 19.1 @ 100MHz on Altera fabric using BRAM and for Dhrystone 11.2DMIPS. Comparisons can be made with the original ZPU designs in the gallery below paying attention to the CoreMark score which seems to be the defacto standard now. *Connectivity* can be seen via implementation of both System and Wishbone buses, allowing for connection of many opensource IP devices. *Instruction expansion* can be seen by the inclusion of a close coupled L1 cache where multiple instruction bytes are sourced and made available to the CPU which in turn can be used for optimization (ie. upto 5 IM instructions executed in 1 cycle) or for extended multi-byte instructions (ie. implementation of a LoaD Increment Repeat instruction). There is room for a lot more improvements such as stack cache, SDRAM to L2 burst mode, parallel instruction execution (ie. and + neqbranch) which are on my list.
+An example of the *performance* of the ZPU Evo can be seen using CoreMark which returns a value of 22.2 @ 100MHz on Altera fabric using BRAM and for Dhrystone 13.2DMIPS. Comparisons can be made with the original ZPU designs in the gallery below paying attention to the CoreMark score which seems to be the defacto standard now. *Connectivity* can be seen via implementation of both System and Wishbone buses, allowing for connection of many opensource IP devices. *Instruction expansion* can be seen by the inclusion of a close coupled L1 cache where multiple instruction bytes are sourced and made available to the CPU which in turn can be used for optimization (ie. upto 5 IM instructions executed in 1 cycle) or for extended multi-byte instructions (ie. implementation of a LoaD Increment Repeat instruction). There is room for a lot more improvements such as stack cache, SDRAM to L2 burst mode, parallel instruction execution (ie. and + neqbranch) which are on my list.
 
 
-# The CPU
+## The CPU
 
 The ZPU Evo follows on from the ZPU Medium and Flex and areas of the code are similar, for example the instruction decoding. The design differs though due to caching and implementation of a Memory Transaction Processor where all Memory/IO operations (except for direct Instruction reads if dual-port instruction bus is enabled) are routed. The original CPU's all handled their memory requirements in-situ or part of the state machine whereas the Evo submits a request to the MXP whenever a memory operation is required.
 
@@ -45,67 +42,76 @@ In addition to the original instructions, a mechanism exists to extend the instr
 
 ***Extend Instruction,<new insn[7:2]+ParamSize[1:0]>,[byte],[byte],[byte],[byte]***
 
-Where ParamSize = 00 - No parameter bytes
-                                    01 - 8 bit parameter
-                                    10 - 16 bit parameter
-                                    11 - 32 bit parameter
+Where ParamSize = 
+  - 00 - No parameter bytes,<br> 
+  - 01 - 8 bit parameter,<br>
+  - 10 - 16 bit parameter,<br>
+  - 11 - 32 bit parameter<br>
 
 Some extended instructions are under development (ie. LDIR) an exact opcode value and extended instruction set has not yet been fully defined. The GNU AS assembler will be updated with these instructions so they can be invoked within a C program and eventually if they have benefit to C will be migrated into the GCC compiler (ie. ADD32/DIV32/MULT32/LDIR/LDDR as from what I have seen, these will have a big impact on CoreMark/Dhrystone tests).
 
 
 ### Implemented Instruction Set
 
-| Name             | Opcode    |           | Description                                                                                                                                                                                                                                                            |
-|------------------|-----------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| BREAKPOINT       | 0         | 00000000  | The debugger sets a memory location to this value to set a breakpoint. Once a JTAG-like debugger interface is added, it will be convenient to be able to distinguish between a breakpoint and an illegal(possibly emulated) instruction.                               |
-| IM               | 1xxx xxxx | 1xxx xxxx | Pushes 7 bit sign extended integer and sets the a «instruction decode interrupt mask» flag(IDIM).<br>If the IDIM flag is already set, this instruction shifts the value on the stack left by 7 bits and stores the 7 bit immediate value into the lower 7 bits.<br>Unless an instruction is listed as treating the IDIM flag specially, it should be assumed to clear the IDIM flag.<br>To push a 14 bit integer onto the stack, use two consecutive IM instructions.<br> If multiple immediate integers are to be pushed onto the stack, they must be interleaved with another instruction, typically NOP.  |
-| STORESP          | 010x xxxx | 010x xxxx | Pop value off stack and store it in the SP+xxxxx*4 memory location, where xxxxx is a positive integer.                                                                                                                                                                 |
-| LOADSP           | 011x xxxx | 011x xxxx | Push value of memory location SP+xxxxx*4, where xxxxx is a positive integer, onto stack.                                                                                                                                                                               |
-| ADDSP            | 0001 xxxx | 0001 xxxx | Add value of memory location SP+xxxx*4 to value on top of stack.                                                                                                                                                                                                       |
-| EMULATE          | 001x xxxx | 010x xxxx | Push PC to stack and set PC to 0x0+xxxxx*32. This is used to emulate opcodes. See zpupgk.vhd for list of emulate opcode values used. zpu_core.vhd contains reference implementations of these instructions rather than letting the ZPU execute the EMULATE instruction.<br>One way to improve performance of the ZPU is to implement some of the EMULATE instructions.|
-| PUSHPC           | emulated  | emulated  | Pushes program counter onto the stack.                                                                                                                                                                                                                                 |
-| POPPC            | 0000 0100 | 0000 0100 | Pops address off stack and sets PC                                                                                                                                                                                                                                     |
-| LOAD             | 0000 1000 | 0000 1000 | Pops address stored on stack and loads the value of that address onto stack.<br>Bit 0 and 1 of address are always treated as 0(i.e. ignored) by the HDL implementations and C code is guaranteed by the programming model never to use 32 bit LOAD on non-32 bit aligned addresses(i.e. if a program does this, then it has a bug).|
-| STORE            | 0000 1100 | 0000 1100 | Pops address, then value from stack and stores the value into the memory location of the address.<br>Bit 0 and 1 of address are always treated as 0                                                                                                                    |
-| PUSHSP           | 0000 0010 | 0000 0010 | Pushes stack pointer.                                                                                                                                                                                                                                                  |
-| POPSP            | 0000 1101 | 0000 1101 | Pops value off top of stack and sets SP to that value. Used to allocate/deallocate space on stack for variables or when changing threads.                                                                                                                              |
-| ADD              | 0000 0101 | 0000 0101 | Pops two values on stack adds them and pushes the result                                                                                                                                                                                                               |
-| AND              | 0000 0110 | 0000 0110 | Pops two values off the stack and does a bitwise-and & pushes the result onto the stack                                                                                                                                                                                |
-| OR               | 0000 0111 | 0000 0111 | Pops two integers, does a bitwise or and pushes result                                                                                                                                                                                                                 |
-| NOT              | 0000 1001 | 0000 1001 | Bitwise inverse of value on stack                                                                                                                                                                                                                                      |
-| FLIP             | 0000 1010 | 0000 1010 | Reverses the bit order of the value on the stack, i.e. abc->cba, 100->001, 110->011, etc.<br>The raison d'etre for this instruction is mainly to emulate other instructions.                                                                                           |
-| NOP              | 0000 1011 | 0000 1011 | No operation, clears IDIM flag as side effect, i.e. used between two consecutive IM instructions to push two values onto the stack.                                                                                                                                    |
-| PUSHSPADD        | 61        | 00111101  | a=sp;<br>b=popIntStack()*4;<br>pushIntStack(a+b);<br>                                                                                                                                                                                                                  |
-| POPPCREL         | 57        | 00111001  | setPc(popIntStack()+getPc());                                                                                                                                                                                                                                          |
-| SUB              | 49        | 00110001  | int a=popIntStack();<br>int b=popIntStack();<br>pushIntStack(b-a);                                                                                                                                                                                                     |
-| XOR              | 50        |           | pushIntStack(popIntStack() ^ popIntStack());                                                                                                                                                                                                                           |
-| LOADB            | 51        |           | 8 bit load instruction. Really only here for compatibility with C programming model. Also it has a big impact on DMIPS test.<br>pushIntStack(cpuReadByte(popIntStack())&0xff);                                                                                         |
-| STOREB           | 52        |           | 8 bit store instruction. Really only here for compatibility with C programming model. Also it has a big impact on DMIPS test. <br>addr = popIntStack();<br>val = popIntStack();<br>cpuWriteByte(addr, val);                                                            |
-| LOADH            | 34        |           | 16 bit load instruction. Really only here for compatibility with C programming model.<br>pushIntStack(cpuReadWord(popIntStack()));                                                                                                                                     |
-| STOREH           | 35        |           | 16 bit store instruction. Really only here for compatibility with C programming model.<br>addr = popIntStack();<br>val = popIntStack();<br>cpuWriteWord(addr, val);<br>                                                                                                |
-| LESSTHAN         | 36        |           | Signed comparison<br>a = popIntStack();<br>b = popIntStack();<br>pushIntStack((a < b) ? 1 : 0);                                                                                                                                                                        |
-| LESSTHANOREQUAL  | 37        |           | Signed comparison<br>a = popIntStack();<br>b = popIntStack();<br>pushIntStack((a <= b) ? 1 : 0);                                                                                                                                                                       |
-| ULESSTHAN        | 38        |           | Unsigned comparison<br>long a;  //long is here 64 bit signed integer<br>long b;<br>a = ((long) popIntStack()) & INTMASK; // INTMASK is unsigned 0x00000000ffffffff<br>b = ((long) popIntStack()) & INTMASK;<br>pushIntStack((a < b) ? 1 : 0);                          |
-| ULESSTHANOREQUAL | 39        |           | Unsigned comparison<br>long a;  //long is here 64 bit signed integer<br>long b;<br>a = ((long) popIntStack()) & INTMASK; // INTMASK is unsigned 0x00000000ffffffff<br>b = ((long) popIntStack()) & INTMASK;<br>pushIntStack((a <= b) ? 1 : 0);                         |
-| EQBRANCH         | 55        |           | int compare;<br>int target;<br>target = popIntStack() + pc;<br>compare = popIntStack();<br>if (compare == 0)<br>{<br>setPc(target);<br>} else<br>{<br>setPc(pc + 1);<br>}                                                                                              |
-| NEQBRANCH        | 56        |           | int compare;<br>int target;<br>target = popIntStack() + pc;<br>compare = popIntStack();<br>if (compare != 0)<br>{<br>setPc(target);<br>} else<br>{<br>setPc(pc + 1);<br>}                                                                                              |
-| MULT             | 41        |           | Signed 32 bit multiply<br>pushIntStack(popIntStack() * popIntStack());                                                                                                                                                                                                 |
-| DIV              | 53        |           | Signed 32 bit integer divide.<br>a = popIntStack();<br>b = popIntStack();<br>if (b == 0)<br>{<br>// undefined<br>} pushIntStack(a / b);                                                                                                                                |
-| MOD              | 54        |           | Signed 32 bit integer modulo.<br>a = popIntStack();<br>b = popIntStack();<br>if (b == 0)<br>{<br>// undefined<br>}<br>pushIntStack(a % b);                                                                                                                             |
-| LSHIFTRIGHT      | 42        |           | unsigned shift right.<br>long shift;<br>long valX;<br>int t;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = ((long) popIntStack()) & INTMASK;<br>t = (int) (valX >> (shift & 0x3f));<br>pushIntStack(t);                                                       |
-| ASHIFTLEFT       | 43        |           | arithmetic(signed) shift left.<br>long shift;<br>long valX;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = ((long) popIntStack()) & INTMASK;<br>int t = (int) (valX << (shift & 0x3f));<br>pushIntStack(t);                                                    |
-| ASHIFTRIGHT      | 43        |           | arithmetic(signed) shift left.<br>long shift;<br>int valX;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = popIntStack();<br>int t = valX >> (shift & 0x3f);<br>pushIntStack(t);                                                                                |
-| CALL             | 45        |           | call procedure.<br>int address = pop();<br>push(pc + 1);<br>setPc(address);                                                                                                                                                                                            |
-| CALLPCREL        | 63        |           | call procedure pc relative<br>int address = pop();<br>push(pc + 1);<br>setPc(address+pc);                                                                                                                                                                              |
-| EQ               | 46        |           | pushIntStack((popIntStack() == popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
-| NEQ              | 47        |           | pushIntStack((popIntStack() != popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
-| NEG              | 48        |           | pushIntStack(-popIntStack());                                                                                                                                                                                                                                          |
+| Name              |  Opcode     | Description                                                                                                                                                                                                                                                            |
+| ----------------  |  ---------  | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ADD               |  00000101   | Pops two values on stack adds them and pushes the result                                                                                                                                                                                                               |
+| ADDSP             |  0001xxxx   | Add value of memory location SP+xxxx*4 to value on top of stack.                                                                                                                                                                                                       |
+| AND               |  00000110   | Pops two values off the stack and does a bitwise-and & pushes the result onto the stack                                                                                                                                                                                |
+| ASHIFTLEFT      \*|  00101011   | arithmetic(signed) shift left.<br>long shift;<br>long valX;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = ((long) popIntStack()) & INTMASK;<br>int t = (int) (valX << (shift & 0x3f));<br>pushIntStack(t);                                                    |
+| ASHIFTRIGHT     \*|  00101100   | arithmetic(signed) shift left.<br>long shift;<br>int valX;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = popIntStack();<br>int t = valX >> (shift & 0x3f);<br>pushIntStack(t);                                                                                |
+| BREAKPOINT        |  00000000   | The debugger sets a memory location to this value to set a breakpoint. Once a JTAG-like debugger interface is added, it will be convenient to be able to distinguish between a breakpoint and an illegal(possibly emulated) instruction.                               |
+| CALL            \*|  00101101   | call procedure.<br>int address = pop();<br>push(pc + 1);<br>setPc(address);                                                                                                                                                                                            |
+| CALLPCREL       \*|  00111111   | call procedure pc relative<br>int address = pop();<br>push(pc + 1);<br>setPc(address+pc);                                                                                                                                                                              |
+| DIV             \*|  00110101   | Signed 32 bit integer divide.<br>a = popIntStack();<br>b = popIntStack();<br>if (b == 0)<br>{<br>// undefined<br>} pushIntStack(a / b);                                                                                                                                |
+| EMULATE           |  001xxxxx   | Push PC to stack and set PC to 0x0+xxxxx*32. This is used to emulate opcodes. Emulated Opcodes are marked with a star (\*) in this table.                                                                                                                              |
+| EQ              \*|  00101110   | pushIntStack((popIntStack() == popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
+| EQBRANCH        \*|  00110111   | int compare;<br>int target;<br>target = popIntStack() + pc;<br>compare = popIntStack();<br>if (compare == 0)<br>{<br>&nbsp;&nbsp;&nbsp;&nbsp;setPc(target);<br>} else<br>{<br>&nbsp;&nbsp;&nbsp;&nbsp;setPc(pc + 1);<br>}                                              |
+| ESR               | *E*00000000 | Copy Extended Status Register to TOS.<br> Bit 31 : 1 = reserved.<br>Bit 0 = Background Transfer in Progress (1).                                                                                                                                                       |
+| EXTEND            |  00001111   | Extended instruction set. Byte following this instruction represents the new instruction.                                                                                                                                                                              |
+| FIADD32         \*|  00111010   | Fixed point (Q15) addition. TOS and NOS are added and the result placed in TOS.                                                                                                                                                                                        |
+| FIDIV32         \*|  00111011   | Fixed point (Q15) division. TOS is the dividend, NOS is the divisor, result is placed in TOS.                                                                                                                                                                          |
+| FIMULT32        \*|  00111100   | Fixed point (Q15) multiplication. TOS is multiplied by NOS and the result is placed in TOS.                                                                                                                                                                            |
+| FLIP              |  00001010   | Reverses the bit order of the value on the stack, i.e. abc->cba, 100->001, 110->011, etc.<br>The raison d'etre for this instruction is mainly to emulate other instructions.                                                                                           |
+| IM                |  1xxxxxxx   | Pushes 7 bit sign extended integer and sets the a «instruction decode interrupt mask» flag(IDIM).<br>If the IDIM flag is already set, this instruction shifts the value on the stack left by 7 bits and stores the 7 bit immediate value into the lower 7 bits.<br>Unless an instruction is listed as treating the IDIM flag specially, it should be assumed to clear the IDIM flag.<br>To push a 14 bit integer onto the stack, use two consecutive IM instructions.<br> If multiple immediate integers are to be pushed onto the stack, they must be interleaved with another instruction, typically NOP.  |
+| LDIR              | *E*00001yxx | LoaD Increment Repeat, copies \<n\> words of memory from source to destination.  TOS = Source Address, NOS = Destination Address, *xx* = bytes to transfer where *'01'* = 8 bit parameter, *'10'* = 16 bit parameter, *'11'* = 32 bit parameter. *y* = mode of operation, *'0'* = CPU waits for completion, *'1'* = Transfer operates in background. If a previous transfer is operating in the background, CPU waits for completion prior to executing instruction. Consult ESR for current status of background execution. | 
+| LESSTHAN        \*|  00100100   | Signed comparison<br>a = popIntStack();<br>b = popIntStack();<br>pushIntStack((a < b) ? 1 : 0);                                                                                                                                                                        |
+| LESSTHANOREQUAL \*|  00100101   | Signed comparison<br>a = popIntStack();<br>b = popIntStack();<br>pushIntStack((a <= b) ? 1 : 0);                                                                                                                                                                       |
+| LOAD              |  00001000   | Pops address stored on stack and loads the value of that address onto stack.<br>Bit 0 and 1 of address are always treated as 0(i.e. ignored) by the HDL implementations and C code is guaranteed by the programming model never to use 32 bit LOAD on non-32 bit aligned addresses(i.e. if a program does this, then it has a bug).|
+| LOADB           \*|  00110011   | 8 bit load instruction. Really only here for compatibility with C programming model. Also it has a big impact on DMIPS test.<br>pushIntStack(cpuReadByte(popIntStack())&0xff);                                                                                         |
+| LOADH           \*|  00100010   | 16 bit load instruction. Really only here for compatibility with C programming model.<br>pushIntStack(cpuReadWord(popIntStack()));                                                                                                                                     |
+| LOADSP            |  011xxxxx   | Push value of memory location SP+xxxxx*4, where xxxxx is a positive integer, onto stack.                                                                                                                                                                               |
+| LSHIFTRIGHT     \*|  00101010   | unsigned shift right.<br>long shift;<br>long valX;<br>int t;<br>shift = ((long) popIntStack()) & INTMASK;<br>valX = ((long) popIntStack()) & INTMASK;<br>t = (int) (valX >> (shift & 0x3f));<br>pushIntStack(t);                                                       |
+| MOD             \*|  00110110   | Signed 32 bit integer modulo.<br>a = popIntStack();<br>b = popIntStack();<br>if (b == 0)<br>{<br>// undefined<br>}<br>pushIntStack(a % b);                                                                                                                             |
+| MULT            \*|  00101001   | Signed 32 bit multiply<br>pushIntStack(popIntStack() * popIntStack());                                                                                                                                                                                                 |
+| NEG             \*|  00110000   | pushIntStack(-popIntStack());                                                                                                                                                                                                                                          |
+| NEQ             \*|  00101111   | pushIntStack((popIntStack() != popIntStack()) ? 1 : 0);                                                                                                                                                                                                                |
+| NEQBRANCH       \*|  00111000   | int compare;<br>int target;<br>target = popIntStack() + pc;<br>compare = popIntStack();<br>if (compare != 0)<br>{<br>&nbsp;&nbsp;&nbsp;&nbsp;setPc(target);<br>} else<br>{<br>&nbsp;&nbsp;&nbsp;&nbsp;setPc(pc + 1);<br>}                                              |
+| NOP               |  00001011   | No operation, clears IDIM flag as side effect, i.e. used between two consecutive IM instructions to push two values onto the stack.                                                                                                                                    |
+| NOT               |  00001001   | Bitwise inverse of value on stack                                                                                                                                                                                                                                      |
+| OR                |  00000111   | Pops two integers, does a bitwise or and pushes result                                                                                                                                                                                                                 |
+| POPPC             |  00000100   | Pops address off stack and sets PC                                                                                                                                                                                                                                     |
+| POPPCREL        \*|  00111001   | setPc(popIntStack()+getPc());                                                                                                                                                                                                                                          |
+| POPSP             |  00001101   | Pops value off top of stack and sets SP to that value. Used to allocate/deallocate space on stack for variables or when changing threads.                                                                                                                              |
+| PUSHPC            |  emulated   | Pushes program counter onto the stack.                                                                                                                                                                                                                                 |
+| PUSHSP            |  00000010   | Pushes stack pointer.                                                                                                                                                                                                                                                  |
+| PUSHSPADD       \*|  00111101   | a=sp;<br>b=popIntStack()*4;<br>pushIntStack(a+b);<br>                                                                                                                                                                                                                  |
+| STORESP           |  010xxxxx   | Pop value off stack and store it in the SP+xxxxx*4 memory location, where xxxxx is a positive integer.                                                                                                                                                                 |
+| STORE             |  00001100   | Pops address, then value from stack and stores the value into the memory location of the address.<br>Bit 0 and 1 of address are always treated as 0                                                                                                                    |
+| STOREB          \*|  00110100   | 8 bit store instruction. Really only here for compatibility with C programming model. Also it has a big impact on DMIPS test. <br>addr = popIntStack();<br>val = popIntStack();<br>cpuWriteByte(addr, val);                                                            |
+| STOREH          \*|  00100011   | 16 bit store instruction. Really only here for compatibility with C programming model.<br>addr = popIntStack();<br>val = popIntStack();<br>cpuWriteWord(addr, val);<br>                                                                                                |
+| SUB             \*|  00110001   | int a=popIntStack();<br>int b=popIntStack();<br>pushIntStack(b-a);                                                                                                                                                                                                     |
+| ULESSTHAN       \*|  00100110   | Unsigned comparison<br>long a;  //long is here 64 bit signed integer<br>long b;<br>a = ((long) popIntStack()) & INTMASK; // INTMASK is unsigned 0x00000000ffffffff<br>b = ((long) popIntStack()) & INTMASK;<br>pushIntStack((a < b) ? 1 : 0);                          |
+| ULESSTHANOREQUAL\*|  00100111   | Unsigned comparison<br>long a;  //long is here 64 bit signed integer<br>long b;<br>a = ((long) popIntStack()) & INTMASK; // INTMASK is unsigned 0x00000000ffffffff<br>b = ((long) popIntStack()) & INTMASK;<br>pushIntStack((a <= b) ? 1 : 0);                         |
+| XOR             \*|  00110010   | pushIntStack(popIntStack() ^ popIntStack());                                                                                                                                                                                                                           |
 
+*E* = Extended instruction, prefixed by EXTEND opcode.<br>
+*\** = Emulated instruction if not implemented in hardware.
 <br>
 
 ### Implemented Instructions Comparison Table
 
-![alt text](https://github.com/pdsmart/ZPU/blob/master/docs/ImplInstructions.png)
+![alt text](../images/ImplInstructions.png)
 
 ### Hardware Variable Byte Write
 
@@ -117,17 +123,20 @@ In the Evo, hardware was implemented (build time selectable) to allow Byte and H
 
 In order to debug the CPU or just provide low level internal operating information, a cached UART debug module is implemented. Currently this is only for output but has the intention to be tied into the IOCP for in-situ debugging when Simulation/Signal-Tap is not available.
 
-Embedded within the CPU RTL are statements which issue snapshot information to the serialiser, if  enabled in the configuration along with the information level. This is then serialized and output to a connected terminal. A snapshot of the output information can be seen below (with manual comments):
+Embedded within the CPU RTL are selectable level triggered statements which issue snapshot information to the serialiser. The statements are expanded and then serialized and output to a connected terminal. A snapshot of the output information can be seen below (with manual comments):
 
 |                                                              |
 | ------------------------------------------------------------ |
-| 000477 01ffec 00001ae4 00000000 70.17 04770484 046c047c 08f0046c 0b848015 17700500 05000500 05001188 11ef2004  <br/><br/><u>Break Point - Illegal instruction</u><br/>000478 01ffe8 00001ae4 00001ae4 00.05 04780484 046c0478 08f0046c 0b888094 05000500 05000500 118811ef 20041188  <br/><br/><u>L1 Cache Dump</u><br/>000478 (480)-> 11 e2 2a 51 11 a0 11 8f <-(483) (004)->11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 <-(46f)<br/>      (004)-> 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b <-(473)<br/>       05 00 05 00 05 00 05 00 (46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477)<br/>(46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477) 05 00 05 00 05 00 05 00 <br/>(470)->11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 <-(477) -> 05 00 05 00 05 00 05 00 (47c)->11 88 11 ef 20 04 11 88 <-(47f)<br/>(474)->1c 38 11 80 17 71 17 70 05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f <br/>       05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 <br/>       11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 <br/><u>L2 Cache Dump</u><br/>000000 88 08 8c 08 ed 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000020 88 08 8c 08 90 08 0b 0b 0b 88 80 08 2d 90 0c 8c 0c 88 0c 04 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000040 71 fd 06 08 72 83 06 09 81 05 82 05 83 2b 2a 83 ff ff 06 52 04 00 00 00 00 00 00 00 00 00 00 00 |
+| 000477 01ffec 00001ae4 00000000 70.17 04770484 046c047c 08f0046c 0b848015 17700500 05000500 05001188 11ef2004  <br/><br/><u>Break Point - Illegal instruction</u><br/>PC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Stack&nbsp;&nbsp;&nbsp;&nbsp;TOS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NOS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Insn&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Signals&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Signals&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Signals&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Signals&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;L1 Insn Q&nbsp;&nbsp;&nbsp;&nbsp;L1 Insn Q&nbsp;&nbsp;&nbsp;&nbsp;L1 Insn Q&nbsp;&nbsp;&nbsp;&nbsp;L1 Insn Q<br>000478 01ffe8 00001ae4 00001ae4 00.05 04780484 046c0478 08f0046c 0b888094 05000500 05000500 118811ef 20041188  <br/><br/><u>L1 Cache Dump</u><br/>000478 (480)-> 11 e2 2a 51 11 a0 11 8f <-(483) (004)->11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 <-(46f)<br/>      (004)-> 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 20 (46c)->04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b <-(473)<br/>       05 00 05 00 05 00 05 00 (46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477)<br/>(46c)->20 04 11 b5 11 e4 17 70 11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 -<(477) 05 00 05 00 05 00 05 00 <br/>(470)->11 b6 11 c4 2d 27 11 8b 1c 38 11 80 17 71 17 70 <-(477) -> 05 00 05 00 05 00 05 00 (47c)->11 88 11 ef 20 04 11 88 <-(47f)<br/>(474)->1c 38 11 80 17 71 17 70 05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f <br/>       05 00 05 00 05 00 05 00 11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 <br/>       11 88 11 ef 20 04 11 88 11 e2 2a 51 11 a0 11 8f 11 ed 20 04 05 00 05 00 05 00 05 00 05 00 05 00 <br/><u>L2 Cache Dump</u><br/>000000 88 08 8c 08 ed 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000020 88 08 8c 08 90 08 0b 0b 0b 88 80 08 2d 90 0c 8c 0c 88 0c 04 00 00 00 00 00 00 00 00 00 00 00 00 <br/>000040 71 fd 06 08 72 83 06 09 81 05 82 05 83 2b 2a 83 ff ff 06 52 04 00 00 00 00 00 00 00 00 00 00 00 |
 
 All critical information such as current instruction being executed (or not if stalled), Signals/Flags, L1/L2 Cache contents and Memory contents can be output.
 
+### Timing Constraints
+
+This is a work in progress, I am slowly updating the design and/or adding constraints such that timing is fully met. Currently there is negative slack at 100MHz albeit the design fully works, this will in the future be corrected so timing as analyzed by TimeQuest will be met.
 
 
-# System On a Chip
+## System On a Chip
 
 In order to provide a working framework in which the ZPU Evo could be used, a System On a Chip wrapper was created which allows for the instantiation of various devices (ie. UART/SD card). 
 
@@ -135,29 +144,34 @@ As part of the development, the ZPU Small/Medium/Flex models were incorporated i
 
 The SoC currently implements (in the build tree):
 
-| Component                 | Selectable (ie not hardwired)                                |
-| ------------------------- | ------------------------------------------------------------ |
-| CPU                       | Choice of ZPU Small, Medium, Flex, Evo or Evo Minimal.       |
-| Wishbone Bus              | Yes, 32 bit bus.                                             |
-| (SB) BRAM                 | Yes, implement a configurable block of BRAM as the boot loader and stack. |
-| Instruction Bus BRAM      | Yes, enable a separate bus (or Dual-Port) to the boot code implemented in BRAM. This is generally a dual-port BRAM shared with the Sysbus BRAM but can be independent. |
-| (SB) RAM                  | Implement a block of BRAM as RAM, seperate from the BRAM used for the boot loader/stack. |
-| (WB) SDRAM                | Yes, implement an SDRAM controller over the Wishbone bus.    |
-| (WB) RAM                  | Implement a block of BRAM as RAM over the Wishbone bus.      |
-| (WB) I2C                  | Yes, implements an I2C Controller over the Wishbone bus.     |
-| (SB) Timer 0              | No, implements a hardware 12bit Second, 18bit milliSec and 24bit uSec down counter with interrupt, a 32bit milliSec up counter with interrupt and a YMD HMS Real Time Clock. The down counters are ideal for scheduling. |
-| (SB) Timer 1              | Yes, a selectable number of pre-scaled 32bit down counters.  |
-| (SB) UART 0               | No, a cached UART used for monitor output and command input/program load. |
-| (SB) UART 1               | No, a cached UART used for software (C program)/hardware (ZPU debug serializer) output. |
-| (SB) Interrupt Controller | Yes, a prioritized configurable (# of inputs) interrupt controller. |
-| (SB) PS2                  | Yes, a PS2 Keyboard and Mouse controller.                    |
-| (SB) SPI                  | Yes, a configurable number of Serial Peripheral Interface controllers. |
-| (SB) SD                   | Yes, a configurable number of hardware based SPI SD controllers. |
-| (SB) SOCCFG               | Yes, a set of registers to indicate configuration of the ZPU and SoC to the controlling program. |
+| Component                     | Option | Comment                                                      |
+| ----------------------------- | ------ | ------------------------------------------------------------ |
+| CPU                           | Yes    | ZPU Small, Medium, Flex, Evo or Evo Minimal.                 |
+| Wishbone Bus                  | Yes    | 32 bit Wishbone bus.                                         |
+| (SB) BRAM                     | Yes    | Implement a configurable block of BRAM as the boot loader and stack. |
+| Instruction Bus BRAM          | Yes    | Enable a separate bus (or Dual-Port) to the boot code implemented in BRAM. This is generally a dual-port BRAM shared with the Sysbus BRAM but can be independent. |
+| (SB) RAM                      | Yes    | Implement a block of BRAM as RAM, seperate from the BRAM used for the boot loader/stack. |
+| (WB) SDRAM                    | Yes    | Implement an SDRAM controller over the Wishbone bus.    |
+| (WB) RAM                      | Yes    | Implement a block of BRAM as RAM over the Wishbone bus.      |
+| (WB) I2C                      | Yes    | Implements an I2C Controller over the Wishbone bus.     |
+| (SB) Timer 0                  | No     | Implements a hardware 12bit Second, 18bit milliSec and 24bit uSec down counter with interrupt, a 32bit milliSec up counter with interrupt and a YMD HMS Real Time Clock. The down counters are ideal for scheduling. |
+| (SB) Timer 1                  | Yes    | A selectable number of pre-scaled 32bit down counters.  |
+| (SB) UART 0                   | No     | A cached UART used for monitor output and command input/program load. |
+| (SB) UART 1                   | No     | A cached UART used for software (C program)/hardware (ZPU debug serializer) output. |
+| (SB) Interrupt Controller     | Yes    | A prioritized configurable (# of inputs) interrupt controller. |
+| (SB) PS2                      | Yes    | A PS2 Keyboard and Mouse controller.                    |
+| (SB) SPI                      | Yes    | A configurable number of Serial Peripheral Interface controllers. |
+| (SB) SD                       | Yes    | A configurable number of hardware based SPI SD controllers. |
+| (SB) SOCCFG                   | Yes    | A set of registers to indicate configuration of the ZPU and SoC to the controlling program. |
 
-Within the SoC configuration, items such as starting Stack Address, Reset Vector, IO Start/End (SB) and (WB) can be specified. Given the wishbone bus, it is very easy to add further opencore IP devices, for the system bus some work may be needed as the opencore IP devices use differing signals.
+Within the SoC configuration, items such as starting Stack Address, Reset Vector, IO Start/End (SB) and (WB) can be specified. With the addition of the wishbone bus, it is very easy to add further opencore IP devices, for the system bus some work may be needed as the opencore IP devices use differing signals.
 
-# Software
+### SDRAM
+
+
+
+## Software
+
 
 The software provided includes:
 
@@ -166,143 +180,248 @@ The software provided includes:
 3. A disk operating system, zOS (ZPU Operating System). A version of ZPUTA but aimed at production code where all functionality resides as disk applications.
 4. Library functions in C to aid in building applications, including 3rd party libs ie. FatFS from El. Chan
 
-### IOCP
-
-The I/O Control Program (IOCP) is basically a bootloader, it can operate standalone or as the first stage in booting an application. At the time of writing the following functionality and memory maps have been defined in the build.sh and within the parameterisation of the IOCP/ZPUTA/RTL but any other is possible by adjusting the parameters.
-
- - Tiny - IOCP is the smallest size possible to boot from SD Card. It is useful for a SoC configuration where there is limited BRAM and the applications loaded from the SD card would potentially run in external RAM.
- - Minimum - As per tiny but adds: print IOCP version, interrupt handler, boot message and SD error messages. 
- - Medium - As per small but adds: command line processor to add commands below, timer on auto boot so it can be disabled by pressing a key
-
-    | Command | Description                                |
-    | ------- | ------------------------------------------ |
-    | 1       | Boot Application in Application area BRAM  |
-    | 4       | Dump out BRAM (boot) memory                |
-    | 5       | Dump out Stack memory                      |
-    | 6       | Dump out application RAM                   |
-    | C       | Clear Application area of BRAM             |
-    | c       | Clear Application RAM                      |
-    | d       | List the SD Cards directory                |
-    | R       | Reset the system and boot as per power on  |
-    | h       | Print out help on enabled commands         |
-    | i       | Prints version information                 |
-
- - Full - As medium but adds additional commands below.
-
-    | Command | Description                                |
-    | ------- | ------------------------------------------ |
-    | 2       | Upload to BRAM application area, in binary format, from serial port |
-    | 3       | Upload to RAM, in binary format, from serial port |
-    | i       | Print detailed SoC configuration           |
-
-### ZPUTA
-
-ZPUTA started life as a basic test application to verify ZPU Evo and SoC operations. As it evolved and different FPGA's were included in the ZPU Evo scope, it became clear that it had to be more advanced due to limited resources. 
-
-ZPUTA has two primary methods of execution, a) as an application booted by IOCP, b) standalone booted as the ZPU Evo startup firmware. The mode is chosen in the configuration and functionality is identical.
-
-In order to cater for limited FPGA BRAM resources, all functionality of ZPUTA can be enabled/disabled within the loaded image. If an SD Card is present then some/all functionality can be shifted from the loaded image into applets (1 applet per function, ie. memory clear) and stored on the SD card - this mode is like DOS where typing a command retrieves the applet from SD card and executes it.
-
-The functionality currently provided by ZPUTA can be summarised as follows.
-
-| Category                      | Command  | Parameters                          | Description                                     |
-| --------                      | -------  | ----------                          | ----------------------------------------------- |
-| Disk IO Commands              | ddump    | \[<pd#> \<sect>]                    | Dump a sector                                   |
-|                               | dinit    | \<pd#> \[\<card type>]              | Initialize disk                                 |
-|                               | dstat    | \<pd#>                              | Show disk status                                |
-|                               | dioctl   | \<pd#>                              | ioctl(CTRL_SYNC)                                | 
-| Disk Buffer Commands          | bdump    | \<ofs>                              | Dump buffer                                     |
-|                               | bedit    | \<ofs> \[\<data>] ...               | Edit buffer                                     |
-|                               | bread    | \<pd#> \<sect> \[\<num>]            | Read into buffer                                |
-|                               | bwrite   | \<pd#> \<sect> \[\<num>]            | Write buffer to disk                            |
-|                               | bfill    | \<val>                              | Fill buffer                                     |
-|                               | blen     | \<len>                              | Set read/write length for fread/fwrite command  |
-| Filesystem Commands           | finit    | \<ld#> \[\<mount>]                  | Force init the volume                           |
-|                               | fopen    | \<mode> \<file>                     | Open a file                                     |
-|                               | fclose   |                                     | Close the open file                             |
-|                               | fseek    | \<ofs>                              | Move fp in normal seek                          |
-|                               | fread    | \<len>                              | Read part of file into buffer                   |
-|                               | finspect | \<len>                              | Read part of file and examine                   |
-|                               | fwrite   | \<len> \<val>                       | Write part of buffer into file                  |
-|                               | ftrunc   |                                     | Truncate the file at current fp                 |
-|                               | falloc   | \<fsz> \<opt>                       | Allocate ctg blks to file                       |
-|                               | fattr    | \<atrr> \<mask> \<name>             | Change object attribute                         |
-|                               | ftime    | <y> <m> <d> <h> <M> <s> <fn>        | Change object timestamp                         |
-|                               | frename  | \<org name> \<new name>             | Rename an object                                |
-|                               | fdel     | \<obj name>                         | Delete an object                                |
-|                               | fmkdir   | \<dir name>                         | Create a directory                              |
-|                               | fstat    | \[\<path>]                          | Show volume status                              |
-|                               | fdir     | \[\<path>]                          | Show a directory                                |
-|                               | fcat     | \<name>                             | Output file contents                            |
-|                               | fcp      | \<src file> \<dst file>             | Copy a file                                     |
-|                               | fconcat  | \<src fn1> \<src fn2> \<dst fn>     | Concatenate 2 files                             |
-|                               | fxtract  | \<src> \<dst> \<start pos> \<len>   | Extract a portion of file                       |
-|                               | fload    | \<name> \[\<addr>]                  | Load a file into memory                         |
-|                               | fexec    | \<name> \<ldAddr> \<xAddr> \<mode>  | Load and execute file                           |
-|                               | fsave    | \<name> \<addr> \<len>              | Save memory range to a file                     |
-|                               | fdump    | \<name> \[\<width>]                 | Dump a file contents as hex                     |
-|                               | fcd      | \<path>                             | Change current directory                        |
-|                               | fdrive   | \<path>                             | Change current drive                            |
-|                               | fshowdir |                                     | Show current directory                          |
-|                               | flabel   | \<label>                            | Set volume label                                |
-|                               | fmkfs    | \<ld#> \<type> \<au>                | Create FAT volume                               |
-| Memory Commands               | mclear   | \<start> \<end> \[\<word>]          | Clear memory                                    |
-|                               | mcopy    | \<start> \<end> \<dst addr>         | Copy memory                                     |
-|                               | mdiff    | \<start> \<end> \<cmp addr>         | Compare memory                                  |
-|                               | mdump    | \[\<start> \[\<end>] \[\<size>]]    | Dump memory                                     |
-|                               | mtest    | \[\<start> \[\<end>] \[iter]        | Test memory                                     |
-|                               | meb      | \<addr> \<byte> \[...]              | Edit memory (Bytes)                             |
-|                               | meh      | \<addr> \<h-word> \[...]            | Edit memory (H-Word)                            |
-|                               | mew      | \<addr> \<word> \[...]              | Edit memory (Word)                              |
-| Hardware Commands             | hid      |                                     | Disable Interrupts                              |
-|                               | hie      |                                     | Enable Interrupts                               |
-|                               | hr       |                                     | Display Register Information                    |
-|                               | ht       |                                     | Test uS Timer                                   |
-|                               | hfd      |                                     | Disable UART FIFO                               |
-|                               | hfe      |                                     | Enable UART FIFO                                |
-| Performance Testing Commands  | dhry     |                                     | Dhrystone Test v2.1                             |
-|                               | coremark |                                     | CoreMark Test v1.0                              |
-| Program Execution Commands    | call     | \<addr>                             | Call function @ \<addr>                         |
-|                               | jmp      | \<addr>                             | Execute code @ \<addr>                          |
-| Miscellaneous Commands        | restart  |                                     | Restart application                             |
-|                               | reset    |                                     | Reset system                                    |
-|                               | help     | \[\<cmd %>\|\<group %>]             | Show this screen                                |
-|                               | info     |                                     | Config info                                     |
-|                               | time     | \[\<y> \<m> \<d> \<h> \<M> \<s>]    | Set/Show current time                           |
-|                               | test     |                                     | Test Screen                                     |
-
-All of the above commands can be disabled, built-in or created as an SD based applet.
-
-### zOS
-
-zOS is under development but is basically an optimised version of ZPUTA stripping out unnecessary logic and targetting it as the primary operating system for ZPU Evo use in my FPGA applications such as the SharpMZ emulator.
-
-zOS will be uploaded to the repository when I feel it is in a good alpha state.
+21/04/2020: Software for the ZPU has now been merged with the tranZPUter and is kept and maintained in the [zSoft](/zsoft) repository.
 
 
-### Memory Maps
+## Configuration
 
-The currently defined memory maps for IOCP/ZPUTA/Applications are as follows:-
-
-
-![IOCP Memory Map](https://github.com/pdsmart/ZPU/blob/master/docs/IOCPMemoryMap.png)
+This section shows how to configure the ZPU and the SoC, either to use the ZPU seperately or as part of the included SoC.
 
 
-For ZPUTA, it can either be configured to be the boot application (ie. no IOCP) or it can be configured as an App booted by IOCP. Depending upon how ZPUTA is built. it can have applets (portions of its functionality created as dedicated executables on the SD card) or standalone with all functionality inbuilt. The former is used when there is limited memory or a set of loadable programs is desired.
+### Configure the CPU
 
-![ZPUTA Memory Map](https://github.com/pdsmart/ZPU/blob/master/docs/ZPUTAMemoryMap.png)
+<br>The CPU is configurable using the configuration file 'cpu/zpu_pkg.vhd'. It generally specifies the size of the address bus and what hardware features should be enabled. The following table outlines the configurable options.
+
+&nbsp;&nbsp;| Configuration Variable   | Model   | Values       | Description                                                                |
+| ------------------------ | -----   | ------------ | ---------------------------------------------------------------------------|
+| EVO_USE_INSN_BUS         | Evo     | true/false   | Use a seperate instruction bus to connect to the BRAM memory. All other Memory and I/O operations will go over the normal bus. This option is primarily used with Dual Port BRAM, one side connected to the Instruction Bus the other side to the standard bus and will give a significant performance boost when the executed code is in this memory. |
+| EVO_USE_HW_BYTE_WRITE    | Evo     | true/false   | This option implements hardware writing of bytes, reads are always 32bit and aligned. |
+| EVO_USE_HW_WORD_WRITE    | Evo     | true/false   | This option implements hardware writing of 16bit words,  reads are always 32bit and aligned. |
+| EVO_USE_WB_BUS           | Evo     | true/false   | Implement the wishbone interface in addition to the system bus.  |
+| DEBUG_CPU                | All     | true/false   | Enable CPU debugging output. This generally consists of core data being serialised and output via the UART1 TX. There are pre-defined blocks of debug data (debug level) for output but it is easy to add in another if your targetting a specific CPU area/instruction. |
+| DEBUG_LEVEL              | All     | 0 to 5       | Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ Everything else. |
+| DEBUG_MAX_TX_FIFO_BITS   | All     | 2 .. ~16     | Size of UART TX Fifo for debug output. One point to note, if too much data is output and the output Baud rate too low, the CPU will wait so cache size is irrelevant. Cache is only useful if outputting small amounts of data (ie. a targetted instruction) where the cache never becomes full and the CPU doesnt need to wait. |
+| DEBUG_MAX_FIFO_BITS      | All     | 2 .. ~16     | Size of debug output data records fifo. Each request to output data via the serialiser is made via debug records which consume memory, the more records available the less chance of the CPU stalling. |
+| DEBUG_TX_BAUD_RATE       | All     | Any Baud integer value | This option sets the output Baud rate of the debug serializer transmitter, ie. 115200 |
+| maxAddrBit               | All     | \<16..31n> + WB_ACTIVE | This option sets the width of the address bus. WB_ACTIVE adds 1 to the width of the bus if the WishBone bus is enabled as the wishbone bus operates in the top half of the addressable memory area. |
+
+<br>
+  : The ZPU Evo has a number of options to enable/disable hardware instructions and cache. When instantiating a ZPU Evo CPU, the following options can be set to the desired configuration:
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| IMPL_OPTIMIZE_IM         | true/false        | If the instruction cache is enabled, optimise Im instructions to gain speed. |
+| IMPL_ASHIFTLEFT          | true/false        | Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT). |
+| IMPL_ASHIFTRIGHT         | true/false        | Arithmetic Shift Right. |
+| IMPL_CALL                | true/false        | Call to direct address. |
+| IMPL_CALLPCREL           | true/false        | Call to indirect address (add offset to program counter). |
+| IMPL_DIV                 | true/false        | 32bit signed division. |
+| IMPL_EQ                  | true/false        | Equality test. |
+| IMPL_EXTENDED_INSN       | true/false        | Extended multibyte instruction set. |
+| IMPL_FIADD32             | true/false        | Fixed point Q17.15 addition. |
+| IMPL_FIDIV32             | true/false        | Fixed point Q17.15 division. |
+| IMPL_FIMULT32            | true/false        | Fixed point Q17.15 multiplication. |
+| IMPL_LOADB               | true/false        | Load single byte from memory. |
+| IMPL_LOADH               | true/false        | Load half word (16bit) from memory. |
+| IMPL_LSHIFTRIGHT         | true/false        | Logical shift right. |
+| IMPL_MOD                 | true/false        | 32bit modulo (remainder after division). |
+| IMPL_MULT                | true/false        | 32bit signed multiplication. |
+| IMPL_NEG                 | true/false        | Negate value in TOS. |
+| IMPL_NEQ                 | true/false        | Not equal test. |
+| IMPL_POPPCREL            | true/false        | Pop a value into the Program Counter from a location relative to the Stack Pointer. |
+| IMPL_PUSHSPADD           | true/false        | Add a value to the Stack pointer and push it onto the stack. |
+| IMPL_STOREB              | true/false        | Store/Write a single byte to memory/IO. |
+| IMPL_STOREH              | true/false        | Store/Write a half word (16bit) to memory/IO. |
+| IMPL_SUB                 | true/false        | 32bit signed subtract. |
+| IMPL_XOR                 | true/false        | Exclusive or of value in TOS. |
+| RESET_ADDR_CPU           | \<n\>             | Initial address to start execution from after reset. This is normally set as the start of the firmware in ROM/BRAM. |
+| START_ADDR_MEM           | \<n\>             | Start location of program memory. This is normally set as the start of the firmware in ROM/BRAM. |
+| STACK_ADDR               | \<n\>             | Stack start address. This is normally set as the top of the RAM/BRAM less 2 words. |
+| CLK_FREQ                 | \<n\>             | This is the cpu clock frequency in Hertz. It is used primarily for the debug logic and output UART baud rate generator. |
 
 <br>
 
-# Build
+### Configure the SoC
+
+<br>The System on a Chip is configurable using the configuration file 'zpu_soc_pkg.vhd'. The following table outlines the options which can be configured to adapt the SoC to a specific application.
+
+<br>
+  : The following options allow you to choose which CPU to instantiate depending on your requirements. Warning, only one can be enbled!
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| ZPU_SMALL                | \<0 or 1\>        | Select the SMALL CPU to be used in the SoC. NB. Wishbone interface not available for this CPU. |
+| ZPU_MEDIUM               | \<0 or 1\>        | Select the MEDIUM CPU to be used in the SoC. NB. Wishbone interface not available for this CPU. |
+| ZPU_FLEX                 | \<0 or 1\>        | Select the FLEX CPU to be used in the SoC. NB. Wishbone interface not available for this CPU. |
+| ZPU_EVO                  | \<0 or 1\>        | Select the EVOLUTION CPU to be used in the SoC. |
+| ZPU_EVO_MINIMAL          | \<0 or 1\>        | Select the Minimalist EVOLUTION CPU, which is the EVO CPU with all configurable options disabled using less fabric. |
+
+<br>
+  : The following options set the frequencies for the various boards. Normally these dont need changing, add additional constants if using a different board to those defined and add in your <board>_Topleavel.vhd file. NB. This option only changes logic dependent on frequency, it doesnt change the PLL which needs to be done seperately in HDL.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SYSCLK_E115_FREQ         | \<Freq in Hz\>    | Set the frequency for the E115 FPGA Board. |
+| SYSCLK_QMV_FREQ          | \<Freq in Hz\>    | Set the frequency for the QMTECH Cyclone V FPGA Board. |
+| SYSCLK_DE0_FREQ          | \<Freq in Hz\>    | Set the frequency for the DE0-Nano FPGA Board. |
+| SYSCLK_DE10_FREQ         | \<Freq in Hz\>    | Set the frequency for the DE10-Nano FPGA Board. |
+| SYSCLK_CYC1000_FREQ      | \<Freq in Hz\>    | Set the frequency for the Trenz CYC1000 FPGA Board. |
+| SYSTEM_FREQUENCY         | 100000000         | Default system clock frequency if not overriden by the above values in the top level. |
+
+<br>
+  : Set the ID's for the various ZPU models. The format is 2 bytes, MSB=\<Model\>, LSB=\<Revision\>. This is only necessary if your making a different version and you need to detect in your software.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| ZPU_ID_SMALL             | 16#0101#          | Set ID for the ZPU Small in this package. |
+| ZPU_ID_MEDIUM            | 16#0201#          | Set ID for the ZPU Medium in this package. |
+| ZPU_ID_FLEX              | 16#0301#          | Set ID for the ZPU Flex in this package. |
+| ZPU_ID_EVO               | 16#0401#          | Set ID for the ZPU Evo in this package. |
+| ZPU_ID_EVO_MINIMAL       | 16#0501#          | Set ID for the ZPU Evo Minimal in this package. |
+
+<br>
+  : EVO CPU cache specific configuration.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| MAX_EVO_L1CACHE_BITS     | \<3..n\>, ie.5    | Evo. Set the maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache. NB. This option uses fabric registers so use sparingly. |
+| MAX_EVO_L2CACHE_BITS     | \<8..n\>, ie.14   | Evo. Set the maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache. This option uses BRAM. |
+| MAX_EVO_MXCACHE_BITS     | \<3..n\>, ie.3    | Evo. Set the maximum size of the memory transaction cache governed by the number of bits. This option changes the depth of the requests made by the CPU to the Memory Transaction Processor. No checks are made if the cache becomes full as it is finite and can be determined in the design how many slots will be used. |
+| MAX_EVO_MIN_L1CACHE_BITS | \<3..n\>, ie.3    | Minimal Evo. Set the maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache. NB. This option uses fabric registers so use sparingly. |
+| MAX_EVO_MIN_L2CACHE_BITS | \<8..n\>, ie.12   | Minimal Evo. Set the maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache. This option uses BRAM. |
+| MAX_EVO_MIN_MXCACHE_BITS | \<3..n\>, ie.3    | Minimal Evo. Set the maximum size of the memory transaction cache governed by the number of bits. |
+
+<br>
+  : Settings for various IO devices.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| MAX_RX_FIFO_BITS         | \<4..n\>, ie.4    | Size of the UART RX Fifo. |
+| MAX_TX_FIFO_BITS         | \<4..n\>, ie.10   | Size of UART TX Fifo. |
+| MAX_UART_DIVISOR_BITS    | \<1..n\>, ie.16   | Maximum number of bits for the UART clock rate generator divisor. |
+| INTR_MAX                 | \<1..n\>, ie.16   | Maximum number of interrupt inputs. |
+
+<br>
+  : SoC specific options.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_IMPL_TIMER1          | true/false        | Implement Timer 1, an array of prescaled downcounter with enable. |
+| SOC_TIMER1_COUNTERS      | \<0..n\>, ie.0    | Number of downcounters in Timer 1. Value is a 2^ array of counters, so 0 = 1 counter. |
+| SOC_IMPL_SD              | true/false        | Implement SD Card interface. |
+| SOC_SD_DEVICES           | \<0..n\>          | Number of SD card channels implemented. |
+| SOC_IMPL_INTRCTL         | true/false        | Implement the prioritised interrupt controller. |
+| SOC_IMPL_TCPU            | true/false        | Implement the TCPU controller for controlling the Z80 Bus.  |
+| SOC_IMPL_SOCCFG          | true/false        | Implement the SoC Configuration information registers. |
+
+<br>
+  : Main Boot BRAM on sysbus, contains startup firmware.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_IMPL_BRAM            | true/false        | Implement BRAM for the BIOS and initial Stack. |
+| SOC_IMPL_INSN_BRAM       | true/false        | Implement dedicated instruction BRAM for the EVO CPU. Any addr access beyond the BRAM size goes to normal memory. |
+| SOC_MAX_ADDR_BRAM_BIT    | \<n\>, ie.15      | Max address bit of the System BRAM ROM/Stack in bytes, ie. 15 = 32KB or 8K 32bit words. NB. For non evo CPUS you must adjust the maxMemBit parameter in zpu_pkg.vhd to be the same. |
+| SOC_ADDR_BRAM_START      | \<n\>, ie.0       | Start address of BRAM. |
+
+<br>
+  : Secondary block of sysbus RAM, typically implemented in BRAM.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_IMPL_RAM             | true/false        | Implement RAM using BRAM, typically for Application programs seperate to BIOS. |
+| SOC_MAX_ADDR_RAM_BIT     | \<n\>, ie.14      | Max address bit of the System RAM. |
+| SOC_ADDR_RAM_START       | \<n\>, ie.32768   | Start address of RAM. |
+
+<br>
+  : SDRAM on sysbus
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_IMPL_SDRAM           | true/false        | Implement Dynamic RAM and controller. |
+| SOC_MAX_ADDR_SDRAM_BIT   | \<n\>, ie.22      | Max address bit of the System RAM. |
+| SOC_ADDR_SDRAM_START     | \<n\>, ie.65536   | Start address of RAM. |
+
+<br>
+  : SDRAM on Wishbone bus.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_IMPL_WB_SDRAM        | true/false        | Implement SDRAM over wishbone interface. |
+| SOC_MAX_ADDR_WB_SDRAM_BIT| \<n\>, ie.22      | Max address bit of the System RAM. |
+| SOC_ADDR_WB_SDRAM_START  | \<n\>, ie.16777216| Start address of RAM. |
+
+<br>
+  : Instruction BRAM on sysbus, typically as a 2nd port on the main Boot BRAM (ie. dualport).
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_ADDR_INSN_BRAM_START | \<n\>, ie.0       | If the instruction bus is enabled this varialble indicates the address at which the BRAM starts on the instruction bus. |
+
+<br>
+  : Options for the CPU initialisation.
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| SOC_RESET_ADDR_CPU       | \<n\>             | Initial address to start execution from after reset. This is normally set as the start of BRAM, ie. SOC_ADDR_BRAM_START |
+| SOC_START_ADDR_MEM       | \<n\>             | Start location of program memory (BRAM/ROM/RAM). This is normally set as the start of BRAM, ie. SOC_ADDR_BRAM_START |
+| SOC_STACK_ADDR           | \<n\>             | Stack start address (BRAM/RAM). This is normally set as the top of the BRAM less 2 words, ie. SOC_ADDR_BRAM_END - 8 |
+| SOC_ADDR_IO_START        | \<n\>             | Start address of the Evo system bus IO region. This is normally via the forumula: '2^(maxAddrBit-WB_ACTIVE)) - (2^maxIOBit)' which sets the address space based on the address bus width and wether the wishbone bus is implemented. ||
+| SOC_ADDR_IO_END          | \<n\>             | End address of the Evo system bus IO region. This is normally via the formula: (2^(maxAddrBit-WB_ACTIVE)) - 1 |
+| SOC_WB_IO_START          | \<n\>, ie. 32505856 | Start address of the Wishbone bus IO range. |
+| SOC_WB_IO_END            | \<n\>, ie. 33554431 | End address of the Wishbone bus IO range. |
+
+<br>
+  : The ZPU Evo can be configured ia the SoC configuration to enable/disable desired options. Two sets of values exist, one with \_EVO\_ for the normal ZPU Evo instantiation, the other with \_EVOM\_ for the ZPU Minimal Evo instantiation.
+  : The configurable options are as follows:
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| IMPL_EVO_OPTIMIZE_IM     | true/false        | If the instruction cache is enabled, optimise Im instructions to gain speed. |
+
+<br>
+  : Evo CPU instructions to be implemented in hardware:
+
+&nbsp;&nbsp;| Configuration Variable   | Values            | Description                                                                 |
+| ------------------------ | ------------      | --------------------------------------------------------------------------- |
+| IMPL_EVO_ASHIFTLEFT      | true/false        | Arithmetic Shift Left (uses same logic so normally combined with ASHIFTRIGHT and LSHIFTRIGHT). |
+| IMPL_EVO_ASHIFTRIGHT     | true/false        | Arithmetic Shift Right. |
+| IMPL_EVO_CALL            | true/false        | Call to direct address. |
+| IMPL_EVO_CALLPCREL       | true/false        | Call to indirect address (add offset to program counter). |
+| IMPL_EVO_DIV             | true/false        | 32bit signed division. |
+| IMPL_EVO_EQ              | true/false        | Equality test. |
+| IMPL_EVO_EXTENDED_INSN   | true/false        | Extended multibyte instruction set. |
+| IMPL_EVO_FIADD32         | true/false        | Fixed point Q17.15 addition. |
+| IMPL_EVO_FIDIV32         | true/false        | Fixed point Q17.15 division. |
+| IMPL_EVO_FIMULT32        | true/false        | Fixed point Q17.15 multiplication. |
+| IMPL_EVO_LOADB           | true/false        | Load single byte from memory. |
+| IMPL_EVO_LOADH           | true/false        | Load half word (16bit) from memory. |
+| IMPL_EVO_LSHIFTRIGHT     | true/false        | Logical shift right. |
+| IMPL_EVO_MOD             | true/false        | 32bit modulo (remainder after division). |
+| IMPL_EVO_MULT            | true/false        | 32bit signed multiplication. |
+| IMPL_EVO_NEG             | true/false        | Negate value in TOS. |
+| IMPL_EVO_NEQ             | true/false        | Not equal test. |
+| IMPL_EVO_POPPCREL        | true/false        | Pop a value into the Program Counter from a location relative to the Stack Pointer. |
+| IMPL_EVO_PUSHSPADD       | true/false        | Add a value to the Stack pointer and push it onto the stack. |
+| IMPL_EVO_STOREB          | true/false        | Store/Write a single byte to memory/IO. |
+| IMPL_EVO_STOREH          | true/false        | Store/Write a half word (16bit) to memory/IO. |
+| IMPL_EVO_SUB             | true/false        | 32bit signed subtract. |
+| IMPL_EVO_XOR             | true/false        | Exclusive or of value in TOS. |
+
+
+<br>
+
+## Build
 
 This section shows how to make a basic build and assumes the target development board is the [QMTECH Cyclone V board](https://github.com/ChinaQMTECH/QM_CYCLONE_V). There are many configuration options but these will be covered seperately.
+
+<br>
 
 ### Software build
 
 Jenkins can be used to automate the build but for simple get up and go compilation use the build.sh and hierarchical Makefile system following the basic instructions here.
 
-1. Download and install the [ZPU GCC ToolChain](https://github.com/zylin/zpugcc). Install into /opt or similar common area.
+1. Download and install the [ZPU GCC ToolChain](https://github.com/zylin/zpugcc). Install into */opt* or similar common area.
 2. Setup the environment variable path.
 ```shell
     export PATH=$PATH:/opt/zpu/bin
@@ -320,28 +439,35 @@ Jenkins can be used to automate the build but for simple get up and go compilati
     # Bootloader installed, thus you will need to build the ZPU Evo SOF bit stream
     # and upload it to the FPGA in order for the new Bootloader to be active.
 ```
-6. Place an SD Card into your system and format it for exFAT format then copy the files onto it.
+6. Place an SD Card into your system and format it for FAT32 format then copy the files onto it.
 ```shell
     cd build/SD
     cp -r * <abs path to SD card, ie. /media/psmart/ZPU>
     # eject the SD card and install it into the SD card reader on your FPGA dev board. 
 ```
 
+<br>
+
 ### RTL Bit Stream build
 
-1. Install [Intel Quartus Prime 17.1](http://fpgasoftware.intel.com/17.1/?edition=lite) or later.
+To build the FPGA bit stream (conversion of HDL into a configuration map for the FPGA), there are two methods:
+
+1. Install [Intel Quartus Prime 17.1](http://fpgasoftware.intel.com/17.1/?edition=lite) or later (or build a docker image described below).
 2. Open Quartus Prime and load project (File -> Open Project) and select \<zpu evo dir>/build/QMV_zpu.qpf
 3. Compile (Processing -> Start)
 
 &nbsp;&nbsp;&nbsp;&nbsp;*alternatively*:-
-1. Install [Intel Quartus Prime 17.1](http://fpgasoftware.intel.com/17.1/?edition=lite) or later.
+1. Install [Intel Quartus Prime 17.1](http://fpgasoftware.intel.com/17.1/?edition=lite) or later (or build a docker image described below).
 2. Use the Makefile build system by issuing the commands.
 ```shell
     cd <zpu evo dir>/build
     make QMV_EVO
 ```
 
-### Configure for ZPU Small Build
+
+<br>
+
+### ZPU Small Build
 
 The ZPU Small CPU can be built by changing the configuration as follows:
 
@@ -394,9 +520,11 @@ Edit: cpu/zpu_pkg.vhd
     constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter
 ````
 
-Using Quartus Prime following the 'iRTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
 
-### Configure for ZPU Medium Build
+<br>
+
+### ZPU Medium Build
 
 The ZPU Medium CPU can be built by changing the configuration as follows:
 
@@ -451,7 +579,9 @@ Edit: cpu/zpu_pkg.vhd
 
 Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
 
-### Configure for ZPU Flex Build
+<br>
+
+### ZPU Flex Build
 
 The ZPU Flex CPU can be built by changing the configuration as follows:
 
@@ -506,7 +636,9 @@ Edit: cpu/zpu_pkg.vhd
 
 Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
 
-### Configure for ZPU Evo Build
+<br>
+
+### ZPU Evo Build
 
 The ZPU Evo has 2 pre-defined versions, the same CPU using different settings. These are the EVO and 'EVO MINIMAL'. The latter implements most of its instructions in micro-code like the ZPU Small.
 Assuming we are building the EVO without the WishBone interface, change the configuration as follows:
@@ -561,6 +693,9 @@ Edit: cpu/zpu_pkg.vhd
 ````
 
 Using Quartus Prime following the 'RTL Bit Stream build' above, build the RTL in the usual manner with this new configuration. You cannot use the Makefile build as it will entail Makefile changes so just use the Quartus Prime GUI at this time.<br><br>The software is the same and unless you have less memory, no changes need to be made to the software build.<br>
+
+<br>
+
 
 ### Notes on setting up a new development board 
 
@@ -637,7 +772,7 @@ You will also have to check and change the PLL assignment, either using one of t
 set_global_assignment -name QIP_FILE Clock_25to100.qip
 ````
 
-ie. If you have a 12MHz primary clock on your board, then use the defined 12->100MHz PLL by changing the QSF file line:
+ie. If you have a 12MHz primary clock on your board, the use the defined 12->100MHz PLL by changing the QSF file line:
 ````
 #set_global_assignment -name QIP_FILE Clock_25to100.qip
 set_global_assignment -name QIP_FILE Clock_12to100.qip
@@ -756,6 +891,9 @@ In the build/NEW_zpu_Toplevel.vhd:
     );
 ````
 
+<br>
+
+
 
 ### Connecting the Development board
 
@@ -787,7 +925,7 @@ set_location_assignment PIN_Y20  -to SDCARD_CS[0]
 
 <br>
 
-# Repository Structure
+## Repository Structure
 
 The GIT Repository is organised as per the build environment shown in the tables below.
 
@@ -823,6 +961,7 @@ The GIT Repository is organised as per the build environment shown in the tables
 |                  | Clock_*              | Refactored Altera PLL definitions for various development board source clocks. These need to be made more generic for eventual inclusion of Xilinx fabric. |
 
 
+<br>
 
 ### Software
 
@@ -917,31 +1056,49 @@ Installing Quartus Prime can be tedious and time consuming, especially as the po
     ````
 <br>
 
-# Images
+## Images
 
 ### Images of QMTECH Cyclone V wiring
 
-![SD Card Wiring](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9837.jpg)
-![UART 1 Wiring](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9838.jpg)
-![UART 2 Wiring](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9839.jpg)
-![QMTECH Cyclone V Board](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9840.jpg)
-![Wiring on QMTECH Cyclone V Board](https://github.com/pdsmart/ZPU/blob/master/docs/IMG_9841.jpg)
+![SD Card Wiring](../images/IMG_9837.jpg)
+![UART 1 Wiring](../images/IMG_9838.jpg)
+![UART 2 Wiring](../images/IMG_9839.jpg)
+![QMTECH Cyclone V Board](../images/IMG_9840.jpg)
+![Wiring on QMTECH Cyclone V Board](../images/IMG_9841.jpg)
 <br>Above are the wiring connections for the QMTECH Cyclone V board as used in the Build section, colour co-ordinated for reference.
 <br>
 
 ### Images of ZPUTA on a ZPU EVO CPU
 
-![ZPUTA Performance Test](https://github.com/pdsmart/ZPU/blob/master/docs/ScreenZPU1.png)
-Dhrystone and CoreMark performance tests of the ZPU Evo CPU. Depending on Fabric there are slight variations, these tests are on a Cyclone V CEFA chip, on a Cyclone IV CE I7 the results are 11.2DMIPS for Dhrystone and 19.1 for CoreMark.
+#### ZPU Performance
+![ZPUTA Performance Test](../images/ScreenZPU1.png)
+Dhrystone and CoreMark performance tests of the ZPU Evo CPU. Depending on Fabric there are slight variations, these tests are on a Cyclone V CEFA chip, on a Cyclone IV CE I7 the results are 13.2DMIPS for Dhrystone and 22.2 for CoreMark.
 
-![ZPUTA Help Screen Test](https://github.com/pdsmart/ZPU/blob/master/docs/ScreenZPU2.png)
+![ZPUTA Performance Test](../images/ScreenZPU4.png)
+Same test as above but on a Cyclone 10LP with limited resources, only using single port memory with no instruction bus, the results are 10.0DMIPS for Dhrystone and 17.96 for CoreMark.
+
+![ZPUTA Help Screen Test](../images/ScreenZPU2.png)
 Help screen for ZPUTA, help in this instance is an applet on the SD Card. A * before the description indicates the command is on SD, a - indicates the command is built-in.
 
-![ZPUTA SD Directory](https://github.com/pdsmart/ZPU/blob/master/docs/ScreenZPU3.png)
+![ZPUTA SD Directory](../images/ScreenZPU3.png)
 SD Directory listings of all the compiled applets.
 
+#### SDRAM Performance
+
+![ZPUTA SDRAM Performance Sysbus No Cache](../images/ZPUSDRAMPerformance.png)
+SDRAM operating over the SYSBUS and with no cache. Not quite true memory performance as the ZPU makes several stack operations for a memory read/write, ie. IM <address>, IM <data>, STORE for a write which would entail upto 11 instruction reads (3 cycles on the Evo) and two stack writes.
+
+![ZPUTA SDRAM Performance Sysbus Cache](../images/ZPUSDRAMPerformanceCached.png)
+SDRAM operating over the SYSBUS with full page cache per bank for read and write-thru cache for write.
+
+![ZPUTA SDRAM Performance Wishbone Bus No Cache](../images/ZPUWBSDRAMPerformance.png)
+SDRAM operating over the WishBone Bus and with no cache.
+
+![ZPUTA SDRAM Performance Wishbone Bus Cache](../images/ZPUWBSDRAMPerformanceCached.png)
+SDRAM operating over the WishBone Bus with full page cache per bank for read and write-thru cache for write.
+
 <br>
-# Links
+## Links
 
 | Recommended Site                                                                               |
 | ---------------------------------------------------------------------------------------------- |
@@ -949,17 +1106,17 @@ SD Directory listings of all the compiled applets.
 | [Original Zylin GCC v3.4.2 toolchain](https://github.com/zylin/zpugcc)                         |
 | [Flex ZPU repository](https://github.com/robinsonb5/ZPUFlex)                                   |
 | [ZPUino and Eco System](http://papilio.cc/index.php?n=Papilio.ZPUinoIntroduction)              |
-| [Wikipedia ZPU Reference](https://en.wikipedia.org/wiki/ZPU_\(microprocessor\))                |
+| [Wikipedia ZPU Reference](https://en.wikipedia.org/wiki/ZPU_(microprocessor))                  |
 
 
 <br>
-# Credits
+## Credits
 
 Where I have used or based any component on a 3rd parties design I have included the original authors copyright notice within the headers or given due credit. All 3rd party software, to my knowledge and research, is open source and freely useable, if there is found to be any component with licensing restrictions, it will be removed from this repository and a suitable link/config provided.
 
 
 <br>
-# Licenses
+## Licenses
 
 The original ZPU uses the Free BSD license and such the Evo is also released under FreeBSD. SoC components and other developments written by me are currently licensed using the GPL. 3rd party components maintain their original copyright notices.
 
