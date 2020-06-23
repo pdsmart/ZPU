@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #########################################################################################################
 ##
 ## Name:            run_quartus.sh
@@ -32,11 +32,17 @@
 MAC_ADDR="02:50:dd:72:03:01"
 PROJECT_DIR_HOST=/srv/quartus
 PROJECT_DIR_IMAGE=/srv/quartus
-DISPLAY=${DISPLAY:-192.168.15.209:0}
+DISPLAY=${DISPLAY:-192.168.15.210:0}
+VERSION=$1
 
+if [ "${VERSION}" = "17.1.1" -o "X${VERSION}" = "X" ]; then
+    VERSION=17.1.1
+elif [ "${VERSION}" != "13.0.1" -a "${VERSION}" != "13.1" ]; then
+    echo "Unknown QuartusII version:$1"
+fi
 # In order to get X-Forwarding from the container, we need to update the X Authorities and bind the authorisation file inside the virtual machine.
 XSOCK=/tmp/.X11-unix
-XAUTH=/tmp/.docker.xauth-n
+XAUTH=/tmp/.docker.xauth
 NLIST=`xauth nlist $DISPLAY | sed -e 's/^..../ffff/'`
 if [ "${NLIST}" != "" ]; then
     echo ${NLIST} | xauth -f $XAUTH nmerge -
@@ -47,15 +53,17 @@ chmod 777 $XAUTH
 docker run --rm \
 		   --mac-address "${MAC_ADDR}" \
 		   --env DISPLAY=${DISPLAY} \
+		   --ipc=host \
 		   --env XAUTHORITY=${XAUTH} \
 		   --privileged \
 		   --volume /dev:/dev \
 		   --volume ${PROJECT_DIR_HOST}:${PROJECT_DIR_IMAGE} \
 		   --volume ${XAUTH}:${XAUTH} \
+		   --volume ${XSOCK}:${XSOCK} \
 		   --volume /sys:/sys:ro \
-		   --name quartus \
-		   quartus-ii-17.1.1 &
+		   --name quartus${VERSION} \
+		   quartus-ii-${VERSION} &
 
 # Bring up a terminal session for any local changes.
 sleep 5
-docker exec -it quartus bash
+docker exec -it quartus${VERSION} bash

@@ -1,14 +1,16 @@
 #########################################################################################################
 ##
-## Name:            Dockerfile.17.1.1
-## Created:         August 2019
+## Name:            Dockerfile.13.0.1
+## Created:         June 2020
 ## Author(s):       Philip Smart
-## Description:     A Docker build script to create an Ubuntu 16.04 OS with Quartus Prime 17.1.1
+## Description:     A Docker build script to create an Ubuntu 16.04 OS with Quartus Prime 13.0.1
 ##
 ## Credits:         
 ## Copyright:       (c) 2019 Philip Smart <philip.smart@net2net.org>
 ##
 ## History:         August 2019   - Initial module written.
+##                  June 2020     - Need to use a CPLD MAX series device which is only supported in 
+##                                  Quartus 13.
 ##
 #########################################################################################################
 ## This source file is free software: you can redistribute it and#or modify
@@ -27,6 +29,8 @@
 
 # Ubuntu 16.04 as the base.
 FROM ubuntu:xenial
+
+# Maintainer!
 MAINTAINER Philip Smart <philip.smart@net2net.org>
 
 # Set build time environment variables.
@@ -37,14 +41,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 ARG TARGET_DOWNLOAD_DIR=/tmp/
 ARG INSTALLATION_DIR=/opt/altera
 ARG ALTERA_DOWNLOAD_SITE=http://download.altera.com/akdlm/software/acdsinst
-ARG QUARTUS_VERSION_INSTALLER=/17.1std/590/ib_installers/
-ARG QUARTUS_VERSION_UPDATE=/17.1std.1/593/update/
-#ARG QUARTUS=QuartusSetup-17.1.0.590-linux.run
-ARG QUARTUS=QuartusLiteSetup-17.1.0.590-linux.run
-ARG QUARTUS_UPDATE=QuartusSetup-17.1.1.593-linux.run
-ARG QUARTUS_PROGRAMMER=QuartusProgrammerSetup-17.1.0.590-linux.run
-ARG QUARTUS_HELP=QuartusHelpSetup-17.1.0.590-linux.run
-ARG QUARTUS_DEVICE_FILES="arria_lite-17.1.0.590.qdz cyclone10lp-17.1.0.590.qdz cyclone-17.1.0.590.qdz cyclonev-17.1.0.590.qdz max10-17.1.0.590.qdz max-17.1.0.590.qdz"
+ARG QUARTUS_VERSION_INSTALLER=/13.0sp1/232/ib_installers/
+#ARG QUARTUS_VERSION_UPDATE=/13.0.1/232/update/
+#ARG QUARTUS=QuartusSetup-13.0.1.232.run
+ARG QUARTUS=QuartusSetupWeb-13.0.1.232.run
+#ARG QUARTUS_UPDATE=QuartusSetup-13.0.1.232.run
+ARG QUARTUS_PROGRAMMER=QuartusProgrammerSetup-13.0.1.232.run
+ARG QUARTUS_HELP=QuartusHelpSetup-13.0.1.232.run
+ARG QUARTUS_LINUX_SUPPORT_BIN=linux-socfpga-13.02-RC10-bin.tar.gz
+ARG QUARTUS_LINUX_SUPPORT_SRC=linux-socfpga-13.02-RC10-src.bsx
+ARG QUARTUS_DEVICE_FILES="arria_web-13.0.1.232.qdz cyclonev-13.0.1.232.qdz cyclone_web-13.0.1.232.qdz cyclone-13.0.1.232.qdz max-13.0.1.232.qdz"
 
 # Base Ubuntu install, add necessary packages for Quartus, command line editting and web-browser.
 RUN dpkg --add-architecture i386
@@ -101,10 +107,18 @@ ENV EXEC_DIR ${INSTALLATION_DIR}
 #
 
 # PRODUCTION CYCLE, fetch files from Altera as needed.
+RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS}"
 RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS}
-RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_UPDATE}/${QUARTUS_UPDATE}
+#RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_UPDATE}"
+#RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_UPDATE}/${QUARTUS_UPDATE}
+RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_PROGRAMMER}"
 RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_PROGRAMMER}
+RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_HELP}"
 RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_HELP}
+RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_LINUX_SUPPORT_BIN}"
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_LINUX_SUPPORT_BIN}
+RUN echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_LINUX_SUPPORT_SRC}"
+RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_LINUX_SUPPORT_SRC}
 RUN for DEVICE_FILE in ${QUARTUS_DEVICE_FILES}; \
 		do \
 		    echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}"; \
@@ -112,19 +126,18 @@ RUN for DEVICE_FILE in ${QUARTUS_DEVICE_FILES}; \
 		done
 
 # DEVELOPMENT CYCLE, quartus files cached locally.
-# Development cycle, quartus files cached locally.
-#COPY ./files/17.1.1/*.qdz ${TARGET_DOWNLOAD_DIR}
-#COPY ./files/17.1.1/*.run ${TARGET_DOWNLOAD_DIR}
+#COPY ./files/13.0/*.qdz ${TARGET_DOWNLOAD_DIR}
+#COPY ./files/13.0/*.run ${TARGET_DOWNLOAD_DIR}
 
 # Install Quartus.
 RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS}
-RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}
+#RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}
 RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_PROGRAMMER}
 RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS_HELP}
-RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS}            --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
-RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}     --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
-RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_PROGRAMMER} --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
-RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_HELP}       --mode unattended --installdir ${INSTALLATION_DIR}/ --accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS}            --mode unattended --installdir ${INSTALLATION_DIR}/ #--accept_eula 1
+#RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_UPDATE}     --mode unattended --installdir ${INSTALLATION_DIR}/ #--accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_PROGRAMMER} --mode unattended --installdir ${INSTALLATION_DIR}/ #--accept_eula 1
+RUN ${TARGET_DOWNLOAD_DIR}${QUARTUS_HELP}       --mode unattended --installdir ${INSTALLATION_DIR}/ #--accept_eula 1
 
 # Copy the license file, this would be a dummy for the Lite version or a genuine one for the Standard version coded to the host
 # MAC Address.
@@ -144,7 +157,7 @@ RUN echo "export LM_LICENSE_FILE=${INSTALLATION_DIR}/license.dat" >> /root/.bash
 
 # Clean up, removing unnecessary installation files.
 RUN rm -rf ${TARGET_DOWNLOAD_DIR}/* ${INSTALLATION_DIR}/uninstall ${INSTALLATION_DIR}/logs/*
-#
+
 # Add the current user into the image.
 ARG user_uid
 ARG user_gid
