@@ -25,8 +25,11 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #########################################################################################################
 
+
 # Ubuntu 16.04 as the base.
 FROM ubuntu:xenial
+
+# Maintainer!
 MAINTAINER Philip Smart <philip.smart@net2net.org>
 
 # Set build time environment variables.
@@ -101,20 +104,19 @@ ENV EXEC_DIR ${INSTALLATION_DIR}
 #
 
 # PRODUCTION CYCLE, fetch files from Altera as needed.
-RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS}
-RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_UPDATE}/${QUARTUS_UPDATE}
-RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_PROGRAMMER}
-RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_HELP}
-RUN for DEVICE_FILE in ${QUARTUS_DEVICE_FILES}; \
-		do \
-		    echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}"; \
-		    wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}; \
-		done
+#RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS}
+#RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_UPDATE}/${QUARTUS_UPDATE}
+#RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_PROGRAMMER}
+#RUN wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${QUARTUS_HELP}
+#RUN for DEVICE_FILE in ${QUARTUS_DEVICE_FILES}; \
+#		do \
+#		    echo "Fetching ${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}"; \
+#		    wget -q --directory-prefix=${TARGET_DOWNLOAD_DIR} ${ALTERA_DOWNLOAD_SITE}/${QUARTUS_VERSION_INSTALLER}/${DEVICE_FILE}; \
+#		done
 
 # DEVELOPMENT CYCLE, quartus files cached locally.
-# Development cycle, quartus files cached locally.
-#COPY ./files/17.1.1/*.qdz ${TARGET_DOWNLOAD_DIR}
-#COPY ./files/17.1.1/*.run ${TARGET_DOWNLOAD_DIR}
+COPY ./files/17.1/*.qdz ${TARGET_DOWNLOAD_DIR}
+COPY ./files/17.1/*.run ${TARGET_DOWNLOAD_DIR}
 
 # Install Quartus.
 RUN chmod +x ${TARGET_DOWNLOAD_DIR}${QUARTUS}
@@ -137,6 +139,11 @@ COPY ./files/quartus_web_rules_file.txt /root/.altera.quartus/
 # Copy the Arrow USB Blaster and setup the udev rules to detect and mount USB-Blaster I and II devices.
 COPY ./files/libjtag_hw_arrow.so        ${INSTALLATION_DIR}/quartus/linux64/
 COPY ./files/70-usb.rules               /etc/udev/rules.d/
+
+# Local upgrades.
+COPY local/17.1/license.dat             ${INSTALLATION_DIR}/
+COPY local/17.1/libsys_cpt.so           ${INSTALLATION_DIR}/quartus/linux64/
+COPY local/17.1/libgcl_afcq.so          ${INSTALLATION_DIR}/quartus/linux64/
 
 # Setup necessary environment variables.
 RUN echo "export PATH=\$PATH:${INSTALLATION_DIR}/quartus/bin:${INSTALLATION_DIR}/qprogrammer/bin" >> /root/.bashrc

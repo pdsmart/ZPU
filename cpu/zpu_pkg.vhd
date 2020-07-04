@@ -52,7 +52,7 @@ package zpu_pkg is
 
     -- Debug options.
     --
-    constant DEBUG_CPU                :     boolean          := true;                               -- Enable CPU debugging output.
+    constant DEBUG_CPU                :     boolean          := false;                               -- Enable CPU debugging output.
     constant DEBUG_LEVEL              :     integer          := 0;                                   -- Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ 4Everything else.
     constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
     constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
