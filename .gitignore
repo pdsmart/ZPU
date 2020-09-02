@@ -11,6 +11,7 @@
 *.rpt
 *.srec
 *.swp
+*.swo
 *.zpu
 *.log
 *.done
@@ -64,3 +65,13 @@ nohup.out
 software/micropython/
 software/x/
 docker/QuartusPrime/files/bad/
+docker/QuartusPrime/Dockerfile.13.0.1.old
+docker/QuartusPrime/Quartus-web-13.0.1.232-linux.tar
+docker/QuartusPrime/files/13.0/
+docker/QuartusPrime/files/13.1/
+docker/QuartusPrime/files/17.1/
+docker/QuartusPrime/local/
+docker/QuartusPrime/quartus_docker.sh
+docker/QuartusPrime/unison/
+docker/QuartusPrime/x/
+
