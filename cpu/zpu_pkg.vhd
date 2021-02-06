@@ -52,8 +52,8 @@ package zpu_pkg is
 
     -- Debug options.
     --
-    constant DEBUG_CPU                :     boolean          := false;                               -- Enable CPU debugging output.
-    constant DEBUG_LEVEL              :     integer          := 0;                                   -- Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ 4Everything else.
+    constant DEBUG_CPU                :     boolean          := true;                               -- Enable CPU debugging output.
+    constant DEBUG_LEVEL              :     integer          := 2;                                   -- Level of debugging output. 0 = Basic, such as Breakpoint, 1 =+ Executing Instructions, 2 =+ L1 Cache contents, 3 =+ L2 Cache contents, 4 =+ Memory contents, 5=+ 4Everything else.
     constant DEBUG_MAX_TX_FIFO_BITS   :     integer          := 12;                                  -- Size of UART TX Fifo for debug output.
     constant DEBUG_MAX_FIFO_BITS      :     integer          := 3;                                   -- Size of debug output data records fifo.
     constant DEBUG_TX_BAUD_RATE       :     integer          := 115200; --230400;                    -- Baud rate for the debug transmitter.
@@ -61,10 +61,13 @@ package zpu_pkg is
     -- Constants common to all ZPU models source code.
     constant Generate_Trace           :     boolean          := false;                               -- generate trace output or not.
     constant wordPower                :     integer          := 5;                                   -- The number of bits in a word, defined as 2^wordPower).
+    constant longWordPower            :     integer          := 6;                                   -- The number of bits in a word, defined as 2^wordPower).
     constant DontCareValue            :     std_logic        := 'X';                                 -- during simulation, set this to '0' to get matching trace.txt 
     constant byteBits                 :     integer          := wordPower-3;                         -- # of bits in a word that addresses bytes
     constant wordSize                 :     integer          := 2**wordPower;
     constant wordBytes                :     integer          := wordSize/8;
+    constant longWordSize             :     integer          := 2**longWordPower;
+    constant longWordBytes            :     integer          := longWordSize/8;
     constant minAddrBit               :     integer          := byteBits;
     constant WB_ACTIVE                :     integer          := bool_to_integer(EVO_USE_WB_BUS);     -- Set to 1 if the wishbone interface is active to divide the address space in two, lower = direct access, upper = wishbone.
     constant maxAddrBit               :     integer          := 24 + WB_ACTIVE;                      -- Maximum address limit in bits.
@@ -81,6 +84,9 @@ package zpu_pkg is
     subtype ADDR_32BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit;            -- Full address range - 4 bytes (32bit) aligned
     subtype ADDR_64BIT_RANGE          is natural range maxAddrBit-1    downto minAddrBit+1;          -- Full address range - 8 bytes (64bit) aligned
     subtype ADDR_IOBIT_RANGE          is natural range ioBit           downto minAddrBit;            -- Non-EVO: IO range.
+    subtype WORD_UPPER_64BIT_RANGE    is natural range 63              downto 32;                    -- Bits for the higher word of a 64bit long word.
+    subtype WORD_LOWER_64BIT_RANGE    is natural range 31              downto 0;                     -- Bits for the lower word of a 64bit long word.
+    subtype WORD_64BIT_RANGE          is natural range longWordSize-1  downto 0;                     -- Number of bits in a long word (normally 64 for this CPU).
     subtype WORD_32BIT_RANGE          is natural range wordSize-1      downto 0;                     -- Number of bits in a word (normally 32 for this CPU).
     subtype WORD_16BIT_RANGE          is natural range (wordSize/2)-1  downto 0;                     -- Number of bits in a half-word (normally 16 for this CPU).
     subtype WORD_UPPER_16BIT_RANGE    is natural range (wordSize/2)-1  downto wordSize/4;            -- Number of bits in a half-word (normally 16 for this CPU).
@@ -244,11 +250,12 @@ package zpu_pkg is
             MAX_INSNRAM_SIZE          : integer := 32768;       -- Maximum size of the optional Instruction BRAM on the INSN Bus.
             MAX_L1CACHE_BITS          : integer := 4;           -- Maximum size in bytes of the Level 1 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
             MAX_L2CACHE_BITS          : integer := 12;          -- Maximum size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
+            MAX_STCACHE_BITS          : integer := 8;           -- Maximum size in 32bit words of the stack cache, governed by the number of bits, ie. 8 - 256 x 32bit cache.
             MAX_MXCACHE_BITS          : integer := 4;           -- Maximum size of the memory transaction cache governed by the number of bits.
             RESET_ADDR_CPU            : integer := 0;           -- Initial start address of the CPU.
             START_ADDR_MEM            : integer := 0;           -- Start address of program memory.
             STACK_ADDR                : integer := 0;           -- Initial stack address on CPU start.            
-            CLK_FREQ                  : integer := 100000000           -- Frequency of the input clock.
+            CLK_FREQ                  : integer := 100000000    -- Frequency of the input clock.
         );
         port (
             CLK                       : in  std_logic;
@@ -263,9 +270,12 @@ package zpu_pkg is
             MEM_READ_ENABLE           : out std_logic;
             MEM_WRITE_BYTE            : out std_logic;
             MEM_WRITE_HWORD           : out std_logic;
+            MEM_BUSRQ                 : in  std_logic;          -- Bus request, when memory transaction processor goes to Idle, suspend and allow an external device to control the bus.
+            MEM_BUSACK                : out std_logic;          -- Bus acknowledge, set when MEM_BUSRQ goes active and the memory transaction processor completes a transaction and goes idle.
+
             -- Instruction memory path
             MEM_BUSY_INSN             : in  std_logic; 
-            MEM_DATA_IN_INSN          : in  std_logic_vector(WORD_32BIT_RANGE);
+            MEM_DATA_IN_INSN          : in  std_logic_vector(WORD_64BIT_RANGE);
             MEM_ADDR_INSN             : out std_logic_vector(ADDR_BIT_RANGE);
             MEM_READ_ENABLE_INSN      : out std_logic;
             -- Master Wishbone Memory/IO bus interface.

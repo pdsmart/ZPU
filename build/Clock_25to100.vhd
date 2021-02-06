@@ -148,7 +148,7 @@ BEGIN
     GENERIC MAP (
         clk0_divide_by => 1,
         clk0_duty_cycle => 50,
-        clk0_multiply_by => 4,
+        clk0_multiply_by => 3,
         clk0_phase_shift => "0",
         clk1_divide_by => 1,
         clk1_duty_cycle => 50,

@@ -275,7 +275,7 @@ architecture rtl of zpu_soc is
     signal MEM_WRITE_HWORD_ENABLE :       std_logic; 
     signal MEM_READ_ENABLE        :       std_logic;
     signal MEM_READ_ENABLE_LAST   :       std_logic;
-    signal MEM_DATA_READ_INSN     :       std_logic_vector(WORD_32BIT_RANGE);
+    signal MEM_DATA_READ_INSN     :       std_logic_vector(WORD_64BIT_RANGE);
     signal MEM_ADDR_INSN          :       std_logic_vector(ADDR_BIT_RANGE);
     signal MEM_READ_ENABLE_INSN   :       std_logic;
     signal IO_DATA_READ           :       std_logic_vector(WORD_32BIT_RANGE);
@@ -516,6 +516,7 @@ begin
                 MAX_INSNRAM_SIZE     => (2**(SOC_MAX_ADDR_INSN_BRAM_BIT)), -- Maximum size of the optional instruction BRAM on the INSN Bus.
                 MAX_L1CACHE_BITS     => MAX_EVO_L1CACHE_BITS,   -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
                 MAX_L2CACHE_BITS     => MAX_EVO_L2CACHE_BITS,   -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
+                MAX_STCACHE_BITS     => MAX_EVO_STCACHE_BITS,   -- Maximum size in 32bit words of the stack cache, governed by the number of bits, ie. 8 - 256 x 32bit cache.
                 MAX_MXCACHE_BITS     => MAX_EVO_MXCACHE_BITS,   -- Maximum size of the memory transaction cache governed by the number of bits.
                 RESET_ADDR_CPU       => SOC_RESET_ADDR_CPU,     -- Initial start address of the CPU.
                 START_ADDR_MEM       => SOC_START_ADDR_MEM,     -- Start address of program memory.
@@ -534,6 +535,8 @@ begin
                 MEM_READ_ENABLE      => MEM_READ_ENABLE,
                 MEM_WRITE_BYTE       => MEM_WRITE_BYTE_ENABLE,
                 MEM_WRITE_HWORD      => MEM_WRITE_HWORD_ENABLE,
+                MEM_BUSRQ            => '0',
+                MEM_BUSACK           => open,
                 -- Instruction memory path.
                 MEM_BUSY_INSN        => '0',
                 MEM_DATA_IN_INSN     => MEM_DATA_READ_INSN,
@@ -600,6 +603,7 @@ begin
                 MAX_INSNRAM_SIZE     => (2**(SOC_MAX_ADDR_INSN_BRAM_BIT)), -- Maximum size of the optional instruction BRAM on the INSN Bus.
                 MAX_L1CACHE_BITS     => MAX_EVO_MIN_L1CACHE_BITS, -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
                 MAX_L2CACHE_BITS     => MAX_EVO_MIN_L2CACHE_BITS, -- Maximum size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
+                MAX_STCACHE_BITS     => MAX_EVO_MIN_STCACHE_BITS, -- Maximum size in 32bit words of the stack cache, governed by the number of bits, ie. 8 - 256 x 32bit cache.
                 MAX_MXCACHE_BITS     => MAX_EVO_MIN_MXCACHE_BITS, -- Maximum size of the memory transaction cache governed by the number of bits.
                 RESET_ADDR_CPU       => SOC_RESET_ADDR_CPU,     -- Initial start address of the CPU.
                 START_ADDR_MEM       => SOC_START_ADDR_MEM,     -- Start address of program memory.
@@ -618,6 +622,8 @@ begin
                 MEM_READ_ENABLE      => MEM_READ_ENABLE,
                 MEM_WRITE_BYTE       => MEM_WRITE_BYTE_ENABLE,
                 MEM_WRITE_HWORD      => MEM_WRITE_HWORD_ENABLE,
+                MEM_BUSRQ            => '0',
+                MEM_BUSACK           => open,
                 -- Instruction memory path.
                 MEM_BUSY_INSN        => '0',
                 MEM_DATA_IN_INSN     => MEM_DATA_READ_INSN,
@@ -704,7 +710,7 @@ begin
 
     -- Evo system BRAM, dual port to allow for seperate instruction bus read.
     ZPUDPBRAMEVO : if (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and SOC_IMPL_INSN_BRAM = true and SOC_IMPL_BRAM = true generate
-        ZPUBRAM : entity work.DualPortBootBRAM
+        ZPUBRAM : entity work.DualPort3264BootBRAM
             generic map (
                 addrbits             => SOC_MAX_ADDR_BRAM_BIT
             )
@@ -717,7 +723,7 @@ begin
                 memAWrite            => MEM_DATA_WRITE,
                 memARead             => BRAM_DATA_READ,
 
-                memBAddr             => MEM_ADDR_INSN(ADDR_32BIT_BRAM_RANGE),
+                memBAddr             => MEM_ADDR_INSN(ADDR_64BIT_BRAM_RANGE),
                 memBWrite            => (others => '0'),
                 memBWriteEnable      => '0',
                 memBRead             => MEM_DATA_READ_INSN
@@ -804,18 +810,23 @@ begin
                 WRITE_BYTE           => MEM_WRITE_BYTE_ENABLE,         -- Write a single byte.
                 WRITE_HWORD          => MEM_WRITE_HWORD_ENABLE,        -- Write a 16 bit word.
                 CS                   => SDRAM_SELECT,                  -- Chip Select.
-                WREN                 => MEM_WRITE_ENABLE, --SDRAM_WREN,                    -- Write enable.
-                RDEN                 => MEM_READ_ENABLE, --SDRAM_RDEN,                    -- Read enable.
+                WREN                 => SDRAM_WREN,                    -- Write enable.
+                RDEN                 => SDRAM_RDEN,                    -- Read enable.
                 BUSY                 => SDRAM_MEM_BUSY                   
             );
 
         -- SDRAM clock based on system clock.
-        SDRAM_CLK                    <= MEMCLK;
+        SDRAM_CLK                <= MEMCLK;
 
         -- RAM Range SOC_ADDR_SDRAM_START) -> SOC_ADDR_SDRAM_END
-        SDRAM_SELECT                 <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
-        --SDRAM_SELECT               <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, MEM_ADDR'LENGTH)))
-                                        else '0';
+        SDRAM_SELECT             <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1 or ZPU_MEDIUM = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_SDRAM_END, MEM_ADDR'LENGTH)))
+        --SDRAM_SELECT           <= '1' when (ZPU_EVO = 1 or ZPU_EVO_MINIMAL = 1) and (MEM_ADDR >= std_logic_vector(to_unsigned(SOC_ADDR_RAM_START, MEM_ADDR'LENGTH)) and MEM_ADDR < std_logic_vector(to_unsigned(SOC_ADDR_RAM_END, MEM_ADDR'LENGTH)))
+                                    else '0';
+        -- Enable write to RAM when selected and CPU in write state.
+        SDRAM_WREN               <= MEM_WRITE_ENABLE  when SDRAM_SELECT = '1'
+                                     else '0';
+        SDRAM_RDEN               <= MEM_READ_ENABLE   when SDRAM_SELECT = '1'
+                                     else '0';
     end generate;
 
     -- Force the CPU to wait when slower memory/IO is accessed and it cant deliver an immediate result.
@@ -2051,7 +2062,9 @@ begin
         -----------------------                
         elsif rising_edge(SYSCLK) then
 
-    MEM_READ_ENABLE_LAST      <= MEM_READ_ENABLE;
+            -- Edge detection for read signal. Most I/O operations need a read signal longer than 1 clock so BUSY needs to be asserted in order to prolong the read cycle. 
+            -- 
+            MEM_READ_ENABLE_LAST                                    <= MEM_READ_ENABLE;
 
             -- If the RX receives a break signal, count down to ensure it is held low for correct period, when the count reaches
             -- zero, start a reset.

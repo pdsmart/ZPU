@@ -74,4 +74,8 @@ docker/QuartusPrime/local/
 docker/QuartusPrime/quartus_docker.sh
 docker/QuartusPrime/unison/
 docker/QuartusPrime/x/
-
+zpu_core_evo.vhd.bakPreZ80
+zpu_core_evo.vhd.new
+zpu_core_evo.vhd.preZ80_2
+zpu_core_evo.vhd.workingpre64bitL1
+zpu_core_evo_L2.vhd.workingpre64bitL1

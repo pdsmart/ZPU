@@ -62,16 +62,16 @@ package zpu_soc_pkg is
 
     -- Target board declaration.
     --
-    constant BOARD_E115               :     boolean    := false;                                            -- E115 FPGA Board
-    constant BOARD_QMV                :     boolean    := true;                                             -- QMTECH Cyclone V FPGA Board
+    constant BOARD_E115               :     boolean    := true;                                             -- E115 FPGA Board
+    constant BOARD_QMV                :     boolean    := false;                                            -- QMTECH Cyclone V FPGA Board
     constant BOARD_DE0                :     boolean    := false;                                            -- DE0-Nano FPGA Board
     constant BOARD_DE10               :     boolean    := false;                                            -- DE10-Nano FPGA Board
     constant BOARD_CYC1000            :     boolean    := false;                                            -- Trenz CYC1000 FPGA Board
 
     -- Frequencies for the various boards.
     --
-    constant SYSCLK_E115_FREQ         :     integer    := 100000000;                                        -- E115 FPGA Board
-    constant SYSCLK_QMV_FREQ          :     integer    := 100000000;                                        -- QMTECH Cyclone V FPGA Board
+    constant SYSCLK_E115_FREQ         :     integer    := 75000000;                                         -- E115 FPGA Board
+    constant SYSCLK_QMV_FREQ          :     integer    := 75000000;                                         -- QMTECH Cyclone V FPGA Board
     constant SYSCLK_DE0_FREQ          :     integer    := 100000000;                                        -- DE0-Nano FPGA Board
     constant SYSCLK_DE10_FREQ         :     integer    := 100000000;                                        -- DE10-Nano FPGA Board
     constant SYSCLK_CYC1000_FREQ      :     integer    := 100000000;                                        -- Trenz CYC1000 FPGA Board
@@ -80,15 +80,17 @@ package zpu_soc_pkg is
     constant ZPU_ID_SMALL             :     integer    := 16#0101#;                                         -- ID for the ZPU Small in this package.
     constant ZPU_ID_MEDIUM            :     integer    := 16#0201#;                                         -- ID for the ZPU Medium in this package.
     constant ZPU_ID_FLEX              :     integer    := 16#0301#;                                         -- ID for the ZPU Flex in this package.
-    constant ZPU_ID_EVO               :     integer    := 16#0401#;                                         -- ID for the ZPU Evo in this package.
-    constant ZPU_ID_EVO_MINIMAL       :     integer    := 16#0501#;                                         -- ID for the ZPU Evo Minimal in this package.
+    constant ZPU_ID_EVO               :     integer    := 16#0402#;                                         -- ID for the ZPU Evo in this package.
+    constant ZPU_ID_EVO_MINIMAL       :     integer    := 16#0502#;                                         -- ID for the ZPU Evo Minimal in this package.
 
     -- EVO CPU specific configuration.
     constant MAX_EVO_L1CACHE_BITS     :     integer    := 5;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_L2CACHE_BITS     :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
+    constant MAX_EVO_STCACHE_BITS     :     integer    := 8;                                                -- Maximum size in 32bit words of the stack cache, governed by the number of bits, ie. 8 - 256 x 32bit cache.
     constant MAX_EVO_MXCACHE_BITS     :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
     constant MAX_EVO_MIN_L1CACHE_BITS :     integer    := 4;                                                -- Maximum size in instructions of the Level 0 instruction cache governed by the number of bits, ie. 8 = 256 instruction cache.
     constant MAX_EVO_MIN_L2CACHE_BITS :     integer    := 12;                                               -- Maximum bit size in bytes of the Level 2 instruction cache governed by the number of bits, ie. 8 = 256 byte cache.
+    constant MAX_EVO_MIN_STCACHE_BITS :     integer    := 8;                                                -- Maximum size in 32bit words of the stack cache, governed by the number of bits, ie. 8 - 256 x 32bit cache.
     constant MAX_EVO_MIN_MXCACHE_BITS :     integer    := 3;                                                -- Maximum size of the memory transaction cache governed by the number of bits.
 
     -- Settings for various IO devices.
@@ -96,7 +98,7 @@ package zpu_soc_pkg is
     constant MAX_RX_FIFO_BITS         :     integer    := 8;                                                -- Size of UART RX Fifo.
     constant MAX_TX_FIFO_BITS         :     integer    := 8;                                                -- Size of UART TX Fifo.
     constant MAX_UART_DIVISOR_BITS    :     integer    := 16;                                               -- Maximum number of bits for the UART clock rate generator divisor.
-    constant SYSTEM_FREQUENCY         :     integer    := 100000000;                                        -- Default system clock frequency if not overriden in top level.
+    constant SYSTEM_FREQUENCY         :     integer    := 75000000;                                        -- Default system clock frequency if not overriden in top level.
 
     -- SoC specific options.
     --
@@ -115,16 +117,16 @@ package zpu_soc_pkg is
     -- Main Boot BRAM on sysbus, contains startup firmware.
     constant SOC_IMPL_BRAM            :     boolean    := true;                                             -- Implement BRAM for the BIOS and initial Stack.
     constant SOC_IMPL_INSN_BRAM       :     boolean    := EVO_USE_INSN_BUS;                                 -- Implement dedicated instruction BRAM for the EVO CPU. Any addr access beyond the BRAM size goes to normal memory.
-    constant SOC_MAX_ADDR_BRAM_BIT    :     integer    := 16;                                               -- Max address bit of the System BRAM ROM/Stack in bytes, ie. 15 = 32KB or 8K 32bit words. NB. For non evo CPUS you must adjust the maxMemBit parameter in zpu_pkg.vhd to be the same.
+    constant SOC_MAX_ADDR_BRAM_BIT    :     integer    := 17;                                               -- Max address bit of the System BRAM ROM/Stack in bytes, ie. 15 = 32KB or 8K 32bit words. NB. For non evo CPUS you must adjust the maxMemBit parameter in zpu_pkg.vhd to be the same.
     constant SOC_ADDR_BRAM_START      :     integer    := 0;                                                -- Start address of BRAM.
     constant SOC_ADDR_BRAM_END        :     integer    := SOC_ADDR_BRAM_START+(2**SOC_MAX_ADDR_BRAM_BIT);   -- End address of BRAM = START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- Secondary block of sysbus RAM, typically implemented in BRAM.
     constant SOC_IMPL_RAM             :     boolean    := false;                                            -- Implement RAM using BRAM, typically for Application programs seperate to BIOS.
-    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 15;                                               -- Max address bit of the System RAM.
+    constant SOC_MAX_ADDR_RAM_BIT     :     integer    := 16;                                               -- Max address bit of the System RAM.
     constant SOC_ADDR_RAM_START       :     integer    := 65536;                                            -- Start address of RAM.
     constant SOC_ADDR_RAM_END         :     integer    := SOC_ADDR_RAM_START+(2**SOC_MAX_ADDR_RAM_BIT);     -- End address of RAM =  START + 2^SOC_MAX_ADDR_INSN_BRAM_BIT.
     -- SDRAM on sysbus.
-    constant SOC_IMPL_SDRAM           :     boolean    := true;                                             -- Implement Dynamic RAM and controller.
+    constant SOC_IMPL_SDRAM           :     boolean    := false;                                            -- Implement Dynamic RAM and controller.
     constant SOC_SDRAM_ROWS           :     integer    := 4096;                                             -- Number of Rows within the SDRAM.
     constant SOC_SDRAM_COLUMNS        :     integer    := 256;                                              -- Number of Columns within the SDRAM.
     constant SOC_SDRAM_BANKS          :     integer    := 4;                                                -- Number of Banks within the SDRAM.
@@ -228,6 +230,7 @@ package zpu_soc_pkg is
     subtype ADDR_BIT_BRAM_RANGE           is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto 0;              -- Address range of the onboard B(lock)RAM - 1 byte aligned
     subtype ADDR_16BIT_BRAM_RANGE         is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto 1;              -- Address range of the onboard B(lock)RAM - 2 bytes aligned
     subtype ADDR_32BIT_BRAM_RANGE         is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto minAddrBit;     -- Address range of the onboard B(lock)RAM - 4 bytes aligned
+    subtype ADDR_64BIT_BRAM_RANGE         is natural range SOC_MAX_ADDR_BRAM_BIT-1   downto minAddrBit+1;   -- Address range of the onboard B(lock)RAM - 8 bytes aligned
     subtype ADDR_BIT_RAM_RANGE            is natural range SOC_MAX_ADDR_RAM_BIT-1    downto 0;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 1 byte aligned
     subtype ADDR_16BIT_RAM_RANGE          is natural range SOC_MAX_ADDR_RAM_BIT-1    downto 1;              -- Address range of external RAM (BRAM, Dynamic, Static etc) - 2 bytes aligned
     subtype ADDR_32BIT_RAM_RANGE          is natural range SOC_MAX_ADDR_RAM_BIT-1    downto minAddrBit;     -- Address range of external RAM (BRAM, Dynamic, Static etc) - 4 bytes aligned
